@@ -7,6 +7,7 @@ queue entries. """
 import flask
 import database
 import auth
+import dotenv
 
 #-----------------------------------------------------------------------
 # CAS Authentication
@@ -39,7 +40,7 @@ def homepage():
 #-----------------------------------------------------------------------
 @app.route('/queueentry', methods={'GET'})
 def queueentry():
-    """ Method that displays the queueentry page for students to
+    """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
 
     # Authenticate CAS
@@ -50,18 +51,12 @@ def queueentry():
 
     # Get the user's course
     course = flask.request.args.get('course')
-    if course is None:
-        course = ''
 
     # Get the user's assignment
     assignment = flask.request.args.get('assignment')
-    if assignment is None:
-        assignment = ''
 
     # Get the user's bug description
     bug_description = flask.request.args.get('bug_description')
-    if bug_description is None:
-        bug_description = ''
 
     # Create the list of session information
     session = {
@@ -74,22 +69,45 @@ def queueentry():
     # Sending session info to Neon database
     session = database.send_session_info(query)
 
-    html_code = flask.render_template('queueentry.html',
-            dept=prev_dept, coursenum=prev_coursenum,
-            area=prev_area, title=prev_title,
-            overviews = overviews_output[1])
-        response = flask.make_response(html_code)
+    # Display queue entry page
+    html_code = flask.render_template('queueentry.html')
+    response = flask.make_response(html_code)
 
-    # If it was not successful, send to the error page
-    else:
-        html_code = flask.render_template('error.html',
-            error_message = overviews_output[1])
-        response = flask.make_response(html_code)
+    return response
 
-    # Set cookies
-    response.set_cookie('prev_dept', prev_dept)
-    response.set_cookie('prev_coursenum', prev_coursenum)
-    response.set_cookie('prev_area', prev_area)
-    response.set_cookie('prev_title', prev_title)
+#-----------------------------------------------------------------------
+# Queue Status Page:
+#-----------------------------------------------------------------------
+@app.route('/queuestatus', methods={'GET'})
+def queueentry():
+    """ Method that displays the queue status page for students to
+    view their position in the queue and their bug description. """
 
+    # Get the user's bug description
+    bug_description = flask.request.args.get('bug_description')
+
+    # Display queue status page
+    html_code = flask.render_template('queuestatus.html', bug_description)
+    response = flask.make_response(html_code)
+
+    return response
+
+#-----------------------------------------------------------------------
+# In Session Page:
+#-----------------------------------------------------------------------
+@app.route('/insessionstudent', methods={'GET'})
+def insessionstudent():
+    """ Method that displays the TA the student was matched with and
+    their bug description. """
+
+    # Get the TA the student was matched with
+    #### GET TA FROM DATABASE... WE MUST MATCH TA TO STUDENT SOMEWHERE ###
+
+    # Get the user's bug description
+    bug_description = flask.request.args.get('bug_description')
+
+    # Display queue status page
+    html_code = flask.render_template('queuestatus.html', bug_description, ta)
+    response = flask.make_response(html_code)
+    
     return response
