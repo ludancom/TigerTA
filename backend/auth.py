@@ -2,8 +2,6 @@
 
 #-----------------------------------------------------------------------
 # auth.py
-# Authors: Alex Halderman, Scott Karlin, Brian Kernighan, Bob Dondero,
-#          and Joshua Lau '26
 #-----------------------------------------------------------------------
 
 import urllib.request
@@ -13,7 +11,7 @@ import json
 import flask
 
 # Optional:
-import database
+import database 
 
 #-----------------------------------------------------------------------
 

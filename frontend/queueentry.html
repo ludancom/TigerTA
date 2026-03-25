@@ -8,11 +8,11 @@
 <body>
     <h1>To join the queue, please enter the following:</h1>
 
-    <form action="/queuestatus" method="get">
+    <form action="/queuestatus" method="get" onsubmit="return validateForm()">
 
         <h2>Select your course</h2>
         <label>
-            <input type="radio" name="course" value="COS 126" onclick="updateAssignments()">
+            <input type="radio" name="course" value="COS 126" onclick="updateAssignments()" required>
             COS 126
         </label>
         <label>
@@ -28,9 +28,10 @@
         <select id="assignments" name="assignment"></select>
 
         <h2>Describe your problem</h2>
-        <textarea name="bug_description" rows="5" cols="50"></textarea>
+        <textarea id="bug_description" name="bug_description" rows="5" cols="50" required></textarea>
 
-        <br><br>
+        <br>
+        <br>
         <input type="submit" value="Join Queue">
     </form>
 
@@ -90,6 +91,20 @@
             }
         }
     </script>
+
+    <script>
+        function validateForm() {
+            let course = document.querySelector('input[name="course"]:checked');
+            let bugDescription = document.getElementById("bug_description").value.trim();
+
+        if (!course || bugDescription === "") {
+            alert("Please select a course and/or describe your problem before submitting.");
+            return false;
+        }
+
+        return true;
+    }
+</script>
 
     {% include 'footer.html' %}
 </body>
