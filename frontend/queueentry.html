@@ -1,99 +1,96 @@
-<<<<<<< HEAD <!DOCTYPE html>
-    <html>
-    =======
-    >>>>>>> aebce51fb5ca318abfae20df690ceea5f835c002
+<!DOCTYPE html>
+<html>
 
-    <head>
-        <title>TigerTA Queue</title>
-    </head>
+<head>
+    <title>TigerTA Queue</title>
+</head>
 
-    <body>
-        <h1>To join the queue, please enter the following:</h1>
+<body>
+    <h1>To join the queue, please enter the following:</h1>
 
-        <form action="/queuestatus" method="get">
+    <form action="/queuestatus" method="get">
 
-            <h2>Select your course</h2>
-            <label>
-                <input type="radio" name="course" value="COS 126" onclick="updateAssignments()">
-                COS 126
-            </label>
-            <label>
-                <input type="radio" name="course" value="COS 226" onclick="updateAssignments()">
-                COS 226
-            </label>
-            <label>
-                <input type="radio" name="course" value="COS 217" onclick="updateAssignments()">
-                COS 217
-            </label>
+        <h2>Select your course</h2>
+        <label>
+            <input type="radio" name="course" value="COS 126" onclick="updateAssignments()">
+            COS 126
+        </label>
+        <label>
+            <input type="radio" name="course" value="COS 226" onclick="updateAssignments()">
+            COS 226
+        </label>
+        <label>
+            <input type="radio" name="course" value="COS 217" onclick="updateAssignments()">
+            COS 217
+        </label>
 
-            <h2>Select your assignment</h2>
-            <select id="assignments" name="assignment"></select>
+        <h2>Select your assignment</h2>
+        <select id="assignments" name="assignment"></select>
 
-            <h2>Describe your problem</h2>
-            <textarea name="bug_description" rows="5" cols="50"></textarea>
+        <h2>Describe your problem</h2>
+        <textarea name="bug_description" rows="5" cols="50"></textarea>
 
-            <input type="submit" value="Join Queue">
-        </form>
+        <input type="submit" value="Join Queue">
+    </form>
 
-        <!-- Script for drop-down menu -->
-        <script>
-            function updateAssignments() {
-                let course = document.querySelector(
-                    'input[name="course"]:checked').value;
-                let dropdown = document.getElementById("assignments");
+    <script>
+        function updateAssignments() {
+            let course = document.querySelector(
+                'input[name="course"]:checked').value;
+            let dropdown = document.getElementById("assignments");
 
-                dropdown.innerHTML = "";
+            dropdown.innerHTML = "";
 
-                let options = [];
+            let options = [];
 
-                if (course === "COS 126") {
-                    options = [
-                        ["a0", "0. Hello, World"],
-                        ["a1", "1. Conditionals and Loops"],
-                        ["a2", "2. Arrays and Input/Output"],
-                        ["a3", "3. Conjunction Function"],
-                        ["a4", "4. Recursion"],
-                        ["a5", "5. Object Oriented Programming"],
-                        ["a6", "6. Guitar Hero"],
-                        ["a7", "7. Image Classifier"],
-                        ["a8", "8. Chat126"],
-                        ["a9", "9. Hamming Codes in TOY"]
-                    ];
-                }
-                else if (course === "COS 226") {
-                    options = [
-                        ["a1", "1. Percolation"],
-                        ["a2", "2. Queues"],
-                        ["a3", "3. Autocomplete"],
-                        ["a4", "4. K-d Trees"],
-                        ["a5", "5. WordNet"],
-                        ["a6", "6. Seam Carving"],
-                        ["a7", "7. Fraud Detection"]
-
-                    ];
-                }
-                else if (course === "COS 217") {
-                    options = [
-                        ["a0", "0. Introductory Survey"],
-                        ["a1", '1. A "De-Comment" Program'],
-                        ["a2", "2. A String Module and Client"],
-                        ["a3", "3. A Symbol Table Module"],
-                        ["a4", "4. Directory and File Trees"],
-                        ["a5", "5. Assembly Language Programming and Testing"],
-                        ["a6", "6. A Buffer Overrun Attack"]
-                    ];
-                }
-
-                for (let i = 0; i < options.length; i++) {
-                    let option = document.createElement("option");
-                    option.value = options[i][0];
-                    option.text = options[i][1];
-                    dropdown.appendChild(option);
-                }
+            if (course === "COS 126") {
+                options = [
+                    ["a0", "0. Hello, World"],
+                    ["a1", "1. Conditionals and Loops"],
+                    ["a2", "2. Arrays and Input/Output"],
+                    ["a3", "3. Conjunction Function"],
+                    ["a4", "4. Recursion"],
+                    ["a5", "5. Object Oriented Programming"],
+                    ["a6", "6. Guitar Hero"],
+                    ["a7", "7. Image Classifier"],
+                    ["a8", "8. Chat126"],
+                    ["a9", "9. Hamming Codes in TOY"]
+                ];
             }
-        </script>
+            else if (course === "COS 226") {
+                options = [
+                    ["a1", "1. Percolation"],
+                    ["a2", "2. Queues"],
+                    ["a3", "3. Autocomplete"],
+                    ["a4", "4. K-d Trees"],
+                    ["a5", "5. WordNet"],
+                    ["a6", "6. Seam Carving"],
+                    ["a7", "7. Fraud Detection"]
 
-        {% include 'footer.html' %}
-    </body>
+                ];
+            }
+            else if (course === "COS 217") {
+                options = [
+                    ["a0", "0. Introductory Survey"],
+                    ["a1", '1. A "De-Comment" Program'],
+                    ["a2", "2. A String Module and Client"],
+                    ["a3", "3. A Symbol Table Module"],
+                    ["a4", "4. Directory and File Trees"],
+                    ["a5", "5. Assembly Language Programming and Testing"],
+                    ["a6", "6. A Buffer Overrun Attack"]
+                ];
+            }
 
-    </html>
+            for (let i = 0; i < options.length; i++) {
+                let option = document.createElement("option");
+                option.value = options[i][0];
+                option.text = options[i][1];
+                dropdown.appendChild(option);
+            }
+        }
+    </script>
+
+    {% include 'footer.html' %}
+</body>
+
+</html>
