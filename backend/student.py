@@ -47,7 +47,10 @@ def queueentry():
     auth.authenticate()
 
     # Get net id from CAS
-    net_id = auth.get_username()
+    student_netid = auth.get_username()
+
+    # Get the user's name
+    student_name = flask.request.args.get('student_name')
 
     # Get the user's course
     course = flask.request.args.get('course')
@@ -60,14 +63,15 @@ def queueentry():
 
     # Create the list of session information
     session = {
-        'student': net_id,
+        'student_netid': student_netid,
+        'student_name': student_name,
         'course': course,
         'assignment': assignment,
         'bug_description': bug_description
     }
 
     # Sending session info to Neon database
-    session = database.send_session_info(query)
+    database.queue_entry(session)
 
     # Display queue entry page
     html_code = flask.render_template('queueentry.html')
