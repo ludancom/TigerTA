@@ -54,8 +54,9 @@ def main():
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS session (
                     session_id INTEGER NOT NULL,
-                    student TEXT NOT NULL,
-                    ta TEXT NOT NULL,
+                    student_netid TEXT NOT NULL,
+                    ta_netid TEXT NOT NULL,
+                    course TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
                     time_joined TEXT,
@@ -84,9 +85,9 @@ def queue_entry(session):
 
                 # Add student to student table
                 cursor.execute('''
-                    INSERT INTO student (student_netid, student_name, time_joined)
-                    VALUES (?, ?, ?)
-                ''', [f'%{student_netid}%', f'%{student_name}%', f'%{time.asctime(time.localtime())}%'])
+                    INSERT INTO student (student_netid, student_name)
+                    VALUES (%s, %s)
+                ''', [f'%{student_netid}%', f'%{student_name}%'])
 
                 # Match student with a TA
                 #ta = find_ta(course)
@@ -112,9 +113,9 @@ def queue_entry(session):
 
                 # Add session to the session table
                 cursor.execute('''
-                INSERT INTO session (student_netid, student_name, course, assignment, bug_description, ta)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ''', [f'%{student_netid}%', f'%{student_name}%', f'%{course}%',
+                INSERT INTO session (student_netid, course, assignment, bug_description, ta)
+                VALUES (%s, %s, %s, %s, %s)
+                ''', [f'%{student_netid}%', f'%{course}%',
                 f'%{assignment}%', f'%{bug_description}%', f'%{ta}'])
                 connection.commit()
                 #return [place]

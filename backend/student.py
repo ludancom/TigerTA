@@ -73,7 +73,7 @@ def queueentry():
     }
 
     # Sending session info to Neon database
-    #ta_place = database.queue_entry(session)
+    database.queue_entry(session)
     #place = ta_place[0]
     #place = ta_place[1]
 
