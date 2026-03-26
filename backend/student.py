@@ -46,7 +46,7 @@ def queueentry():
     enter their issue and select their course and assignment. """
 
     # Authenticate CAS
-    #auth.authenticate()
+    auth.authenticate()
 
     # Get net id from CAS
     student_netid = auth.get_username()
@@ -73,7 +73,9 @@ def queueentry():
     }
 
     # Sending session info to Neon database
-    ta, place = database.queue_entry(session)
+    #ta_place = database.queue_entry(session)
+    #place = ta_place[0]
+    #place = ta_place[1]
 
     # Display queue entry page
     html_code = flask.render_template('queueentry.html')

@@ -22,46 +22,48 @@ def main():
                 #-------------------------------------------------------
 
                 cursor.execute('''
-                    CREATE TABLE ta (
+                    CREATE TABLE IF NOT EXISTS ta (
                     ta_netid TEXT NOT NULL,
                     ta_name TEXT NOT NULL,
                     available BOOLEAN NOT NULL,
-                    PRIMARY KEY (net_id)
+                    PRIMARY KEY (ta_netid)
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE student (
+                    CREATE TABLE IF NOT EXISTS student (
                     student_netid TEXT NOT NULL,
                     student_name TEXT NOT NULL,
-                    PRIMARY KEY (net_id)
+                    PRIMARY KEY (student_netid)
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE ta_course (
-                    net_id TEXT NOT NULL,
-                    course_code INTEGER
-                    PRIMARY KEY (net_id)
+                    CREATE TABLE IF NOT EXISTS ta_course (
+                    ta_netid TEXT NOT NULL,
+                    course_code INTEGER,
+                    PRIMARY KEY (ta_netid)
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE assignment (
+                    CREATE TABLE IF NOT EXISTS assignment (
                     assignment_id INTEGER NOT NULL,
                     course_code INTEGER NOT NULL,
-                    name text
+                    name text,
                     PRIMARY KEY (assignment_id)
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE session (
+                    CREATE TABLE IF NOT EXISTS session (
                     session_id INTEGER NOT NULL,
                     student TEXT NOT NULL,
                     ta TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
                     time_joined TEXT,
-                    PRIMARY KEY (net_id)
+                    PRIMARY KEY (session_id)
                     )
                 ''')
+
+                connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -83,30 +85,30 @@ def queue_entry(session):
                 # Add student to student table
                 cursor.execute('''
                     INSERT INTO student (student_netid, student_name, time_joined)
-                    VALUES (?, ?)
+                    VALUES (?, ?, ?)
                 ''', [f'%{student_netid}%', f'%{student_name}%', f'%{time.asctime(time.localtime())}%'])
 
                 # Match student with a TA
-                ta = find_ta(course)
+                #ta = find_ta(course)
 
                 #get ta info
-                statement_str = """SELECT ta_netid, ta_name 
-                FROM ta
-                WHERE ta_netid = ? 
-                """
-                cursor.execute(statement_str, (f"%{ta}%"))
-                table = cursor.fetchall()
-                ta_name = table[0][1]
+                #statement_str = """SELECT ta_netid, ta_name 
+                #FROM ta
+                #WHERE ta_netid = ? 
+                #"""
+                #cursor.execute(statement_str, (f"%{ta}%"))
+                #table = cursor.fetchall()
+                #ta_name = table[0][1]
 
                 #find place of student
-                statement_str = """SELECT student_netid
-                FROM student
-                WHERE course = ?
-                ORDER BY time_joined ASC
-                """
-                cursor.execute(statement_str, (f"%{course}%"))
-                table = cursor.fetchall()
-                place = table.index(student_netid)
+                #statement_str = """SELECT student_netid
+                #FROM student
+                #WHERE course = ?
+                #ORDER BY time_joined ASC
+                #"""
+                #cursor.execute(statement_str, (f"%{course}%"))
+                #table = cursor.fetchall()
+                #place = table.index(student_netid)
 
                 # Add session to the session table
                 cursor.execute('''
@@ -114,8 +116,8 @@ def queue_entry(session):
                 VALUES (?, ?, ?, ?, ?, ?)
                 ''', [f'%{student_netid}%', f'%{student_name}%', f'%{course}%',
                 f'%{assignment}%', f'%{bug_description}%', f'%{ta}'])
-
-                return ta, place
+                connection.commit()
+                #return [place]
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -134,8 +136,13 @@ def find_ta(course):
                 ta = table[0][0]
                 statement_str = "UPDATE ta SET available = False WHERE ta_netid=?"
                 cursor.execute(statement_str, (f"%{ta}%"))
+
+                connection.commit()
                 return ta
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
 #remove from session, add to session, add student, select ta(course)
+
+if __name__ == '__main__':
+    main()

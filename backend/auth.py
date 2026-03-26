@@ -9,6 +9,7 @@ import urllib.parse
 import re
 import json
 import flask
+import ssl
 
 # Optional:
 import database 
@@ -79,6 +80,7 @@ def validate(ticket):
         + '&ticket='
         + urllib.parse.quote(ticket)
         + '&format=json')
+    
     with urllib.request.urlopen(val_url) as flo:
         result = json.loads(flo.read().decode('utf-8'))
 
@@ -153,4 +155,4 @@ def authenticate():
     flask.session['username'] = username
 
     # Optional:
-    database.put_userinfo(username, json.dumps(userinfo))
+    #database.put_userinfo(username, json.dumps(userinfo))
