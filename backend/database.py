@@ -21,6 +21,12 @@ def main():
             with contextlib.closing(connection.cursor()) as cursor:
                 #-------------------------------------------------------
 
+                cursor.execute('DROP TABLE IF EXISTS ta')
+                cursor.execute('DROP TABLE IF EXISTS student')
+                cursor.execute('DROP TABLE IF EXISTS ta_course')
+                cursor.execute('DROP TABLE IF EXISTS assignment')
+                cursor.execute('DROP TABLE IF EXISTS session')
+
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS ta (
                     ta_netid TEXT NOT NULL,
@@ -53,14 +59,13 @@ def main():
                 ''')
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS session (
-                    session_id INTEGER NOT NULL,
+                    session_id SERIAL PRIMARY KEY,
                     student_netid TEXT NOT NULL,
                     ta_netid TEXT,
                     course TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
-                    time_joined TEXT,
-                    PRIMARY KEY (session_id)
+                    time_joined TEXT
                     )
                 ''')
 
@@ -121,7 +126,8 @@ def queue_entry(session):
                 connection.commit()
                 #return [place]
     except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        print("ERROR:", ex)
+        raise
 
 #finding tas that are available and match code, update ta availability
 def find_ta(course):
