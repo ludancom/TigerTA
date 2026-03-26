@@ -1,37 +1,38 @@
- #!/usr/bin/env python
- #-----------------------------------------------------------------------
- #database.py
- #-----------------------------------------------------------------------
+#!/usr/bin/env python
+#-----------------------------------------------------------------------
+#database.py
+#-----------------------------------------------------------------------
 
- import os
- import sys
- import psycopg
- import dotenv
+import os
+import sys
+import psycopg
+import dotenv
+import contextlib
+import time
 
- dotenv.load_dotenv()
- DATABASE_URL = os.environ['DATABASE_URL']
+dotenv.load_dotenv()
+DATABASE_URL = os.environ['DATABASE_URL']
 
- #----------------------------------------------------------------------
+#----------------------------------------------------------------------
 
- def main():
+def main():
     try:
-        with psycopg.connect(DATABASE_URL) as connection:
-            with connection.curser() as cursor:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
                 #-------------------------------------------------------
 
                 cursor.execute('''
                     CREATE TABLE ta (
-                    net_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
+                    ta_netid TEXT NOT NULL,
+                    ta_name TEXT NOT NULL,
                     available BOOLEAN NOT NULL,
-                    available list NOT NULL,
                     PRIMARY KEY (net_id)
                     )
                 ''')
                 cursor.execute('''
                     CREATE TABLE student (
-                    net_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
+                    student_netid TEXT NOT NULL,
+                    student_name TEXT NOT NULL,
                     PRIMARY KEY (net_id)
                     )
                 ''')
@@ -57,36 +58,84 @@
                     ta TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
+                    time_joined TEXT,
                     PRIMARY KEY (net_id)
                     )
                 ''')
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 
 def queue_entry(session):
     """ Method that enters a student's information into the 
     database after entering the queue. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                #-------------------------------------------------------
+                # Create variables for session information
+                student_netid = session['student_netid']
+                student_name = session['student_name']
+                course = session['course']
+                assignment = session['assignment']
+                bug_description = session['bug_description']
 
-    # Create variables for session information
-    student_netid = session['student_netid']
-    student_name = session['student_name']
-    course = session['course']
-    assignment = session['assignment']
-    bug_description = session['bug_description']
+                # Add student to student table
+                cursor.execute('''
+                    INSERT INTO student (student_netid, student_name, time_joined)
+                    VALUES (?, ?)
+                ''', [f'%{student_netid}%', f'%{student_name}%', f'%{time.asctime(time.localtime())}%'])
 
-    # Add student to student table
-    cursor.execute('''
-        INSERT INTO student (student_netid, student_name)
-        VALUES (?, ?)
-    ''', [f'%{student_netid}%', f'%{student_name}%'])
+                # Match student with a TA
+                ta = find_ta(course)
 
-    # Match student with a TA
-    ta = find_ta(course)
+                #get ta info
+                statement_str = """SELECT ta_netid, ta_name 
+                FROM ta
+                WHERE ta_netid = ? 
+                """
+                cursor.execute(statement_str, (f"%{ta}%"))
+                table = cursor.fetchall()
+                ta_name = table[0][1]
 
-    # Add session to the session table
-    cursor.execute('''
-    INSERT INTO session (student_netid, student_name, course, assignment, bug_description, ta)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ''', [f'%{student_netid}%', f'%{student_name}%', f'%{course}%',
-    f'%{assignment}%', f'%{bug_description}%', f'%{ta}'])
+                #find place of student
+                statement_str = """SELECT student_netid
+                FROM student
+                WHERE course = ?
+                ORDER BY time_joined ASC
+                """
+                cursor.execute(statement_str, (f"%{course}%"))
+                table = cursor.fetchall()
+                place = table.index(student_netid)
+
+                # Add session to the session table
+                cursor.execute('''
+                INSERT INTO session (student_netid, student_name, course, assignment, bug_description, ta)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''', [f'%{student_netid}%', f'%{student_name}%', f'%{course}%',
+                f'%{assignment}%', f'%{bug_description}%', f'%{ta}'])
+
+                return ta, place
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+#finding tas that are available and match code, update ta availability
+def find_ta(course):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                statement_str = """SELECT ta_courses.ta_netid, ta.ta_netid, ta.available 
+                FROM ta_courses, ta 
+                WHERE course_code = ? 
+                AND ta_courses.ta_netid = ta.ta_netid
+                AND available = TRUE"""
+                cursor.execute(statement_str, (f"%{course}%"))
+                table = cursor.fetchall()
+                ta = table[0][0]
+                statement_str = "UPDATE ta SET available = False WHERE ta_netid=?"
+                cursor.execute(statement_str, (f"%{ta}%"))
+                return ta
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
 #remove from session, add to session, add student, select ta(course)

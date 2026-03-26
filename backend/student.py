@@ -5,6 +5,7 @@
 """ Flask program that communicates with the Neon database to modify
 queue entries. """
 import flask
+import os
 import database
 import auth
 import dotenv
@@ -24,11 +25,11 @@ auth.init(app)
 #-----------------------------------------------------------------------
 # Student Home Page:
 #-----------------------------------------------------------------------
-@app.route('/', methods={'GET'})
+
 @app.route('/home', methods={'GET'})
 def homepage():
     """ Method that displays the homepage page to students. """
-
+    
     # Send users to the HTML home page
     html_code = flask.render_template('homepage.html')
     response = flask.make_response(html_code)
@@ -38,13 +39,14 @@ def homepage():
 #-----------------------------------------------------------------------
 # Queue Entry Page:
 #-----------------------------------------------------------------------
+@app.route('/', methods={'GET'})
 @app.route('/queueentry', methods={'GET'})
 def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
 
     # Authenticate CAS
-    auth.authenticate()
+    #auth.authenticate()
 
     # Get net id from CAS
     student_netid = auth.get_username()
@@ -71,7 +73,7 @@ def queueentry():
     }
 
     # Sending session info to Neon database
-    database.queue_entry(session)
+    ta, place = database.queue_entry(session)
 
     # Display queue entry page
     html_code = flask.render_template('queueentry.html')
@@ -83,7 +85,7 @@ def queueentry():
 # Queue Status Page:
 #-----------------------------------------------------------------------
 @app.route('/queuestatus', methods={'GET'})
-def queueentry():
+def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
 
@@ -91,7 +93,7 @@ def queueentry():
     bug_description = flask.request.args.get('bug_description')
 
     # Display queue status page
-    html_code = flask.render_template('queuestatus.html', bug_description)
+    html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
     response = flask.make_response(html_code)
 
     return response
@@ -103,9 +105,11 @@ def queueentry():
 def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
-
+    
     # Get the TA the student was matched with
     #### GET TA FROM DATABASE... WE MUST MATCH TA TO STUDENT SOMEWHERE ###
+    course = flask.request.args.get('course')
+    ta = database.find_ta(course)
 
     # Get the user's bug description
     bug_description = flask.request.args.get('bug_description')

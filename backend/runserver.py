@@ -7,7 +7,7 @@ our flask program. """
 
 import sys
 import argparse
-import reg3
+import student
 
 def main():
     parser = argparse.ArgumentParser(description=
@@ -18,7 +18,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        reg3.app.run(host='0.0.0.0', port=args.port, debug=True)
+        student.app.run(host='0.0.0.0', port=args.port, debug=True)
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         sys.exit(1)
