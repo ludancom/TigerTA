@@ -32,7 +32,7 @@ def main():
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS student (
                     student_netid TEXT NOT NULL,
-                    student_name TEXT NOT NULL,
+                    student_name TEXT,
                     PRIMARY KEY (student_netid)
                     )
                 ''')
@@ -55,7 +55,7 @@ def main():
                     CREATE TABLE IF NOT EXISTS session (
                     session_id INTEGER NOT NULL,
                     student_netid TEXT NOT NULL,
-                    ta_netid TEXT NOT NULL,
+                    ta_netid TEXT,
                     course TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
@@ -82,13 +82,14 @@ def queue_entry(session):
                 course = session['course']
                 assignment = session['assignment']
                 bug_description = session['bug_description']
+                session_id = 1
 
                 # Add student to student table
                 cursor.execute('''
                     INSERT INTO student (student_netid, student_name)
                     VALUES (%s, %s)
-                ''', [f'%{student_netid}%', f'%{student_name}%'])
-
+                ''', [student_netid, student_name])
+                
                 # Match student with a TA
                 #ta = find_ta(course)
 
@@ -112,11 +113,11 @@ def queue_entry(session):
                 #place = table.index(student_netid)
 
                 # Add session to the session table
+                #add ta back
                 cursor.execute('''
-                INSERT INTO session (student_netid, course, assignment, bug_description, ta)
+                INSERT INTO session (session_id, student_netid, course, assignment, bug_description) 
                 VALUES (%s, %s, %s, %s, %s)
-                ''', [f'%{student_netid}%', f'%{course}%',
-                f'%{assignment}%', f'%{bug_description}%', f'%{ta}'])
+                ''', [session_id, student_netid, course, assignment, bug_description])
                 connection.commit()
                 #return [place]
     except Exception as ex:

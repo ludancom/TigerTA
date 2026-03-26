@@ -48,7 +48,29 @@ def queueentry():
     # Authenticate CAS
     auth.authenticate()
 
-    # Get net id from CAS
+    # Sending session info to Neon database
+    
+    #place = ta_place[0]
+    #place = ta_place[1]
+
+    # Display queue entry page
+    html_code = flask.render_template('queueentry.html')
+    response = flask.make_response(html_code)
+
+    return response
+
+#-----------------------------------------------------------------------
+# Queue Status Page:
+#-----------------------------------------------------------------------
+@app.route('/queuestatus', methods={'GET'})
+def queuestatus():
+    """ Method that displays the queue status page for students to
+    view their position in the queue and their bug description. """
+    
+    # Get the user's bug description
+    bug_description = flask.request.args.get('bug_description')
+
+        # Get net id from CAS
     student_netid = auth.get_username()
 
     # Get the user's name
@@ -71,28 +93,7 @@ def queueentry():
         'assignment': assignment,
         'bug_description': bug_description
     }
-
-    # Sending session info to Neon database
     database.queue_entry(session)
-    #place = ta_place[0]
-    #place = ta_place[1]
-
-    # Display queue entry page
-    html_code = flask.render_template('queueentry.html')
-    response = flask.make_response(html_code)
-
-    return response
-
-#-----------------------------------------------------------------------
-# Queue Status Page:
-#-----------------------------------------------------------------------
-@app.route('/queuestatus', methods={'GET'})
-def queuestatus():
-    """ Method that displays the queue status page for students to
-    view their position in the queue and their bug description. """
-
-    # Get the user's bug description
-    bug_description = flask.request.args.get('bug_description')
 
     # Display queue status page
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
