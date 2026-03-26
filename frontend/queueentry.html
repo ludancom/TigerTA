@@ -1,28 +1,36 @@
 <!DOCTYPE html>
 <html>
-
+<div class="container">
 <head>
     <title>TigerTA Queue</title>
+    <!-- Link the external CSS file -->
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <h1>To join the queue, please enter the following:</h1>
+    <div class=header><h1>To join the queue, please enter the following:</h1></div>
 
     <form action="/queuestatus" method="get" onsubmit="return validateForm()">
 
         <h2>Select your course</h2>
+        <div class="form-button">
         <label>
             <input type="radio" name="course" value="COS 126" onclick="updateAssignments()" required>
             COS 126
         </label>
+        </div>
+        <div class="form-button">
         <label>
             <input type="radio" name="course" value="COS 226" onclick="updateAssignments()">
             COS 226
         </label>
+        </div>
+        <div class="form-button">
         <label>
             <input type="radio" name="course" value="COS 217" onclick="updateAssignments()">
             COS 217
         </label>
+        </div>
 
         <h2>Select your assignment</h2>
         <select id="assignments" name="assignment"></select>
@@ -108,5 +116,6 @@
 
     {% include 'footer.html' %}
 </body>
+</div>
 
 </html>
