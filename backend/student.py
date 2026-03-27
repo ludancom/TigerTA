@@ -31,6 +31,9 @@ auth.init(app)
 def homepage():
     """ Method that displays the homepage page to students. """
     
+    # Authenticate CAS
+    auth.authenticate()
+
     # Send users to the HTML home page
     html_code = flask.render_template('homepage.html')
     response = flask.make_response(html_code)
@@ -45,15 +48,13 @@ def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
     if flask.request.method == 'POST':
-        # Authenticate CAS
-        auth.authenticate()
 
         # Get net id from CAS
         student_netid = auth.get_username()
 
         # Get the user's name
         #student_name = flask.request.form.get('student_name')
-        student_name = "amelambersaleemaludanmohemeen"
+        student_name = flask.request.form.get('student_name')
 
         # Get the user's course
         course = flask.request.form.get('course')
