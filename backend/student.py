@@ -46,14 +46,15 @@ def homepage():
 def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
+
+    # Authenticate CAS
+    auth.authenticate()
+
+    # Get net id from CAS
+    student_netid = auth.get_username()
+    
     if flask.request.method == 'POST':
-
-        # Authenticate CAS
-        auth.authenticate()
-
-        # Get net id from CAS
-        student_netid = auth.get_username()
-
+        
         # Get the user's name
         #student_name = flask.request.form.get('student_name')
         student_name = flask.request.form.get('student_name')
