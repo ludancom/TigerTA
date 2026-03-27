@@ -67,6 +67,10 @@ def queueentry():
         if bug_description is None:
             bug_description = ''
 
+        # Display queue entry page
+        html_code = flask.render_template('queueentry.html')
+        response = flask.make_response(html_code)
+
         # Set cookies
         response.set_cookie('bug_description', bug_description)
 
@@ -85,10 +89,6 @@ def queueentry():
         #place = ta_place[1]
 
         return  flask.redirect('/queuestatus')
-
-    # Display queue entry page
-    html_code = flask.render_template('queueentry.html')
-    response = flask.make_response(html_code)
 
     return response
 
