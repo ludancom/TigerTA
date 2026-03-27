@@ -12,7 +12,6 @@ body {
 }
 
 .container {
-    flex: 1; 
     width: 80%;
     max-width: 700px;
     margin: 60px auto;
