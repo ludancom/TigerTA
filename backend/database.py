@@ -25,7 +25,6 @@ def main():
                 cursor.execute('DROP TABLE IF EXISTS ta')
                 cursor.execute('DROP TABLE IF EXISTS student')
                 cursor.execute('DROP TABLE IF EXISTS ta_course')
-                cursor.execute('DROP TABLE IF EXISTS assignment')
                 cursor.execute('DROP TABLE IF EXISTS session')
 
                 cursor.execute('''
@@ -48,14 +47,6 @@ def main():
                     ta_netid TEXT NOT NULL,
                     course_code INTEGER,
                     PRIMARY KEY (ta_netid)
-                    )
-                ''')
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS assignment (
-                    assignment_id INTEGER NOT NULL,
-                    course_code INTEGER NOT NULL,
-                    name text,
-                    PRIMARY KEY (assignment_id)
                     )
                 ''')
                 cursor.execute('''
