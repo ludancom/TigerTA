@@ -1,11 +1,18 @@
-body {
+html, body {
+    height: 100%;
     margin: 0;
+}
+
+body {
     font-family: 'League Spartan', sans-serif;
     background-color: #e9d1b5;
     color: #222;
+    display: flex;
+    flex-direction: column;
 }
 
 .container {
+    flex: 1; 
     width: 80%;
     max-width: 700px;
     margin: 60px auto;
@@ -13,7 +20,7 @@ body {
     padding: 30px;
     border-radius: 16px;
     text-align: center;
-    align-items: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
 }
 
 h1 {
@@ -41,6 +48,14 @@ textarea {
     font-size: 16px;
 }
 
+input[type="text"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #2f2373;
+    box-shadow: 0 0 0 2px rgba(47,35,115,0.2);
+}
+
 .course-options label {
     display: block;
     width: 220px;
@@ -50,6 +65,12 @@ textarea {
     border-radius: 25px;
     cursor: pointer;
     font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.course-options label:hover {
+    transform: translateY(-2px);
+    background-color: #dcb8d8;
 }
 
 input[type="submit"],
@@ -64,6 +85,13 @@ input[type="submit"],
     text-decoration: none;
     font-size: 16px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+input[type="submit"]:hover,
+.button-link:hover {
+    background-color: #241a5c;
+    transform: translateY(-2px);
 }
 
 .status-box {
@@ -72,6 +100,7 @@ input[type="submit"],
     background-color: #e6cfe5;
     border-radius: 12px;
     display: inline-block;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .problem-box {
@@ -81,4 +110,12 @@ input[type="submit"],
     border: 1px solid #d8cfc4;
     border-radius: 12px;
     text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.footer {
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    color: #555;
 }
