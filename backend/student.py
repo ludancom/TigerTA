@@ -86,12 +86,12 @@ def queueentry():
         }
 
         # Sending session info to Neon database
-        ta_name = database.queue_entry(session)
-        if ta_name is None:
-            ta_name = ''
+        database.queue_entry(session)
+        #if ta_name is None:
+            #ta_name = ''
 
         # Set ta name cookie
-        response.set_cookie('ta_name', ta_name)
+        #response.set_cookie('ta_name', ta_name)
 
         #place = ta_place[0]
         #place = ta_place[1]
@@ -126,7 +126,7 @@ def insessionstudent():
     their bug description. """
     
     # Getting TA name from cookies
-    ta_name = flask.request.cookies.get('ta_name')
+    #ta_name = flask.request.cookies.get('ta_name')
 
     # Getting bug description from cookies
     bug_description = flask.request.cookies.get('bug_description')

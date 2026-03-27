@@ -98,16 +98,16 @@ def queue_entry(session):
                 ''', [student_netid, student_name])
                 
                 # Match student with a TA
-                ta_netid = find_ta(course)
+                #ta_netid = find_ta(course)
 
                 # Get TA name
-                statement_str = """SELECT ta_name 
-                FROM ta
-                WHERE ta_netid = %s 
-                """
-                cursor.execute(statement_str, (ta_netid))
-                table = cursor.fetchall()
-                ta_name = table[0][0]
+                #statement_str = """SELECT ta_name 
+                #FROM ta
+                #WHERE ta_netid = %s 
+                #"""
+                #cursor.execute(statement_str, (ta_netid))
+                #table = cursor.fetchall()
+                #ta_name = table[0][0]
 
                 #find place of student
                 # statement_str = """SELECT student_netid
@@ -121,13 +121,13 @@ def queue_entry(session):
                 # Add session to the session table
                 #add ta back
                 cursor.execute('''
-                INSERT INTO session (session_id, student_netid, course, assignment, bug_description, ta_netid) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ''', [session_id, student_netid, course, assignment, bug_description, ta_netid])
+                INSERT INTO session (session_id, student_netid, course, assignment, bug_description) 
+                VALUES (%s, %s, %s, %s, %s)
+                ''', [session_id, student_netid, course, assignment, bug_description])
                 connection.commit()
                 
                 #Return TA name so we can display it to users
-                return ta_name
+                #return ta_name
 
     except Exception as ex:
         print("ERROR:", ex)
