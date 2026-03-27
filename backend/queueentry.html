@@ -11,7 +11,8 @@
     <div class=header><h1>To join the queue, please enter the following:</h1></div>
 
     <form action="/queueentry" method="post" onsubmit="return validateForm()">
-
+        <h2>Enter your name</h2>
+        <input type="text" id="student_name" name="student_name" placeholder="Your name" required>
         <h2>Select your course</h2>
         <div class="form-button">
         <label>
@@ -104,9 +105,10 @@
         function validateForm() {
             let course = document.querySelector('input[name="course"]:checked');
             let bugDescription = document.getElementById("bug_description").value.trim();
+            let studentName = document.getElementById("student_name").value.trim();
 
-        if (!course || bugDescription === "") {
-            alert("Please select a course and/or describe your problem before submitting.");
+        if (!course || bugDescription === "" || studentName === "") {
+            alert("Please fill out your name, select a course and/or describe your problem before submitting.");
             return false;
         }
 
