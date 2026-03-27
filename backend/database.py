@@ -9,6 +9,7 @@ import psycopg
 import dotenv
 import contextlib
 import time
+import random
 
 dotenv.load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -88,7 +89,7 @@ def queue_entry(session):
                 course = session['course']
                 assignment = session['assignment']
                 bug_description = session['bug_description']
-                session_id = 1
+                session_id = random.randint(1, 9999)
 
                 # Add student to student table
                 cursor.execute('''
