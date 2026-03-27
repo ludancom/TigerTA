@@ -98,17 +98,16 @@ def queue_entry(session):
                 ''', [student_netid, student_name])
                 
                 # Match student with a TA
-                ta = find_ta(course)
+                ta_netid = find_ta(course)
 
-                # get ta info
-                statement_str = """SELECT ta_netid, ta_name 
+                # Get TA name
+                statement_str = """SELECT ta_name 
                 FROM ta
-                WHERE ta_netid = ? 
+                WHERE ta_netid = %s 
                 """
-                cursor.execute(statement_str, (f"%{ta}%"))
+                cursor.execute(statement_str, (ta_netid))
                 table = cursor.fetchall()
-                ta_name = table[0][1]
-                ta_netid = table[0][0]
+                ta_name = table[0][0]
 
                 #find place of student
                 # statement_str = """SELECT student_netid
@@ -138,19 +137,20 @@ def find_ta(course):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                statement_str = """SELECT ta_courses.ta_netid, ta.ta_netid, ta.available 
+                statement_str = """SELECT ta.ta_netid
                 FROM ta_courses, ta 
-                WHERE course_code = %s
+                WHERE ta_courses.course_code = %s
                 AND ta_courses.ta_netid = ta.ta_netid
-                AND available = TRUE"""
+                AND ta.available = TRUE"""
                 cursor.execute(statement_str, (course))
                 table = cursor.fetchall()
-                ta = table[0][0]
-                statement_str = "UPDATE ta SET available = False WHERE ta_netid=%s"
-                cursor.execute(statement_str, (ta))
+                ta_netid = table[0][0]
+                statement_str = """UPDATE ta SET available = FALSE
+                WHERE ta_netid=%s"""
+                cursor.execute(statement_str, (ta_netid))
 
                 connection.commit()
-                return ta
+                return ta_netid
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
