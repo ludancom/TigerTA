@@ -1,0 +1,84 @@
+body {
+    margin: 0;
+    font-family: 'League Spartan', sans-serif;
+    background-color: #e9d1b5;
+    color: #222;
+}
+
+.container {
+    width: 80%;
+    max-width: 700px;
+    margin: 60px auto;
+    background-color: #fffaf5;
+    padding: 30px;
+    border-radius: 16px;
+    text-align: center;
+    align-items: center;
+}
+
+h1 {
+    color: #2f2373;
+    margin-bottom: 15px;
+}
+
+h2 {
+    color: #6b124d;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+input[type="text"],
+select,
+textarea {
+    width: 90%;
+    max-width: 500px;
+    padding: 12px;
+    margin: 10px auto;
+    display: block;
+    border: 1px solid #d8cfc4;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+.course-options label {
+    display: block;
+    width: 220px;
+    margin: 10px auto;
+    padding: 12px;
+    background-color: #e6cfe5;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+input[type="submit"],
+.button-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 24px;
+    background-color: #2f2373;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    text-decoration: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.status-box {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #e6cfe5;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.problem-box {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: white;
+    border: 1px solid #d8cfc4;
+    border-radius: 12px;
+    text-align: center;
+}

@@ -1,57 +1,60 @@
 <!DOCTYPE html>
 <html>
-<div class="container">
 <head>
     <title>TigerTA Queue</title>
-    <!-- Link the external CSS file -->
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
 </head>
-
 <body>
-    <div class=header><h1>To join the queue, please enter the following:</h1></div>
+    <div class="container">
+        <h1>To join the queue, please enter the following:</h1>
 
-    <form action="/queueentry" method="post" onsubmit="return validateForm()">
-        <h2>Enter your name</h2>
-        <input type="text" id="student_name" name="student_name" placeholder="Your name" required>
-        <h2>Select your course</h2>
-        <div class="form-button">
-        <label>
-            <input type="radio" name="course" value="COS 126" onclick="updateAssignments()" required>
-            COS 126
-        </label>
-        </div>
-        <div class="form-button">
-        <label>
-            <input type="radio" name="course" value="COS 226" onclick="updateAssignments()">
-            COS 226
-        </label>
-        </div>
-        <div class="form-button">
-        <label>
-            <input type="radio" name="course" value="COS 217" onclick="updateAssignments()">
-            COS 217
-        </label>
-        </div>
+        <form action="/queueentry" method="post" onsubmit="return validateForm()">
+            <h2>Enter your name</h2>
+            <input type="text" id="student_name" name="student_name" placeholder="Your name" required>
 
-        <h2>Select your assignment</h2>
-        <select id="assignments" name="assignment"></select>
+            <h2>Select your course</h2>
+            <div class="course-options">
+                <label>
+                    <input type="radio" name="course" value="COS 126" onclick="updateAssignments()" required>
+                    COS 126
+                </label>
 
-        <h2>Describe your problem</h2>
-        <textarea id="bug_description" name="bug_description" rows="5" cols="50" required></textarea>
+                <label>
+                    <input type="radio" name="course" value="COS 226" onclick="updateAssignments()">
+                    COS 226
+                </label>
 
-        <br>
-        <br>
-        <input type="submit" value="Join Queue">
-    </form>
+                <label>
+                    <input type="radio" name="course" value="COS 217" onclick="updateAssignments()">
+                    COS 217
+                </label>
+            </div>
+
+            <h2>Select your assignment</h2>
+            <select id="assignments" name="assignment" required>
+                <option value="">Choose an assignment</option>
+            </select>
+
+            <h2>Describe your problem</h2>
+            <textarea id="bug_description" name="bug_description" required></textarea>
+
+            <input type="submit" value="Join Queue">
+        </form>
+    </div>
 
     <script>
         function updateAssignments() {
-            let course = document.querySelector(
-                'input[name="course"]:checked').value;
+            let selectedCourse = document.querySelector('input[name="course"]:checked');
             let dropdown = document.getElementById("assignments");
 
-            dropdown.innerHTML = "";
+            dropdown.innerHTML = '<option value="">Choose an assignment</option>';
 
+            if (!selectedCourse) return;
+
+            let course = selectedCourse.value;
             let options = [];
 
             if (course === "COS 126") {
@@ -67,8 +70,7 @@
                     ["a8", "8. Chat126"],
                     ["a9", "9. Hamming Codes in TOY"]
                 ];
-            }
-            else if (course === "COS 226") {
+            } else if (course === "COS 226") {
                 options = [
                     ["a1", "1. Percolation"],
                     ["a2", "2. Queues"],
@@ -77,13 +79,11 @@
                     ["a5", "5. WordNet"],
                     ["a6", "6. Seam Carving"],
                     ["a7", "7. Fraud Detection"]
-
                 ];
-            }
-            else if (course === "COS 217") {
+            } else if (course === "COS 217") {
                 options = [
                     ["a0", "0. Introductory Survey"],
-                    ["a1", '1. A "De-Comment" Program'],
+                    ["a1", "1. A De-Comment Program"],
                     ["a2", "2. A String Module and Client"],
                     ["a3", "3. A Symbol Table Module"],
                     ["a4", "4. Directory and File Trees"],
@@ -99,25 +99,20 @@
                 dropdown.appendChild(option);
             }
         }
-    </script>
 
-    <script>
         function validateForm() {
             let course = document.querySelector('input[name="course"]:checked');
-            let bugDescription = document.getElementById("bug_description").value.trim();
             let studentName = document.getElementById("student_name").value.trim();
+            let assignment = document.getElementById("assignments").value;
+            let bugDescription = document.getElementById("bug_description").value.trim();
 
-        if (!course || bugDescription === "" || studentName === "") {
-            alert("Please fill out your name, select a course and/or describe your problem before submitting.");
-            return false;
+            if (!studentName || !course || !assignment || !bugDescription) {
+                alert("Please fill out all fields before submitting.");
+                return false;
+            }
+            return true;
         }
-
-        return true;
-    }
-</script>
-
+    </script>
     {% include 'footer.html' %}
 </body>
-</div>
-
 </html>

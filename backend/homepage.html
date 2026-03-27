@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <!--Browser title-->
-        <title>
-            TigerTA
-        </title>
-    </head>
-    <body>
+<head>
+    <title>TigerTA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
         <h1>Welcome to TigerTA!</h1>
-
-         <!--Log in button -->
-        <a href="/queueentry">Click Here to Log In</a>
-
-    </body>
+        <a href="/queueentry" class="button-link">Click Here to Log In</a>
+    </div>
+    {% include 'footer.html' %}
+</body>
 </html>

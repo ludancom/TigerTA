@@ -1,23 +1,30 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <!--Browser title-->
-        <title>
-            TigerTA Queue
-        </title>
-    </head>
-    <body>
-        <div class="header"><h1>You are number {{queuenumber}} in line!</h1></div>
-        <br>
+<head>
+    <title>TigerTA Queue Status</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>You are number {{ queuenumber }} in line!</h1>
 
-        <p>Thanks for joining the queue! You will receive an email notification
-            when you are next in the queue and when it is your turn. If you are 
-            working with a partner, only one person should join the queue.</p>
+        <p>
+            Thanks for joining the queue! You will receive an email notification when you are next in the queue and when it is your turn.
+            If you are working with a partner, only one person should join the queue.
+        </p>
 
-        
+        <div class="status-box">
+            <strong>Available TAs:</strong> 6
+        </div>
 
-        <p><b>Your problem: </b> {{bug_description}} </p>
-
-    </body>
+        <div class="problem-box">
+            <strong>Your problem:</strong>
+            <p>{{ bug_description }}</p>
+        </div>
+    </div>
+    {% include 'footer.html' %}
+</body>
 </html>
-

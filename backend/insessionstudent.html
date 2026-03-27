@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <!--Browser title-->
-        <title>
-            TigerTA Session
-        </title>
-    </head>
-    <body>
-        <h1>You have been matched to a TA!</h1>
-    
-        <h2> TA: {{matched-ta}}</h2>
+<head>
+    <title>TigerTA Session</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>You have been matched with a TA!</h1>
+        <h2>TA: {{ matched_ta }}</h2>
 
-        <p><b>Your problem: </b> {{user-problem}} </p>
-
-    </body>
+        <div class="problem-box">
+            <strong>Your problem:</strong>
+            <p>{{ user_problem }}</p>
+        </div>
+    </div>
+    {% include 'footer.html' %}
+</body>
 </html>
