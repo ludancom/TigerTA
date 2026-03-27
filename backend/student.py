@@ -87,7 +87,8 @@ def queueentry():
 
         # Sending session info to Neon database
         ta_name = database.queue_entry(session)
-        print(ta_name)
+        if ta_name is None:
+            ta_name = ''
 
         # Set ta name cookie
         response.set_cookie('ta_name', ta_name)
