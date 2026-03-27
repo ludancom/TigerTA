@@ -87,7 +87,6 @@ def queue_entry(session):
                 course = session['course']
                 assignment = session['assignment']
                 bug_description = session['bug_description']
-                session_id = 1
 
                 # Add student to student table
                 cursor.execute('''
