@@ -64,6 +64,8 @@ def queueentry():
 
         # Get the user's bug description
         bug_description = flask.request.form.get('bug_description')
+        if bug_description is None:
+            bug_description = ''
 
         # Create the list of session information
         session = {
