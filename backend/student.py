@@ -68,8 +68,7 @@ def queueentry():
             bug_description = ''
 
         # Display queue entry page
-        html_code = flask.render_template('queueentry.html')
-        response = flask.make_response(html_code)
+        response = flask.redirect('/queuestatus')
 
         # Set cookies
         response.set_cookie('bug_description', bug_description)
@@ -88,9 +87,9 @@ def queueentry():
         #place = ta_place[0]
         #place = ta_place[1]
 
-        return  flask.redirect('/queuestatus')
+        return response
 
-    return response
+    return flask.render_template('queueentry.html')
 
 #-----------------------------------------------------------------------
 # Queue Status Page:
