@@ -16,7 +16,12 @@ dotenv.load_dotenv()
 _APP_SECRET_KEY = os.getenv('APP_SECRET_KEY')
 
 #-----------------------------------------------------------------------
-app = flask.Flask(__name__, template_folder='.', static_folder='.')
+app = flask.Flask(
+    __name__,
+    template_folder='.',
+    static_folder='.',
+    static_url_path='/static'
+)
 
 app.secret_key = _APP_SECRET_KEY
 auth.init(app)
