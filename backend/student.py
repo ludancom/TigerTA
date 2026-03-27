@@ -86,7 +86,7 @@ def queueentry():
     response = flask.make_response(html_code)
 
     # Set cookies
-    response.set_cookie('bug_description', beg_description)
+    response.set_cookie('bug_description', bug_description)
 
     return response
 
