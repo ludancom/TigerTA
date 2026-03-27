@@ -59,13 +59,14 @@ def main():
                 ''')
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS session (
-                    session_id SERIAL PRIMARY KEY,
+                    session_id INTEGER NOT NULL,
                     student_netid TEXT NOT NULL,
                     ta_netid TEXT,
                     course TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
-                    time_joined TEXT
+                    time_joined TEXT,
+                    PRIMARY KEY (session_id)
                     )
                 ''')
 
