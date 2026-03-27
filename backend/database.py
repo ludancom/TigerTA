@@ -98,38 +98,40 @@ def queue_entry(session):
                 ''', [student_netid, student_name])
                 
                 # Match student with a TA
-                #ta = find_ta(course)
+                ta = find_ta(course)
 
-                #get ta info
-                #statement_str = """SELECT ta_netid, ta_name 
-                #FROM ta
-                #WHERE ta_netid = ? 
-                #"""
-                #cursor.execute(statement_str, (f"%{ta}%"))
-                #table = cursor.fetchall()
-                #ta_name = table[0][1]
+                # get ta info
+                statement_str = """SELECT ta_netid, ta_name 
+                FROM ta
+                WHERE ta_netid = ? 
+                """
+                cursor.execute(statement_str, (f"%{ta}%"))
+                table = cursor.fetchall()
+                ta_name = table[0][1]
+                ta_netid = table[0][0]
 
                 #find place of student
-                #statement_str = """SELECT student_netid
-                #FROM student
+                # statement_str = """SELECT student_netid
+                # FROM student
                 #WHERE course = ?
                 #ORDER BY time_joined ASC
                 #"""
                 #cursor.execute(statement_str, (f"%{course}%"))
                 #table = cursor.fetchall()
-                #place = table.index(student_netid)
 
                 # Add session to the session table
                 #add ta back
                 cursor.execute('''
-                INSERT INTO session (session_id, student_netid, course, assignment, bug_description) 
-                VALUES (%s, %s, %s, %s, %s)
-                ''', [session_id, student_netid, course, assignment, bug_description])
+                INSERT INTO session (session_id, student_netid, course, assignment, bug_description, ta_netid) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ''', [session_id, student_netid, course, assignment, bug_description, ta_netid])
                 connection.commit()
-                #return [place]
+                
+                #Return TA name so we can display it to users
+                return ta_name
+
     except Exception as ex:
         print("ERROR:", ex)
-        raise
 
 #finding tas that are available and match code, update ta availability
 def find_ta(course):
@@ -149,6 +151,7 @@ def find_ta(course):
 
                 connection.commit()
                 return ta
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 

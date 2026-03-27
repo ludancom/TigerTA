@@ -86,7 +86,11 @@ def queueentry():
         }
 
         # Sending session info to Neon database
-        database.queue_entry(session)
+        ta_name = database.queue_entry(session)
+
+        # Set ta name cookie
+        response.set_cookie('ta_name', ta_name)
+
         #place = ta_place[0]
         #place = ta_place[1]
 
@@ -102,11 +106,11 @@ def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
 
-    # Getting previous searches from cookies
+    # Getting bug description from cookies
     bug_description = flask.request.cookies.get('bug_description')
 
     # Display queue status page
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
+    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, ta_name = ta_name)
     response = flask.make_response(html_code)
 
     return response
@@ -119,16 +123,14 @@ def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
     
-    # Get the TA the student was matched with
-    #### GET TA FROM DATABASE... WE MUST MATCH TA TO STUDENT SOMEWHERE ###
-    course = flask.request.form.get('course')
-    ta = database.find_ta(course)
+    # Getting TA name from cookies
+    ta_name = flask.request.cookies.get('ta_name')
 
-    # Get the user's bug description
-    bug_description = flask.request.form.get('bug_description')
+    # Getting bug description from cookies
+    bug_description = flask.request.cookies.get('bug_description')
 
     # Display queue status page
-    html_code = flask.render_template('queuestatus.html', bug_description, ta)
+    html_code = flask.render_template('queuestatus.html', bug_description, ta_name)
     response = flask.make_response(html_code)
     
     return response
