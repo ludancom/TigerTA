@@ -26,6 +26,7 @@ auth.init(app)
 # Student Home Page:
 #-----------------------------------------------------------------------
 
+@app.route('/', methods={'GET'})
 @app.route('/home', methods={'GET'})
 def homepage():
     """ Method that displays the homepage page to students. """
@@ -39,7 +40,6 @@ def homepage():
 #-----------------------------------------------------------------------
 # Queue Entry Page:
 #-----------------------------------------------------------------------
-@app.route('/', methods={'GET'})
 @app.route('/queueentry', methods=['GET', 'POST'])
 def queueentry():
     """ Method that displays the queue entry page for students to
