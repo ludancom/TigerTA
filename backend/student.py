@@ -67,6 +67,9 @@ def queueentry():
         if bug_description is None:
             bug_description = ''
 
+        # Set cookies
+        response.set_cookie('bug_description', bug_description)
+
         # Create the list of session information
         session = {
             'student_netid': student_netid,
@@ -86,9 +89,6 @@ def queueentry():
     # Display queue entry page
     html_code = flask.render_template('queueentry.html')
     response = flask.make_response(html_code)
-
-    # Set cookies
-    response.set_cookie('bug_description', bug_description)
 
     return response
 
