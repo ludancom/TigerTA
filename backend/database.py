@@ -140,14 +140,14 @@ def find_ta(course):
             with contextlib.closing(connection.cursor()) as cursor:
                 statement_str = """SELECT ta_courses.ta_netid, ta.ta_netid, ta.available 
                 FROM ta_courses, ta 
-                WHERE course_code = ? 
+                WHERE course_code = %s
                 AND ta_courses.ta_netid = ta.ta_netid
                 AND available = TRUE"""
-                cursor.execute(statement_str, (f"%{course}%"))
+                cursor.execute(statement_str, (course))
                 table = cursor.fetchall()
                 ta = table[0][0]
-                statement_str = "UPDATE ta SET available = False WHERE ta_netid=?"
-                cursor.execute(statement_str, (f"%{ta}%"))
+                statement_str = "UPDATE ta SET available = False WHERE ta_netid=%s"
+                cursor.execute(statement_str, (ta))
 
                 connection.commit()
                 return ta
