@@ -30,7 +30,7 @@ auth.init(app)
 @app.route('/home', methods={'GET'})
 def homepage():
     """ Method that displays the homepage page to students. """
-    
+
     # Authenticate CAS
     auth.authenticate()
 
@@ -85,6 +85,9 @@ def queueentry():
     html_code = flask.render_template('queueentry.html')
     response = flask.make_response(html_code)
 
+    # Set cookies
+    response.set_cookie('bug_description', beg_description)
+
     return response
 
 #-----------------------------------------------------------------------
@@ -95,8 +98,8 @@ def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
 
-    # Get the user's bug description
-    bug_description = flask.request.args.get('bug_description')
+    # Getting previous searches from cookies
+    bug_description = flask.request.cookies.get('bug_description')
 
     # Display queue status page
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
