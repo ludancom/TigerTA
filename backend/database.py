@@ -99,20 +99,21 @@ def queue_entry(session):
         print("ERROR:", ex)
 
 # Find student place in queue 
-#def find_student_place():
-    #try:
-        #with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            #with contextlib.closing(connection.cursor()) as cursor: 
-                # Find place of student
-                # statement_str = """SELECT student_netid
-                # FROM student
-                #WHERE course = ?
-                #ORDER BY time_joined ASC
-                #"""
-                #cursor.execute(statement_str, (f"%{course}%"))
-                #table = cursor.fetchall()
-    #except Exception as ex:
-        #print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+def find_student_place():
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor: 
+                Find place of student
+                statement_str = """SELECT student_netid, 
+                ROW_NUMBER() OVER (ORDER BY session_id DESC) AS row_num
+                FROM student
+                WHERE course = %s
+                """
+                cursor.execute(statement_str, (course,))
+                table = cursor.fetchall()
+                return tab
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 # Find name of the matched TA 
 def find_ta_name(course, student_netid):
