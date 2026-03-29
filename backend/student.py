@@ -61,7 +61,6 @@ def queueentry():
     if flask.request.method == 'POST':
         
         # Get the user's name
-        #student_name = flask.request.form.get('student_name')
         student_name = flask.request.form.get('student_name')
 
         # Get the user's course
@@ -92,11 +91,15 @@ def queueentry():
 
         # Sending session info to Neon database
         database.queue_entry(session)
-        #if ta_name is None:
-            #ta_name = ''
 
+        # Get the matched TA's name
+        ta_name = database.find_ta_name(session)
+        if ta_name is None:
+            ta_name = ''
+        # Checking if works, should return to server
+        print("TA NAME RETURNED:", ta_name)
         # Set ta name cookie
-        #response.set_cookie('ta_name', ta_name)
+        response.set_cookie('ta_name', ta_name)
 
         #place = ta_place[0]
         #place = ta_place[1]
@@ -131,7 +134,7 @@ def insessionstudent():
     their bug description. """
     
     # Getting TA name from cookies
-    #ta_name = flask.request.cookies.get('ta_name')
+    ta_name = flask.request.cookies.get('ta_name')
 
     # Getting bug description from cookies
     bug_description = flask.request.cookies.get('bug_description')

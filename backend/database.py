@@ -24,7 +24,7 @@ def main():
 
                 cursor.execute('DROP TABLE IF EXISTS ta')
                 cursor.execute('DROP TABLE IF EXISTS student')
-                cursor.execute('DROP TABLE IF EXISTS ta_course')
+                cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
 
                 cursor.execute('''
@@ -43,9 +43,9 @@ def main():
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS ta_course (
+                    CREATE TABLE IF NOT EXISTS ta_courses (
                     ta_netid TEXT NOT NULL,
-                    course_code INTEGER,
+                    course TEXT NOT NULL,
                     PRIMARY KEY (ta_netid)
                     )
                 ''')
@@ -87,20 +87,8 @@ def queue_entry(session):
                     INSERT INTO student (student_netid, student_name)
                     VALUES (%s, %s)
                 ''', [student_netid, student_name])
-                
-                # Match student with a TA
-                #ta_netid = find_ta(course)
 
-                # Get TA name
-                #statement_str = """SELECT ta_name 
-                #FROM ta
-                #WHERE ta_netid = %s 
-                #"""
-                #cursor.execute(statement_str, (ta_netid))
-                #table = cursor.fetchall()
-                #ta_name = table[0][0]
-
-                #find place of student
+                # Find place of student
                 # statement_str = """SELECT student_netid
                 # FROM student
                 #WHERE course = ?
@@ -109,36 +97,56 @@ def queue_entry(session):
                 #cursor.execute(statement_str, (f"%{course}%"))
                 #table = cursor.fetchall()
 
-                # Add session to the session table
-                #add ta back
+                # Add session to session table
+                # Add TA back
                 cursor.execute('''
                 INSERT INTO session (session_id, student_netid, course, assignment, bug_description) 
                 VALUES (%s, %s, %s, %s, %s)
                 ''', [session_id, student_netid, course, assignment, bug_description])
                 connection.commit()
-                
-                #Return TA name so we can display it to users
-                #return ta_name
 
     except Exception as ex:
         print("ERROR:", ex)
 
-#finding tas that are available and match code, update ta availability
-def find_ta(course):
+# Find name of the matched TA 
+def find_ta_name(session):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor: 
+                # Match student with a TA
+                course = session['course']
+                ta_netid = find_ta_netid(course)
+
+                # Get TA name
+                statement_str = """SELECT ta_name 
+                FROM ta
+                WHERE ta_netid = %s 
+                """
+                cursor.execute(statement_str, (ta_netid, ))
+                table = cursor.fetchall()
+                ta_name = table[0][0]
+
+                # Return TA name to display to users
+                return ta_name
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+# Find netid of a TA that is available and teaches course, update TA availability
+def find_ta_netid(course):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 statement_str = """SELECT ta.ta_netid
-                FROM ta_courses, ta 
-                WHERE ta_courses.course_code = %s
+                FROM ta, ta_courses
+                WHERE ta_courses.course = %s
                 AND ta_courses.ta_netid = ta.ta_netid
                 AND ta.available = TRUE"""
-                cursor.execute(statement_str, (course))
+                cursor.execute(statement_str, (course,))
                 table = cursor.fetchall()
                 ta_netid = table[0][0]
                 statement_str = """UPDATE ta SET available = FALSE
                 WHERE ta_netid=%s"""
-                cursor.execute(statement_str, (ta_netid))
+                cursor.execute(statement_str, (ta_netid,))
 
                 connection.commit()
                 return ta_netid
@@ -146,7 +154,7 @@ def find_ta(course):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
-#remove from session, add to session, add student, select ta(course)
+# Remove from session, add to session, add student, select TA(course)
 
 if __name__ == '__main__':
     main()
