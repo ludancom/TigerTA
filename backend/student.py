@@ -117,24 +117,31 @@ def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
 
-    # Get the user's net id from CAS
-    student_netid = auth.get_username()
-
     # Get cookies
     bug_description = flask.request.cookies.get('bug_description')
-    course = flask.request.cookies.get('course')
 
     # Continue displaying queue status page if user does not match with TA
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
     response = flask.make_response(html_code)
 
-    # Display in session page if user matches with TA
+    return response
+
+#-----------------------------------------------------------------------
+# Match Attempt (For Queue Status Page):
+#-----------------------------------------------------------------------
+@app.route('/trymatch', methods={'GET'})
+def trymatch():
+    # Get cookies
+    student_netid = auth.get_username()
+    course = flask.request.cookies.get('course')
+
+    # If TA is found, Queue Status page will redirect to In Session page
     ta_name = database.find_ta_name(course, student_netid)
     if ta_name:
-        response = flask.redirect('/insessionstudent')
-        response.set_cookie('ta_name', ta_name)
-
-    return response
+    # Javascript Object Format
+        return {"matched": True}
+    else:
+        return {"matched": False}
 
 #-----------------------------------------------------------------------
 # In Session Page:
