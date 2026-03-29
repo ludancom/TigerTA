@@ -96,8 +96,7 @@ def queueentry():
         ta_name = database.find_ta_name(session)
         if ta_name is None:
             ta_name = ''
-        # Checking if works, should return to server
-        print("TA NAME RETURNED:", ta_name)
+ 
         # Set ta name cookie
         response.set_cookie('ta_name', ta_name)
 
@@ -123,6 +122,13 @@ def queuestatus():
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
     response = flask.make_response(html_code)
 
+    # Display in session page if student matches with TA
+    ta_name = flask.request.cookies.get('ta_name')
+    if ta_name:
+        response = flask.redirect('/insessionstudent')
+    else: 
+        response = flask.render_template('queuestatus.html', bug_description = bug_description)
+
     return response
 
 #-----------------------------------------------------------------------
@@ -140,7 +146,7 @@ def insessionstudent():
     bug_description = flask.request.cookies.get('bug_description')
 
     # Display queue status page
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, ta_name = ta_name)
+    html_code = flask.render_template('insessionstudent.html', bug_description = bug_description, ta_name = ta_name)
     response = flask.make_response(html_code)
     
     return response

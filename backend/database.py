@@ -51,7 +51,7 @@ def main():
                 ''')
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS session (
-                    session_id INTEGER NOT NULL,
+                    session_id BIGSERIAL,
                     student_netid TEXT NOT NULL,
                     ta_netid TEXT,
                     course TEXT NOT NULL,
@@ -80,7 +80,6 @@ def queue_entry(session):
                 course = session['course']
                 assignment = session['assignment']
                 bug_description = session['bug_description']
-                session_id = random.randint(1, 9999)
 
                 # Add student to student table
                 cursor.execute('''
@@ -91,9 +90,9 @@ def queue_entry(session):
                 # Add session to session table (TA will be added later once matched)
                 # Add TA back
                 cursor.execute('''
-                INSERT INTO session (session_id, student_netid, course, assignment, bug_description) 
-                VALUES (%s, %s, %s, %s, %s)
-                ''', [session_id, student_netid, course, assignment, bug_description])
+                INSERT INTO session (student_netid, course, assignment, bug_description) 
+                VALUES (%s, %s, %s, %s)
+                ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
     except Exception as ex:

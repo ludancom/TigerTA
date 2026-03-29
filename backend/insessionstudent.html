@@ -9,12 +9,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>You have been matched with a TA!</h1>
-        <h2>TA: {{ matched_ta }}</h2>
+        <h1>You have been matched with a TA! </h1>
+        <h3> Your TA will come to you. </h3>
+        <h2>TA: {{ ta_name }}</h2>
 
         <div class="problem-box">
             <strong>Your problem:</strong>
-            <p>{{ user_problem }}</p>
+            <p>{{ bug_description }}</p>
         </div>
     </div>
     {% include 'footer.html' %}
