@@ -74,12 +74,6 @@ def queueentry():
         if bug_description is None:
             bug_description = ''
 
-        # Display queue entry page
-        response = flask.redirect('/queuestatus')
-
-        # Set cookies
-        response.set_cookie('bug_description', bug_description)
-
         # Create the list of session information
         session = {
             'student_netid': student_netid,
@@ -92,13 +86,21 @@ def queueentry():
         # Sending session info to Neon database
         database.queue_entry(session)
 
-        # Get the matched TA's name
-        ta_name = database.find_ta_name(session)
-        if ta_name is None:
-            ta_name = ''
- 
-        # Set ta name cookie
-        response.set_cookie('ta_name', ta_name)
+        # Try to match student with TA.
+        ta_name = database.find_ta_name(course, student_netid)
+        # If match is successful
+        if ta_name:
+            # Display in session page
+            response = flask.redirect('/insessionstudent')
+            # Set TA name cookie
+            response.set_cookie('ta_name', ta_name)
+        else: 
+            # Display queue entry page
+            response = flask.redirect('/queuestatus')
+
+        # Set cookies
+        response.set_cookie('bug_description', bug_description)
+        response.set_cookie('course', course)
 
         #place = ta_place[0]
         #place = ta_place[1]
@@ -115,19 +117,21 @@ def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
 
-    # Getting bug description from cookies
+    # Get net id from CAS
+    student_netid = auth.get_username()
+    # Get cookies
     bug_description = flask.request.cookies.get('bug_description')
+    course = flask.request.cookies.get('course')
 
     # Display queue status page
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
     response = flask.make_response(html_code)
 
-    # Display in session page if student matches with TA
-    ta_name = flask.request.cookies.get('ta_name')
+    # Display in session page if user matches with TA
+    ta_name = database.find_ta_name(course, student_netid)
     if ta_name:
         response = flask.redirect('/insessionstudent')
-    else: 
-        response = flask.render_template('queuestatus.html', bug_description = bug_description)
+        response.set_cookie('ta_name', ta_name)
 
     return response
 

@@ -115,12 +115,12 @@ def queue_entry(session):
         #print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 # Find name of the matched TA 
-def find_ta_name(session):
+def find_ta_name(course, student_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 # Match student with a TA
-                ta_netid = find_ta_netid(session)
+                ta_netid = find_ta_netid(course, student_netid)
 
                 # Get TA name
                 statement_str = """SELECT ta_name 
@@ -137,14 +137,10 @@ def find_ta_name(session):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 # Find netid of a TA that is available and teaches course, update TA availability
-def find_ta_netid(session):
+def find_ta_netid(course, student_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Get student's course and netid
-                course = session['course']
-                student_netid = session['student_netid']
-
                 # Get TA netid
                 statement_str = """SELECT ta.ta_netid
                 FROM ta, ta_courses
