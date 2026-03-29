@@ -1,6 +1,5 @@
 #-----------------------------------------------------------------------
-# student.py
-# Authors: Amel Osman
+# ta.py
 #-----------------------------------------------------------------------
 """ Flask program that communicates with the Neon database to modify
 queue entries. """
@@ -28,16 +27,31 @@ auth.init(app)
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
-# Student Home Page:
+# TA Home Page:
 #-----------------------------------------------------------------------
 
 @app.route('/', methods={'GET'})
 @app.route('/home', methods={'GET'})
 def homepage():
-    """ Method that displays the homepage page to students. """
+    """ Method that displays the homepage page to TAs. """
 
     # Send users to the HTML home page
     html_code = flask.render_template('homepage.html')
+    response = flask.make_response(html_code)
+
+    return response
+
+#-----------------------------------------------------------------------
+# Role Selection Page:
+#-----------------------------------------------------------------------
+
+@app.route('/roleselection', methods={'GET', 'POST'})
+def homepage():
+    """ Method that displays the option for TAs to either be a TA or
+    a student for their session. """
+
+    # Send users to the HTML home page
+    html_code = flask.render_template('roleselection.html')
     response = flask.make_response(html_code)
 
     return response
@@ -99,6 +113,9 @@ def queueentry():
         # Set cookies
         response.set_cookie('bug_description', bug_description)
         response.set_cookie('course', course)
+
+        #place = ta_place[0]
+        #place = ta_place[1]
 
         return response
 
