@@ -55,7 +55,7 @@ def queueentry():
     # Authenticate CAS
     auth.authenticate()
 
-    # Get net id from CAS
+    # Get the user's net id from CAS
     student_netid = auth.get_username()
     
     if flask.request.method == 'POST':
@@ -83,10 +83,10 @@ def queueentry():
             'bug_description': bug_description
         }
 
-        # Sending session info to Neon database
+        # Send session info to Neon database
         database.queue_entry(session)
 
-        # Try to match student with TA.
+        # Try to match student with TA
         ta_name = database.find_ta_name(course, student_netid)
         # If match is successful
         if ta_name:
@@ -95,7 +95,7 @@ def queueentry():
             # Set TA name cookie
             response.set_cookie('ta_name', ta_name)
         else: 
-            # Display queue entry page
+            # Otherwise, display queue entry page
             response = flask.redirect('/queuestatus')
 
         # Set cookies
@@ -117,13 +117,14 @@ def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
 
-    # Get net id from CAS
+    # Get the user's net id from CAS
     student_netid = auth.get_username()
+
     # Get cookies
     bug_description = flask.request.cookies.get('bug_description')
     course = flask.request.cookies.get('course')
 
-    # Display queue status page
+    # Continue displaying queue status page if user does not match with TA
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
     response = flask.make_response(html_code)
 
@@ -143,10 +144,8 @@ def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
     
-    # Getting TA name from cookies
+    # Get cookies
     ta_name = flask.request.cookies.get('ta_name')
-
-    # Getting bug description from cookies
     bug_description = flask.request.cookies.get('bug_description')
 
     # Display queue status page

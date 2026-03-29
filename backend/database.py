@@ -81,13 +81,13 @@ def queue_entry(session):
                 assignment = session['assignment']
                 bug_description = session['bug_description']
 
-                # Add student to student table
+                # Add this student to student table
                 cursor.execute('''
                     INSERT INTO student (student_netid, student_name)
                     VALUES (%s, %s)
                 ''', [student_netid, student_name])
 
-                # Add session to session table (TA will be added later once matched)
+                # Add this session to session table (TA will be added later once matched)
                 # Add TA back
                 cursor.execute('''
                 INSERT INTO session (student_netid, course, assignment, bug_description) 
