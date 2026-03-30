@@ -99,7 +99,7 @@ def queue_entry(session):
         print("ERROR:", ex)
 
 # Find student place in queue 
-def find_student_place(student_netid):
+def find_student_place(student_netid, course):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
@@ -117,7 +117,7 @@ def find_student_place(student_netid):
                 cursor.execute(statement_str, (course, student_netid))
                 table = cursor.fetchone()
                 
-                return 9
+                return table[0]
 
 
     except Exception as ex:
