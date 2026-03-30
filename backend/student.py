@@ -115,8 +115,11 @@ def queuestatus():
     # Get cookies
     bug_description = flask.request.cookies.get('bug_description')
 
+    student_place = database.find_student_place(auth.get_username())
+    print("student_place issss: " + student_place)
+
     # Continue displaying queue status page if user does not match with TA
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
+    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place)
     response = flask.make_response(html_code)
 
     return response
