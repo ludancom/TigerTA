@@ -117,7 +117,7 @@ def queuestatus():
     course = flask.request.cookies.get('course')
 
     # Continue displaying queue status page if user does not match with TA
-    student_place = database.find_student_place(student_netid, course)
+    student_place = database.find_student_place(course, student_netid)
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place)
     response = flask.make_response(html_code)
 
@@ -134,11 +134,12 @@ def trymatch():
     
     # If TA is found, Queue Status page will redirect to In Session page
     ta_name = database.find_ta_name(course, student_netid)
-    if ta_name:
+    student_place = database.find_student_place(course, student_netid)
     # Javascript Object Format
-        return [{"matched": True}]
-    else:
-        return [{"matched": False}]
+    return {
+        "matched": ta_name is not None,
+        "student_place": student_place  
+    }
 
 #-----------------------------------------------------------------------
 # In Session Page:
