@@ -111,13 +111,14 @@ def queueentry():
 def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
-
+    student_netid = auth.get_username()
     # Get cookies
     bug_description = flask.request.cookies.get('bug_description')
-
+    course = flask.request.cookies.get('course')
 
     # Continue displaying queue status page if user does not match with TA
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
+    student_place = database.find_student_place(student_netid, course)
+    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place)
     response = flask.make_response(html_code)
 
     return response
@@ -130,15 +131,14 @@ def trymatch():
     # Get cookies
     student_netid = auth.get_username()
     course = flask.request.cookies.get('course')
-    student_place = database.find_student_place(student_netid, course)
-
+    
     # If TA is found, Queue Status page will redirect to In Session page
     ta_name = database.find_ta_name(course, student_netid)
     if ta_name:
     # Javascript Object Format
-        return [{"matched": True}, student_place]
+        return [{"matched": True}]
     else:
-        return [{"matched": False}, student_place]
+        return [{"matched": False}]
 
 #-----------------------------------------------------------------------
 # In Session Page:

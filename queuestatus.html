@@ -27,14 +27,25 @@
     </div>
     {% include 'footer.html' %}
     <script> setInterval (async function(){
+        fetch ('/queuestatus')
         const response = await fetch ('/trymatch');
-        const data = await response[0].json();
-        student_place = await response[1];
+        const data = await response.json();
 
         if (data.matched){
             location.href = "/insessionstudent";
         }
     }, 5000);
     </script>
+
+     <script> setInterval (async function(){
+        const response = await fetch ('/trymatch');
+        const data = await response.json();
+
+        if (data.matched){
+            location.href = "/insessionstudent";
+        }
+    }, 5000);
+    </script>
+
 </body>
 </html>
