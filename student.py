@@ -133,8 +133,12 @@ def trymatch():
     course = flask.request.cookies.get('course')
     
     # If TA is found, Queue Status page will redirect to In Session page
-    ta_name = database.find_ta_name(course, student_netid)
     student_place = database.find_student_place(course, student_netid)
+    ta_name = None
+
+    # Only try to match a student if they are first in the queue
+    if(student_place == 1):
+        ta_name = database.find_ta_name(course, student_netid)
     # Javascript Object Format
     return {
         "matched": ta_name is not None,
