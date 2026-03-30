@@ -63,6 +63,7 @@ def roleselection():
 
         # If the TA role is selected, validate that the user is actually a TA
         if role == 'TA':
+            ### Implement this function later ###
             is_ta = database.validate_ta(net_id)
 
             # If the user is a TA, send them to the TA work hub
@@ -85,115 +86,67 @@ def roleselection():
     return flask.render_template('roleselection.html')
 
 #-----------------------------------------------------------------------
-# Queue Entry Page:
+# Work Hub Page:
 #-----------------------------------------------------------------------
-@app.route('/queueentry', methods=['GET', 'POST'])
-def queueentry():
-    """ Method that displays the queue entry page for students to
-    enter their issue and select their course and assignment. """
+@app.route('/workhub', methods=['GET', 'POST'])
+def workhub():
+    """ Method that displays the work hub page for TAs and allows
+    them to clock in and start a session. """
 
-    # Authenticate CAS
-    auth.authenticate()
-
-    # Get the user's net id from CAS
-    student_netid = auth.get_username()
+    # Get netid cookies
+    ta_netid = flask.request.cookies.get('net_id')
     
     if flask.request.method == 'POST':
         
-        # Get the user's name
-        student_name = flask.request.form.get('student_name')
+        # Get the user's clock in status
+        action = flask.request.form.get('action')
 
-        # Get the user's course
-        course = flask.request.form.get('course')
+        # Update the TA's attendance when they clock in
+        ### Implement this function later ###
+        if action == clock_in:
+            database.clockin(ta_netid)
 
-        # Get the user's assignment
-        assignment = flask.request.form.get('assignment')
+        # If the TA wants to start a session...
+        if action == start_session:
+            student_name = database.start_session()
+            # This can all be done in one function in database.py
 
-        # Get the user's bug description
-        bug_description = flask.request.form.get('bug_description')
-        if bug_description is None:
-            bug_description = ''
+            # Change the TA's availability to true
 
-        # Create the list of session information
-        session = {
-            'student_netid': student_netid,
-            'student_name': student_name,
-            'course': course,
-            'assignment': assignment,
-            'bug_description': bug_description
-        }
+            # Check if there are students in the queue
+                # pull everyone from sessions table where ta_netid = Null
 
-        # Send session info to Neon database
-        database.queue_entry(session)
+            # If there are students in the queue:
+                # get and return the student's name that they were matched with from the sessions table
 
-        # Try to match student with TA
-        ta_name = database.find_ta_name(course, student_netid)
-        # If match is successful
-        if ta_name:
-            # Display in session page
-            response = flask.redirect('/insessionstudent')
-            # Set TA name cookie
-            response.set_cookie('ta_name', ta_name)
-        else: 
-            # Otherwise, display queue entry page
-            response = flask.redirect('/queuestatus')
+            # If there are no students in the queue:
+                # Refresh and check again every 5 seconds or so (this is done in JS on frontend)
 
-        # Set cookies
-        response.set_cookie('bug_description', bug_description)
-        response.set_cookie('course', course)
+        # Set student name cookie
+        response.set_cookie('student_name', student_name)
 
-        return response
-
-    return flask.render_template('queueentry.html')
+    return flask.render_template('workhub.html')
 
 #-----------------------------------------------------------------------
-# Queue Status Page:
+# In Session TA Page:
 #-----------------------------------------------------------------------
-@app.route('/queuestatus', methods={'GET'})
-def queuestatus():
-    """ Method that displays the queue status page for students to
-    view their position in the queue and their bug description. """
-
-    # Get cookies
-    bug_description = flask.request.cookies.get('bug_description')
-
-    # Continue displaying queue status page if user does not match with TA
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description)
-    response = flask.make_response(html_code)
-
-    return response
-
-#-----------------------------------------------------------------------
-# Match Attempt (For Queue Status Page):
-#-----------------------------------------------------------------------
-@app.route('/trymatch', methods={'GET'})
-def trymatch():
-    # Get cookies
-    student_netid = auth.get_username()
-    course = flask.request.cookies.get('course')
-
-    # If TA is found, Queue Status page will redirect to In Session page
-    ta_name = database.find_ta_name(course, student_netid)
-    if ta_name:
-    # Javascript Object Format
-        return {"matched": True}
-    else:
-        return {"matched": False}
-
-#-----------------------------------------------------------------------
-# In Session Page:
-#-----------------------------------------------------------------------
-@app.route('/insessionstudent', methods={'GET'})
-def insessionstudent():
+@app.route('/insessionta', methods=['GET', 'POST'])
+def insessionta():
     """ Method that displays the TA the student was matched with and
     their bug description. """
-    
-    # Get cookies
-    ta_name = flask.request.cookies.get('ta_name')
-    bug_description = flask.request.cookies.get('bug_description')
 
-    # Display queue status page
-    html_code = flask.render_template('insessionstudent.html', bug_description = bug_description, ta_name = ta_name)
+    # Get student name cookie
+    student_name = flask.request.cookies.get('student_name')
+
+    # Get course
+    # Get assignment
+    # Get bug description
+    # Display these things
+
+    # Display in session page
+    html_code = flask.render_template('insessionta.html', bug_description = bug_description, student_name = ta_name)
     response = flask.make_response(html_code)
+
+    # End session button takes them to next page
     
     return response

@@ -152,7 +152,7 @@ def insessionstudent():
     ta_name = flask.request.cookies.get('ta_name')
     bug_description = flask.request.cookies.get('bug_description')
 
-    # Display queue status page
+    # Display in session page
     html_code = flask.render_template('insessionstudent.html', bug_description = bug_description, ta_name = ta_name)
     response = flask.make_response(html_code)
     
