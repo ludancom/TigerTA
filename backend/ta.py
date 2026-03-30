@@ -46,15 +46,43 @@ def homepage():
 #-----------------------------------------------------------------------
 
 @app.route('/roleselection', methods={'GET', 'POST'})
-def homepage():
+def roleselection():
     """ Method that displays the option for TAs to either be a TA or
     a student for their session. """
 
-    # Send users to the HTML home page
-    html_code = flask.render_template('roleselection.html')
-    response = flask.make_response(html_code)
+    # Authenticate CAS
+    auth.authenticate()
 
-    return response
+    # Get the user's net id from CAS
+    net_id = auth.get_username()
+
+    if flask.request.method == 'POST':
+
+        # Get the user's role
+        role = flask.request.form.get('role')
+
+        # If the TA role is selected, validate that the user is actually a TA
+        if role == 'TA':
+            is_ta = database.validate_ta(net_id)
+
+            # If the user is a TA, send them to the TA work hub
+            if is_ta:
+                response = flask.redirect('/workhub')
+
+            # If the user is not a TA, send them to an error page
+            else:
+                response = flask.redirect('/error')
+
+        # If the student role is selected, send them to the student workflow
+        else:
+            response = flask.redirect('/queueentry')
+
+        # Set net_id cookie
+        response.set_cookie('net_id', net_id)
+
+        return response
+
+    return flask.render_template('roleselection.html')
 
 #-----------------------------------------------------------------------
 # Queue Entry Page:
@@ -113,9 +141,6 @@ def queueentry():
         # Set cookies
         response.set_cookie('bug_description', bug_description)
         response.set_cookie('course', course)
-
-        #place = ta_place[0]
-        #place = ta_place[1]
 
         return response
 
