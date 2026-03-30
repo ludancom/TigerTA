@@ -106,12 +106,12 @@ def find_student_place(student_netid, course):
                 
                 #Find place of student
                 statement_str = """SELECT row_num FROM 
-                {
+                (
                 SELECT student_netid,
                 ROW_NUMBER() OVER (ORDER BY session.session_id ASC) AS row_num
                 FROM session
                 WHERE course = %s
-                } AS iguessbro
+                ) AS iguessbro
                 WHERE student_netid = %s
                 """
                 cursor.execute(statement_str, (course, student_netid))
