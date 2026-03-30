@@ -28,7 +28,8 @@
     {% include 'footer.html' %}
     <script> setInterval (async function(){
         const response = await fetch ('/trymatch');
-        const data = await response.json();
+        const data = await response[0].json();
+        student_place = await response[1];
 
         if (data.matched){
             location.href = "/insessionstudent";
