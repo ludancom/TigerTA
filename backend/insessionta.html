@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TigerTA Session</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>You have been matched with a student! </h1>
+        <div class="studentinfo-box">
+            <strong>Student: {{student_name}}</strong>
+            <strong>Course: {{course}}</strong>
+            <strong>Assignment: {{assignment}}</strong>
+        </div>
+
+        <div class="problem-box">
+            <strong>Their problem:</strong>
+            <p>{{ bug_description }}</p>
+        </div>
+
+        <h2>Session Length: {{session_length}} minutes</h2>
+
+        <div class="actions">
+            <button class="button-link" onclick="location.href='/endessionta'">End Session</button>
+        </div>
+    </div>
+    {% include 'footer.html' %}
+</body>
+</html>
