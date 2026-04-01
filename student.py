@@ -28,6 +28,51 @@ def homepage():
     return response
 
 #-----------------------------------------------------------------------
+# Role Selection Page:
+#-----------------------------------------------------------------------
+
+@student_routes.route('/roleselection', methods={'GET', 'POST'})
+def roleselection():
+    """ Method that displays the option to either be a TA or
+    a student for their session. """
+
+    # Authenticate CAS
+    auth.authenticate()
+
+    # Get the user's net id from CAS
+    net_id = auth.get_username()
+
+    if flask.request.method == 'POST':
+
+        # Get the user's role
+        role = flask.request.form.get('role')
+
+        # If the TA role is selected, validate that the user is actually a TA
+        if role == 'TA':
+            ### Implement this function later ###
+            is_ta = database.validate_ta(net_id)
+
+            # If the user is a TA, send them to the TA work hub
+            if is_ta:
+                response = flask.redirect('/workhub')
+
+            # If the user is not a TA, send them to an error page
+            else:
+                response = flask.redirect('/error')
+
+        # If the student role is selected, send them to the student
+        # queue entry
+        else:
+            response = flask.redirect('/queueentry')
+
+        # Set net_id cookie
+        response.set_cookie('net_id', net_id)
+
+        return response
+
+    return flask.render_template('roleselection.html')
+
+#-----------------------------------------------------------------------
 # Queue Entry Page:
 #-----------------------------------------------------------------------
 @student_routes.route('/queueentry', methods=['GET', 'POST'])
@@ -35,11 +80,8 @@ def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
 
-    # Authenticate CAS
-    auth.authenticate()
-
-    # Get the user's net id from CAS
-    student_netid = auth.get_username()
+    # Get the user's net id from cookies
+    student_netid = flask.request.cookies.get('net_id')
     
     if flask.request.method == 'POST':
         
