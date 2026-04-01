@@ -68,8 +68,9 @@ def workhub():
         current_time = int(time.time())
         expires = database.get_clockin_expire(ta_netid) or 0
         clock_disabled = expires > current_time
-
-    return flask.render_template('workhub.html', clock_disabled=clock_disabled)
+        return flask.render_template('workhub.html', clock_disabled=clock_disabled)
+         
+    return flask.render_template('workhub.html')
 
 #-----------------------------------------------------------------------
 # In Session TA Page:
