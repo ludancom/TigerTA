@@ -205,28 +205,40 @@ def validate_ta(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-def start_session(ta_netid):
+def get_session_info(ta_netid):
+    """ Method that checks for a TA's session information. If they are
+    matched to a session, returns relevant info. If they are not matched,
+    return false.  """
+    # Select session information for the TA's session
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT student_name, course, assignment, bug_description,
+                    session_id
+                    FROM session
+                    WHERE ta_netid = %s
+                    ORDER BY session_id DESC
+                """, (ta_netid,))
+                table = cursor.fetchall()
 
-    # Check if the TA was matched by seeing if session info can
-    # be extracted
-    available = ta_availability(ta_netid)
+                # If the table doesn't exist, then the TA is not matched
+                if not table:
+                    return None
 
-    # If their availability is false, then they are matched
-    # Pull the 
-    if available == False:
-        try:
-            with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-                with contextlib.closing(connection.cursor()) as cursor:
-                    cursor.execute("""
-                        SELECT student_name, course, assignment, bug_description
-                        FROM session
-                        JOIN student ON session.student_netid = student.student_netid
-                        WHERE session.ta_netid = %s
-                        ORDER BY session_id DESC
-                    """, (ta_netid,))
-                    return cursor.fetchone()
-        except Exception as ex:
-            print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+                # Otherwise, return session information
+                session_info = {
+                    'student_name': table[0][0],
+                    'course': table[0][1],
+                    'assignment': table[0][2],
+                    'bug_description': table[0][3],
+                    'session_id': table[0][4]
+                }
+
+                return session_info
+    
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 #removes the session from the sessions table 
 def end_session(session_id):
