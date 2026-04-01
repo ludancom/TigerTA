@@ -62,7 +62,7 @@ def workhub():
         if action == 'start_session':
             
             # Update their availability to true
-            database.update_availability(ta_netid)
+            database.set_available(ta_netid)
 
         # button is disabled if clocked in
         current_time = int(time.time())

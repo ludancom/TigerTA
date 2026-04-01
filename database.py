@@ -240,6 +240,9 @@ def get_session_info(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+def set_available(ta_netid):
+    """ Method that updates a TA's availability to true. """
+
 #removes the session from the sessions table 
 def end_session(session_id):
     try:
