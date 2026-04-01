@@ -9,7 +9,7 @@ import auth
 import sys
 import argparse
 from student import student_routes
-#from ta import ta_routes
+from ta import ta_routes
 
 #-----------------------------------------------------------------------
 # Create app
@@ -30,7 +30,7 @@ auth.init(app)
 #-----------------------------------------------------------------------
 # register routes
 app.register_blueprint(student_routes)
-#app.register_blueprint(ta_routes)
+app.register_blueprint(ta_routes)
 
 #-----------------------------------------------------------------------
 # running
