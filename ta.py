@@ -13,65 +13,6 @@ import time
 ta_routes = flask.Blueprint('ta_routes', __name__)
 
 #-----------------------------------------------------------------------
-# TA Home Page:
-#-----------------------------------------------------------------------
-
-@ta_routes.route('/', methods={'GET'})
-@ta_routes.route('/home', methods={'GET'})
-def homepage():
-    """ Method that displays the homepage page to TAs. """
-
-    # Send users to the HTML home page
-    html_code = flask.render_template('homepage.html')
-    response = flask.make_response(html_code)
-
-    return response
-
-#-----------------------------------------------------------------------
-# Role Selection Page:
-#-----------------------------------------------------------------------
-
-@ta_routes.route('/roleselection', methods={'GET', 'POST'})
-def roleselection():
-    """ Method that displays the option for TAs to either be a TA or
-    a student for their session. """
-
-    # Authenticate CAS
-    auth.authenticate()
-
-    # Get the user's net id from CAS
-    net_id = auth.get_username()
-
-    if flask.request.method == 'POST':
-
-        # Get the user's role
-        role = flask.request.form.get('role')
-
-        # If the TA role is selected, validate that the user is actually a TA
-        if role == 'TA':
-            ### Implement this function later ###
-            is_ta = database.validate_ta(net_id)
-
-            # If the user is a TA, send them to the TA work hub
-            if is_ta:
-                response = flask.redirect('/workhub')
-
-            # If the user is not a TA, send them to an error page
-            else:
-                response = flask.redirect('/error')
-
-        # If the student role is selected, send them to the student workflow
-        else:
-            response = flask.redirect('/queueentry')
-
-        # Set net_id cookie
-        response.set_cookie('net_id', net_id)
-
-        return response
-
-    return flask.render_template('roleselection.html')
-
-#-----------------------------------------------------------------------
 # Work Hub Page:
 #-----------------------------------------------------------------------
 @ta_routes.route('/workhub', methods=['GET', 'POST'])
