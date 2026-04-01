@@ -54,7 +54,7 @@ def roleselection():
 
             # If the user is a TA, send them to the TA work hub
             if is_ta:
-                response = flask.redirect('/workhub')
+                response = flask.redirect(flask.url_for('ta_routes.workhub'))
 
             # If the user is not a TA, send them to an error page
             else:
@@ -220,7 +220,7 @@ def endsessionstudent():
 
         # If the user presses the end session button, it redirects 
         # them to the end session page
-        if action == home:
+        if action == 'home':
 
             # Redirect to the queue entry page
             response = flask.redirect('/queueentry')
