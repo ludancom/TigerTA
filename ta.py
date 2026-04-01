@@ -31,9 +31,14 @@ def workhub():
         # Update the TA's attendance when they clock in
         ### Implement this function later ###
         if action == 'clock_in':
-            database.clock_in(ta_netid)
-            expires = int(time.time()) + 60*60*2
-            database.set_clockin_expire(ta_netid, expires)
+            # creating the 2 hour shift for the TA when clocked in
+            current_time = int(time.time())
+            expires = database.get_clockin_expire(ta_netid) or 0
+            if expires <= current_time:
+                # add the shift to the clock in table, and expire in 2 hours
+                database.clock_in(ta_netid)
+                database.set_clockin_expire(ta_netid, current_time + 60*60*2)
+            # redirect so they cant submit twice
             return flask.redirect(flask.url_for('ta._routes.workhub'))
 
         # If the TA wants to start a session...
@@ -51,15 +56,15 @@ def workhub():
             # If not matched yet...
                 # Refresh and check again every 5 seconds or so (this is done in JS on frontend)
 
-        #calculating seconds for clock in
-        now_time = int(time.time())
+        # button is disabled if clocked in
+        current_time = int(time.time())
         expires = database.get_clockin_expire(ta_netid) or 0
-        remaining_time = max(0, int(expires - now_time)) if expires else 0
+        clock_disabled = expires > current_time
 
         # Set session info cookie
         response.set_cookie('session_info', session_info)
 
-    return flask.render_template('workhub.html', remaining_time=remaining_time)
+    return flask.render_template('workhub.html', clock_disabled=clock_disabled)
 
 #-----------------------------------------------------------------------
 # In Session TA Page:
