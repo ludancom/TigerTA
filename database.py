@@ -26,6 +26,7 @@ def main():
                 cursor.execute('DROP TABLE IF EXISTS student')
                 cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
+                cursor.execute('DROP TABLE IF EXISTS shifts')
 
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS ta (
@@ -59,6 +60,14 @@ def main():
                     bug_description TEXT,
                     time_joined TEXT,
                     PRIMARY KEY (session_id)
+                    )
+                ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS shifts (
+                    shift_id BIGSERIAL,
+                    ta_netid TEXT,
+                    date TIMESTAMP NOT NULL,
+                    PRIMARY KEY (shift_id)
                     )
                 ''')
 
