@@ -17,6 +17,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
 #----------------------------------------------------------------------
 
 def main():
+    """ Method that creates the tables for the database. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -76,6 +77,9 @@ def main():
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+#-----------------------------------------------------------------------
+# Student functions
+#-----------------------------------------------------------------------
 
 def queue_entry(session):
     """ Method that enters a student's information into the 
@@ -108,6 +112,7 @@ def queue_entry(session):
     except Exception as ex:
         print("ERROR:", ex)
 
+
 def find_student_place(course, student_netid):
     """ Method that finds and returns a student's place in the queue. """
     try:
@@ -133,6 +138,7 @@ def find_student_place(course, student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+
 def find_ta_name(course, student_netid):
     """ Method that finds and returns the name of a student's matched TA. """
 
@@ -140,7 +146,7 @@ def find_ta_name(course, student_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 # Match student with a TA
-                ta_netid = match_ta(course, student_netid)
+                ta_netid = match(course, student_netid)
 
                 # Get TA name
                 statement_str = """SELECT ta_name 
@@ -158,7 +164,7 @@ def find_ta_name(course, student_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 
-def match_ta(course, student_netid):
+def match(course, student_netid):
     """ Method that matches a TA to a student by finding their netid,
     changing their availability, and adding their information to the
     session table. Returns their net id. """
@@ -193,6 +199,29 @@ def match_ta(course, student_netid):
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+    def student_already_in_queue(student_netid):
+    """ Method that ensures a student is not rejoining the queue. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Get Student name
+                statement_str = """SELECT student_netid 
+                FROM session
+                WHERE student_netid = %s 
+                """
+                cursor.execute(statement_str, (student_netid,))
+                table = cursor.fetchone()
+                # Student's netid will be None if they are not in the queue
+                student_session_netid = table[0]
+                return student_session_netid is not None
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+
+#-----------------------------------------------------------------------
+# TA functions
+#-----------------------------------------------------------------------
 
 def get_session_info(ta_netid):
     """ Method that checks for a TA's session information. If they are
@@ -272,24 +301,6 @@ def clock_in(ta_netid):
                     VALUES (%s, %s)
                 ''', (ta_netid, datetime.now()))
                 connection.commit()
-    except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
-def student_already_in_queue(student_netid):
-    """ Method that ensures a student is not rejoining the queue. """
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                # Get Student name
-                statement_str = """SELECT student_netid 
-                FROM session
-                WHERE student_netid = %s 
-                """
-                cursor.execute(statement_str, (student_netid,))
-                table = cursor.fetchone()
-                # Student's netid will be None if they are not in the queue
-                student_session_netid = table[0]
-                return student_session_netid is not None
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
