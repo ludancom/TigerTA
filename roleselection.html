@@ -10,7 +10,7 @@
 <body>
     <div class="container">
         <h1>Please select your role.</h1>
-         <form method="post" action="{{ url_for('roleselection') }}">
+         <form method="post" action="{{ url_for('student_routes.roleselection') }}">
             <button type="submit" name="role" value="TA" class="button-link">TA</button>
             <button type="submit" name="role" value="Student" class="button-link">Student</button>
         </form>

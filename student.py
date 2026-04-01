@@ -10,7 +10,7 @@ import auth
 
 #-----------------------------------------------------------------------
 #new workflow needs this
-student_routes = flask.Blueprint('student_routes', __name__)
+student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
 
 #-----------------------------------------------------------------------
 # Home Page:
