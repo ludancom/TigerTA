@@ -143,7 +143,8 @@ def insessionstudent():
     bug_description = flask.request.cookies.get('bug_description')
 
     # Display in session page
-    html_code = flask.render_template('insessionstudent.html', bug_description = bug_description, ta_name = ta_name)
+    html_code = flask.render_template('insessionstudent.html', 
+    bug_description = bug_description, ta_name = ta_name)
     response = flask.make_response(html_code)
 
     # Set TA name cookie for the end session page
