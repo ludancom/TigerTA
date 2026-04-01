@@ -91,6 +91,9 @@ def workhub():
         ### Implement this function later ###
         if action == 'clock_in':
             database.clock_in(ta_netid)
+            expires = int(time.time()) + 60*60*2
+            database.set_clockin_expire(ta_netid, expires)
+            return flask.redirect(flask.url_for('ta._routes.workhub'))
 
         # If the TA wants to start a session...
         if action == 'start_session':
@@ -107,10 +110,15 @@ def workhub():
             # If not matched yet...
                 # Refresh and check again every 5 seconds or so (this is done in JS on frontend)
 
+        #calculating seconds for clock in
+        now_time = int(time.time())
+        expires = database.get_clockin_expire(ta_netid) or 0
+        remaining_time = max(0, int(expires - now_time)) if expires else 0
+
         # Set session info cookie
         response.set_cookie('session_info', session_info)
 
-    return flask.render_template('workhub.html')
+    return flask.render_template('workhub.html', remaining_time=remaining_time)
 
 #-----------------------------------------------------------------------
 # In Session TA Page:
