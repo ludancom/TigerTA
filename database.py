@@ -151,6 +151,7 @@ def find_ta_name(course, student_netid):
 
                 # Return TA name to display to users
                 return ta_name
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -200,6 +201,51 @@ def validate_ta(ta_netid):
                 table = cursor.fetchall()
                 count = table[0][0]
                 return count > 0
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+#removes the session from the sessions table 
+def end_session(session_id):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor: 
+                statement_str = """DELETE FROM session
+                WHERE session_id = %s
+                """
+                cursor.execute(statement_str, (session_id,))
+
+#collects the date and netid of the ta after they clock in
+def clock_in(ta_netid):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Create a new shift entry
+                cursor.execute('''
+                    INSERT INTO shifts (ta_netid, date)
+                    VALUES (%s, %s)
+                ''', (ta_netid, datetime.now()))
+                connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+# Ensure that the student is not rejoining the queue
+def student_already_in_queue(student_netid):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Get Student name
+                statement_str = """SELECT student_netid 
+                FROM session
+                WHERE student_netid = %s 
+                """
+                cursor.execute(statement_str, (student_netid,))
+                table = cursor.fetchone()
+                # Student's netid will be None if they are not in the queue
+                student_session_netid = table[0]
+                return student_session_netid is not None
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+                
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
