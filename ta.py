@@ -42,11 +42,14 @@ def workhub():
             # This can all be done in one function in database.py
 
             # Change the TA's availability to true
+            
+
 
             # Check if the TA has gotten matched
                 # pull everyone from sessions table where ta_netid = self tas netid
                 # get and return the student's information (name, course, assignment, bug description) that they were matched with from the sessions table
                 # IF matched.... redirect to the in session page
+                # IF matched also change availability to fasle
 
             # If not matched yet...
                 # Refresh and check again every 5 seconds or so (this is done in JS on frontend)
