@@ -13,7 +13,7 @@ import auth
 student_routes = flask.Blueprint('student_routes', __name__)
 
 #-----------------------------------------------------------------------
-# Student Home Page:
+# Home Page:
 #-----------------------------------------------------------------------
 
 @student_routes.route('/', methods={'GET'})
