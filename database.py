@@ -213,6 +213,7 @@ def end_session(session_id):
                 WHERE session_id = %s
                 """
                 cursor.execute(statement_str, (session_id,))
+                connection.commit()
 
 #collects the date and netid of the ta after they clock in
 def clock_in(ta_netid):
@@ -245,6 +246,24 @@ def student_already_in_queue(student_netid):
                 return student_session_netid is not None
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+                
+#Verify that a TA is an actual TA given their net_id. Return False if not, return true if yes. 
+def validate_ta(netid):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Get Student name
+                statement_str = """SELECT ta_netid 
+                FROM ta
+                WHERE ta_netid = %s 
+                """
+                cursor.execute(statement_str, (netid,))
+                table = cursor.fetchone()
+                ta_netid = table[0]
+                # if there is no 
+                if ta_netid == None:
+                    return False
+                return True
                 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
