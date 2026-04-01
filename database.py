@@ -33,6 +33,7 @@ def main():
                     ta_netid TEXT NOT NULL,
                     ta_name TEXT NOT NULL,
                     available BOOLEAN NOT NULL,
+                    clockin_expire TIMESTAMP,
                     PRIMARY KEY (ta_netid)
                     )
                 ''')
@@ -270,6 +271,36 @@ def validate_ta(netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+# setting the time that clock in expires for the TA
+def set_clockin_expiry(ta_netid, expires_epoch):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    UPDATE ta
+                    SET clockin_expires = TO_TIMESTAMP(%s)
+                    WHERE ta_netid = %s
+                """, (int(expires_epoch), ta_netid))
+                connection.commit()
+    except Exception as ex:
+        print(f'set_clockin_expiry: {ex}', file=sys.stderr)
+
+# getting the updated remaining time for the TAs shift
+def get_clockin_expiry(ta_netid):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT EXTRACT(EPOCH FROM clockin_expires)::BIGINT
+                    FROM ta
+                    WHERE ta_netid = %s
+                """, (ta_netid,))
+                row = cursor.fetchone()
+                return int(row[0]) if row and row[0] is not None else 0
+    except Exception as ex:
+        print(f'get_clockin_expiry: {ex}', file=sys.stderr)
+        return 0
+    
 def ta_availability(ta_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
