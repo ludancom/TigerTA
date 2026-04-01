@@ -242,6 +242,20 @@ def get_session_info(ta_netid):
 
 def set_available(ta_netid):
     """ Method that updates a TA's availability to true. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+
+                # Set TA to available
+                statement_str = """UPDATE ta 
+                SET available = TRUE
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+
+                connection.commit()
+
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 #removes the session from the sessions table 
 def end_session(session_id):
