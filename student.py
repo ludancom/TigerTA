@@ -152,17 +152,17 @@ def insessionstudent():
 #-----------------------------------------------------------------------
 # End Session Student Page:
 #-----------------------------------------------------------------------
-@ta_routes.route('/endsessionta', methods=['GET', 'POST'])
-def endsessionta():
-    """ Method that displays the end page, the student's name, and
+@student_routes.route('/endsessionstudent', methods=['GET', 'POST'])
+def endsessionstudent():
+    """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
-    # Get student name cookie
-    student_name = flask.request.cookies.get('student_name')
+    # Get TA name cookie
+    ta_name = flask.request.cookies.get('ta_name')
 
     # Display end session page
-    html_code = flask.render_template('endsessionta.html', 
-    student_name = student_name)
+    html_code = flask.render_template('endsessionstudent.html', 
+    ta_name = ta_name)
 
     response = flask.make_response(html_code)
 
@@ -173,10 +173,10 @@ def endsessionta():
         action = flask.request.form.get('action')
 
         # If the user presses the end session button, it redirects 
-        # them  to the end session page
+        # them to the end session page
         if action == home:
 
-            # Redirect to the work hub  page
-            response = flask.redirect('/workhub')
+            # Redirect to the queue entry page
+            response = flask.redirect('/queueentry')
 
     return response
