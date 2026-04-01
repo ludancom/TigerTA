@@ -6,6 +6,7 @@ queue entries. """
 import flask
 import os
 import database
+import auth
 
 #-----------------------------------------------------------------------
 ta_routes = flask.Blueprint('ta_routes', __name__)
