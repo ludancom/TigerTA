@@ -147,3 +147,36 @@ def insessionstudent():
     response = flask.make_response(html_code)
     
     return response
+
+
+#-----------------------------------------------------------------------
+# End Session Student Page:
+#-----------------------------------------------------------------------
+@ta_routes.route('/endsessionta', methods=['GET', 'POST'])
+def endsessionta():
+    """ Method that displays the end page, the student's name, and
+    a button to return back to home. """
+
+    # Get student name cookie
+    student_name = flask.request.cookies.get('student_name')
+
+    # Display end session page
+    html_code = flask.render_template('endsessionta.html', 
+    student_name = student_name)
+
+    response = flask.make_response(html_code)
+
+    # Back to work hub page if they press "Home" button
+    if flask.request.method == 'POST':
+
+        # Get the user's button request
+        action = flask.request.form.get('action')
+
+        # If the user presses the end session button, it redirects 
+        # them  to the end session page
+        if action == home:
+
+            # Redirect to the work hub  page
+            response = flask.redirect('/workhub')
+
+    return response
