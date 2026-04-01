@@ -147,14 +147,3 @@ def endsessionta():
             response = flask.redirect('/workhub')
 
     return response
-
-@ta_routes.route('/findstudent', methods={'GET'})
-def findstudent():
-
-    # Get netid cookies
-    ta_netid = flask.request.cookies.get('ta_netid')
-
-    # is TA matched
-    available = ta_netid.ta_availability(ta_netid)
-
-    return {"matched": not available}
