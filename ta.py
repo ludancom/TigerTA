@@ -32,6 +32,13 @@ def workhub():
         response = flask.redirect('/insessionta')
 
         # Set their cookies to send to the in session page
+        response.set_cookie('session_info', session_info)
+
+        return response
+
+        # If not matched yet...
+            # Refresh and check again every 5 seconds or so 
+            # (this is done in JS on frontend)
     
     if flask.request.method == 'POST':
         
@@ -53,26 +60,14 @@ def workhub():
 
         # If the TA wants to start a session...
         if action == 'start_session':
-            session_info = database.start_session(ta_netid)
-            # This can all be done in one function in database.py
-
-            # Change the TA's availability to true
-
-            # Check if the TA has gotten matched
-                # pull everyone from sessions table where ta_netid = self tas netid
-                # get and return the student's information (name, course, assignment, bug description) that they were matched with from the sessions table
-                # IF matched.... redirect to the in session page
-
-            # If not matched yet...
-                # Refresh and check again every 5 seconds or so (this is done in JS on frontend)
+            
+            # Update their availability to true
+            database.update_availability(ta_netid)
 
         # button is disabled if clocked in
         current_time = int(time.time())
         expires = database.get_clockin_expire(ta_netid) or 0
         clock_disabled = expires > current_time
-
-        # Set session info cookie
-        response.set_cookie('session_info', session_info)
 
     return flask.render_template('workhub.html', clock_disabled=clock_disabled)
 
@@ -117,7 +112,7 @@ def insessionta():
 
         # If the user presses the end session button, it redirects 
         # them  to the end session page
-        if action == end_session:
+        if action == 'end_session':
 
             # Remove the session from the queue after session ends
             database.remove_session(session_id)
@@ -156,7 +151,7 @@ def endsessionta():
 
         # If the user presses the end session button, it redirects 
         # them  to the end session page
-        if action == home:
+        if action == 'home':
 
             # Redirect to the work hub  page
             response = flask.redirect('/workhub')
