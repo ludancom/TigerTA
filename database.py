@@ -214,6 +214,8 @@ def end_session(session_id):
                 """
                 cursor.execute(statement_str, (session_id,))
                 connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 #collects the date and netid of the ta after they clock in
 def clock_in(ta_netid):
