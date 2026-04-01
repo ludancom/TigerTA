@@ -295,7 +295,7 @@ def validate_ta(netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 # setting the time that clock in expires for the TA
-def set_clockin_expiry(ta_netid, expires_epoch):
+def set_clockin_expire(ta_netid, expires_epoch):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -309,7 +309,7 @@ def set_clockin_expiry(ta_netid, expires_epoch):
         print(f'set_clockin_expiry: {ex}', file=sys.stderr)
 
 # getting the updated remaining time for the TAs shift
-def get_clockin_expiry(ta_netid):
+def get_clockin_expire(ta_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:

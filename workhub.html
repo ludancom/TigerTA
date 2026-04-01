@@ -13,29 +13,12 @@
         <p>Welcome, {{ ta_name }}</p> <!-- this needs to be the name assoc with the netid -->
 
         <!-- clock in button: disabled for 2 hours -->
-        {% if remaining_time > 0 %}
+         {% if clock_disabled %}
         <form method="post" action="">
-            <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
-                Clocked in: re-enable in <span id="remaining">{{ remaining_seconds }}</span>seconds
+            <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link" disabled>
+                Clocked in (shift will last for 2 hours)
             </button>
         </form>
-        <script>
-            // countdown timer for the clock in button
-            var remainingSeconds = {{ remaining_seconds }};
-            var countdownElement = document.getElementById('remaining');
-            var clockInButton = document.getElementById('clock_in');
-
-            var countdownInterval = setInterval(function() {
-                if (remainingSeconds > 0) {
-                    remainingSeconds--;
-                    countdownElement.textContent = remainingSeconds;
-                } else {
-                    clearInterval(countdownInterval);
-                    clockInButton.disabled = false;
-                    clockInButton.textContent = 'Clock In';
-                }
-            }, 1000);
-        </script>
         {% else %}
         <form method="post" action="">
             <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
