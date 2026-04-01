@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>LabTA Hub</title>
-    </head>
-    <body>
+
+<head>
+    <title>LabTA Hub</title>
+</head>
+
+<body>
     <hr>
     <div class="container">
 
         <h1>LabTA Hub</h1>
         <p>Welcome, {{ ta_name }}</p> <!-- this needs to be the name assoc with the netid -->
-    
+
         <form method="post" action="{{ url_for('workhub') }}">
             <button type="submit" name="action" value="clock_in" class="button-link">
-            Clock In
+                Clock In
             </button>
         </form>
 
         <br>
         <form method="post" action="{{ url_for('workhub') }}">
             <button type="submit" name="action" value="start_session" class="button-link">
-            Start Session
+                Start Session
             </button>
         </form>
 
@@ -36,19 +38,19 @@
             </thead>
             <tbody>
                 {% if queue_students %}
-                    {% for student in queue_students %}
-                        <tr>
-                            <td>{{ student["student_netid"] }}</td>
-                            <td>{{ student["course"] }}</td>
-                            <td>{{ student["assignment"] }}</td>
-                            <td>{{ student["bug_description"] }}</td>
-                            <td>{{ student["queue_number"] }}</td>
-                        </tr>
-                    {% endfor %}
+                {% for student in queue_students %}
+                <tr>
+                    <td>{{ student["student_netid"] }}</td>
+                    <td>{{ student["course"] }}</td>
+                    <td>{{ student["assignment"] }}</td>
+                    <td>{{ student["bug_description"] }}</td>
+                    <td>{{ student["queue_number"] }}</td>
+                </tr>
+                {% endfor %}
                 {% else %}
-                    <tr>
-                        <td colspan="5">No students currently in queue.</td>
-                    </tr>
+                <tr>
+                    <td colspan="5">No students currently in queue.</td>
+                </tr>
                 {% endif %}
             </tbody>
         </table>
@@ -66,19 +68,19 @@
             </thead>
             <tbody>
                 {% if active_sessions %}
-                    {% for session in active_sessions %}
-                        <tr>
-                            <td>{{ session["student_netid"] }}</td>
-                            <td>{{ session["ta_netid"] }}</td>
-                            <td>{{ session["course"] }}</td>
-                            <td>{{ session["assignment"] }}</td>
-                            <td>{{ session["bug_description"] }}</td>
-                        </tr>
-                    {% endfor %}
+                {% for session in active_sessions %}
+                <tr>
+                    <td>{{ session["student_netid"] }}</td>
+                    <td>{{ session["ta_netid"] }}</td>
+                    <td>{{ session["course"] }}</td>
+                    <td>{{ session["assignment"] }}</td>
+                    <td>{{ session["bug_description"] }}</td>
+                </tr>
+                {% endfor %}
                 {% else %}
-                    <tr>
-                        <td colspan="5">No active sessions right now.</td>
-                    </tr>
+                <tr>
+                    <td colspan="5">No active sessions right now.</td>
+                </tr>
                 {% endif %}
             </tbody>
         </table>
@@ -86,5 +88,6 @@
         <hr>
         {% include 'footer.html' %}
     </div>
-    </body>
+</body>
+
 </html>

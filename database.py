@@ -267,6 +267,20 @@ def validate_ta(netid):
                 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+def ta_availability(ta_netid):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT available
+                    FROM ta
+                    WHERE ta_netid = %s
+                """, (ta_netid,))
+                row = cursor.fetchone()
+                return row[0] if row else None
+    except Exception as ex:
+        print(ex)
                 
 # Remove from session, add to session, add student, select TA(course)
 
