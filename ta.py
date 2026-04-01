@@ -6,32 +6,16 @@ queue entries. """
 import flask
 import os
 import database
-import auth
-import dotenv
 
 #-----------------------------------------------------------------------
-# CAS Authentication
-dotenv.load_dotenv()
-_APP_SECRET_KEY = os.getenv('APP_SECRET_KEY')
-
-#-----------------------------------------------------------------------
-app = flask.Flask(
-    __name__,
-    template_folder='.',
-    static_folder='.',
-    static_url_path='/static'
-)
-
-app.secret_key = _APP_SECRET_KEY
-auth.init(app)
-#-----------------------------------------------------------------------
+ta_routes = flask.Blueprint('ta_routes', __name__)
 
 #-----------------------------------------------------------------------
 # TA Home Page:
 #-----------------------------------------------------------------------
 
-@app.route('/', methods={'GET'})
-@app.route('/home', methods={'GET'})
+@ta_routes.route('/', methods={'GET'})
+@ta_routes.route('/home', methods={'GET'})
 def homepage():
     """ Method that displays the homepage page to TAs. """
 
@@ -45,7 +29,7 @@ def homepage():
 # Role Selection Page:
 #-----------------------------------------------------------------------
 
-@app.route('/roleselection', methods={'GET', 'POST'})
+@ta_routes.route('/roleselection', methods={'GET', 'POST'})
 def roleselection():
     """ Method that displays the option for TAs to either be a TA or
     a student for their session. """
@@ -88,7 +72,7 @@ def roleselection():
 #-----------------------------------------------------------------------
 # Work Hub Page:
 #-----------------------------------------------------------------------
-@app.route('/workhub', methods=['GET', 'POST'])
+@ta_routes.route('/workhub', methods=['GET', 'POST'])
 def workhub():
     """ Method that displays the work hub page for TAs and allows
     them to clock in and start a session. """
@@ -130,7 +114,7 @@ def workhub():
 #-----------------------------------------------------------------------
 # In Session TA Page:
 #-----------------------------------------------------------------------
-@app.route('/insessionta', methods=['GET', 'POST'])
+@ta_routes.route('/insessionta', methods=['GET', 'POST'])
 def insessionta():
     """ Method that displays the TA the student was matched with and
     their bug description. """

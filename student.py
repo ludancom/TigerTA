@@ -1,6 +1,5 @@
 #-----------------------------------------------------------------------
 # student.py
-# Authors: Amel Osman
 #-----------------------------------------------------------------------
 """ Flask program that communicates with the Neon database to modify
 queue entries. """
@@ -8,31 +7,18 @@ import flask
 import os
 import database
 import auth
-import dotenv
+
 
 #-----------------------------------------------------------------------
-# CAS Authentication
-dotenv.load_dotenv()
-_APP_SECRET_KEY = os.getenv('APP_SECRET_KEY')
-
-#-----------------------------------------------------------------------
-app = flask.Flask(
-    __name__,
-    template_folder='.',
-    static_folder='.',
-    static_url_path='/static'
-)
-
-app.secret_key = _APP_SECRET_KEY
-auth.init(app)
-#-----------------------------------------------------------------------
+#new workflow needs this
+student_routes = flask.Blueprint('student_routes', __name__)
 
 #-----------------------------------------------------------------------
 # Student Home Page:
 #-----------------------------------------------------------------------
 
-@app.route('/', methods={'GET'})
-@app.route('/home', methods={'GET'})
+@student_routes.route('/', methods={'GET'})
+@student_routes.route('/home', methods={'GET'})
 def homepage():
     """ Method that displays the homepage page to students. """
 
@@ -45,7 +31,7 @@ def homepage():
 #-----------------------------------------------------------------------
 # Queue Entry Page:
 #-----------------------------------------------------------------------
-@app.route('/queueentry', methods=['GET', 'POST'])
+@student_routes.route('/queueentry', methods=['GET', 'POST'])
 def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
@@ -107,7 +93,7 @@ def queueentry():
 #-----------------------------------------------------------------------
 # Queue Status Page:
 #-----------------------------------------------------------------------
-@app.route('/queuestatus', methods={'GET'})
+@student_routes.route('/queuestatus', methods={'GET'})
 def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
@@ -126,7 +112,7 @@ def queuestatus():
 #-----------------------------------------------------------------------
 # Match Attempt (For Queue Status Page):
 #-----------------------------------------------------------------------
-@app.route('/trymatch', methods={'GET'})
+@student_routes.route('/trymatch', methods={'GET'})
 def trymatch():
     # Get cookies
     student_netid = auth.get_username()
@@ -148,7 +134,7 @@ def trymatch():
 #-----------------------------------------------------------------------
 # In Session Page:
 #-----------------------------------------------------------------------
-@app.route('/insessionstudent', methods={'GET'})
+@student_routes.route('/insessionstudent', methods={'GET'})
 def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
