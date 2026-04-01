@@ -10,7 +10,7 @@ import auth
 import time
 
 #-----------------------------------------------------------------------
-ta_routes = flask.Blueprint('ta_routes', __name__)
+ta_routes = flask.Blueprint('ta_routes', __name__, template_folder='.')
 
 #-----------------------------------------------------------------------
 # Work Hub Page:
