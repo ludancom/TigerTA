@@ -108,8 +108,8 @@ def queue_entry(session):
     except Exception as ex:
         print("ERROR:", ex)
 
-# Find student place in queue 
 def find_student_place(course, student_netid):
+    """ Method that finds and returns a student's place in the queue. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
@@ -133,13 +133,14 @@ def find_student_place(course, student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-# Find name of the matched TA 
 def find_ta_name(course, student_netid):
+    """ Method that finds and returns the name of a student's matched TA. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 # Match student with a TA
-                ta_netid = find_ta_netid(course, student_netid)
+                ta_netid = match_ta(course, student_netid)
 
                 # Get TA name
                 statement_str = """SELECT ta_name 
@@ -156,8 +157,12 @@ def find_ta_name(course, student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-# Find netid of a TA that is available and teaches course, update TA availability
-def find_ta_netid(course, student_netid):
+
+def match_ta(course, student_netid):
+    """ Method that matches a TA to a student by finding their netid,
+    changing their availability, and adding their information to the
+    session table. Returns their net id. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -189,26 +194,10 @@ def find_ta_netid(course, student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-# Validate if a TA exists in the TA table
-def validate_ta(ta_netid):
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor: 
-                statement_str = """SELECT COUNT(*)
-                FROM ta
-                WHERE ta_netid = %s
-                """
-                cursor.execute(statement_str, (ta_netid,))
-                table = cursor.fetchall()
-                count = table[0][0]
-                return count > 0
-    except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
 def get_session_info(ta_netid):
     """ Method that checks for a TA's session information. If they are
     matched to a session, returns relevant info. If they are not matched,
-    return false.  """
+    return None. """
     # Select session information for the TA's session
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
@@ -257,8 +246,9 @@ def set_available(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-#removes the session from the sessions table 
-def end_session(session_id):
+def remove_session(session_id):
+    """ Method that reomves a session from the session list after it has
+    ended. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
@@ -270,8 +260,9 @@ def end_session(session_id):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-#collects the date and netid of the ta after they clock in
 def clock_in(ta_netid):
+    """ Method that collects the date and netid of the ta after 
+    they clock in. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -284,8 +275,8 @@ def clock_in(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-# Ensure that the student is not rejoining the queue
 def student_already_in_queue(student_netid):
+    """ Method that ensures a student is not rejoining the queue. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -302,8 +293,8 @@ def student_already_in_queue(student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
-#Verify that a TA is an actual TA given their net_id. Return False if not, return true if yes. 
 def validate_ta(netid):
+    """ Method that validates if a user with ta_netid is truly a TA."""
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -323,8 +314,8 @@ def validate_ta(netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-# setting the time that clock in expires for the TA
 def set_clockin_expire(ta_netid, expires_epoch):
+    """ Method that sets the time that clock in expires for the TA. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -337,8 +328,9 @@ def set_clockin_expire(ta_netid, expires_epoch):
     except Exception as ex:
         print(f'set_clockin_expiry: {ex}', file=sys.stderr)
 
-# getting the updated remaining time for the TAs shift
 def get_clockin_expire(ta_netid):
+    """ Method that gets the updated remaining time for the TAs shift. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -352,22 +344,7 @@ def get_clockin_expire(ta_netid):
     except Exception as ex:
         print(f'get_clockin_expiry: {ex}', file=sys.stderr)
         return 0
-    
-def ta_availability(ta_netid):
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""
-                    SELECT available
-                    FROM ta
-                    WHERE ta_netid = %s
-                """, (ta_netid,))
-                row = cursor.fetchone()
-                return row[0] if row else None
-    except Exception as ex:
-        print(ex)
-                
-# Remove from session, add to session, add student, select TA(course)
+            
 
 if __name__ == '__main__':
     main()
