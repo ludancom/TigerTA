@@ -20,8 +20,18 @@ def workhub():
     """ Method that displays the work hub page for TAs and allows
     them to clock in and start a session. """
 
-    # Get netid cookies
+    # Get netid cookie
     ta_netid = flask.request.cookies.get('net_id')
+
+    # Check if TA was matched by seeing if session_info is able
+    # to be extracted
+    session_info = database.get_session_info(ta_netid)
+
+    # If they are matched, send them to the in session page
+    if session_info:
+        response = flask.redirect('/insessionta')
+
+        # Set their cookies to send to the in session page
     
     if flask.request.method == 'POST':
         
@@ -39,7 +49,7 @@ def workhub():
                 database.clock_in(ta_netid)
                 database.set_clockin_expire(ta_netid, current_time + 60*60*2)
             # redirect so they cant submit twice
-            return flask.redirect(flask.url_for('ta._routes.workhub'))
+            return flask.redirect('/workhub')
 
         # If the TA wants to start a session...
         if action == 'start_session':

@@ -206,19 +206,27 @@ def validate_ta(ta_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def start_session(ta_netid):
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""
-                    SELECT student_name, course, assignment, bug_description
-                    FROM session
-                    JOIN student ON session.student_netid = student.student_netid
-                    WHERE session.ta_netid = %s
-                    ORDER BY session_id DESC
-                """, (ta_netid,))
-                return cursor.fetchone()
-    except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+    # Check if the TA was matched by seeing if session info can
+    # be extracted
+    available = ta_availability(ta_netid)
+
+    # If their availability is false, then they are matched
+    # Pull the 
+    if available == False:
+        try:
+            with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+                with contextlib.closing(connection.cursor()) as cursor:
+                    cursor.execute("""
+                        SELECT student_name, course, assignment, bug_description
+                        FROM session
+                        JOIN student ON session.student_netid = student.student_netid
+                        WHERE session.ta_netid = %s
+                        ORDER BY session_id DESC
+                    """, (ta_netid,))
+                    return cursor.fetchone()
+        except Exception as ex:
+            print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 #removes the session from the sessions table 
 def end_session(session_id):
