@@ -93,22 +93,20 @@ def workhub():
 
         # If the TA wants to start a session...
         if action == start_session:
-            student_name = database.start_session()
+            session_info = database.start_session()
             # This can all be done in one function in database.py
 
             # Change the TA's availability to true
 
             # Check if there are students in the queue
-                # pull everyone from sessions table where ta_netid = Null
-
-            # If there are students in the queue:
-                # get and return the student's name that they were matched with from the sessions table
+                # pull everyone from sessions table where ta_netid = self tas netid
+                # get and return the student's information (name, course, assignment, bug description) that they were matched with from the sessions table
 
             # If there are no students in the queue:
                 # Refresh and check again every 5 seconds or so (this is done in JS on frontend)
 
         # Set student name cookie
-        response.set_cookie('student_name', student_name)
+        response.set_cookie('session_info', session_info)
 
     return flask.render_template('workhub.html')
 

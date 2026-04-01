@@ -8,7 +8,6 @@ import os
 import database
 import auth
 
-
 #-----------------------------------------------------------------------
 #new workflow needs this
 student_routes = flask.Blueprint('student_routes', __name__)
