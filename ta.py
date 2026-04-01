@@ -7,6 +7,7 @@ import flask
 import os
 import database
 import auth
+import time
 
 #-----------------------------------------------------------------------
 ta_routes = flask.Blueprint('ta_routes', __name__)
@@ -88,11 +89,11 @@ def workhub():
 
         # Update the TA's attendance when they clock in
         ### Implement this function later ###
-        if action == clock_in:
+        if action == 'clock_in':
             database.clock_in(ta_netid)
 
         # If the TA wants to start a session...
-        if action == start_session:
+        if action == 'start_session':
             session_info = database.start_session(ta_netid)
             # This can all be done in one function in database.py
 
@@ -197,3 +198,14 @@ def endsessionta():
             response = flask.redirect('/workhub')
 
     return response
+
+@ta_routes.route('/findstudent', methods={'GET'})
+def findstudent():
+
+    # Get netid cookies
+    ta_netid = flask.request.cookies.get('ta_netid')
+
+    # is TA matched
+    available = ta_netid.ta_availability(ta_netid)
+
+    return {"matched": not available}
