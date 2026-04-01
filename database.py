@@ -177,6 +177,22 @@ def find_ta_netid(course, student_netid):
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+# Validate if a TA exists in the TA table
+def validate_ta(ta_netid):
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor: 
+                statement_str = """SELECT COUNT(*)
+                FROM ta
+                WHERE ta_netid = %s
+                """
+                cursor.execute(statement_str, (ta_netid,))
+                table = cursor.fetchall()
+                count = table[0][0]
+                return count > 0
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
 # Remove from session, add to session, add student, select TA(course)
 
