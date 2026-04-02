@@ -21,7 +21,7 @@ def workhub():
     them to clock in and start a session. """
 
     # Get netid cookie
-    ta_netid = flask.request.cookies.get('net_id')
+    ta_netid = auth.get_username()
     print("TA NETID:", ta_netid)
 
     # Check if TA was matched by seeing if session_info is able
