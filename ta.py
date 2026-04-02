@@ -22,7 +22,6 @@ def workhub():
 
     # Get netid cookie
     ta_netid = auth.get_username()
-    print("TA NETID:", ta_netid)
 
     # Check if TA was matched by seeing if session_info is able
     # to be extracted
