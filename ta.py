@@ -60,7 +60,6 @@ def workhub():
 
         # If the TA wants to start a session...
         if action == 'start_session':
-            
             # Update their availability to true
             database.set_available(ta_netid)
 
@@ -104,7 +103,7 @@ def insessionta():
     assignment = assignment, bug_description = bug_description)
 
     response = flask.make_response(html_code)
-
+    
     # End session button takes them to next page
     if flask.request.method == 'POST':
 
@@ -124,6 +123,8 @@ def insessionta():
             # Set student name cookie for the end session page
             response.set_cookie('student_name', student_name)
 
+        return response
+    
     return response
 
 

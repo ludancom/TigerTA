@@ -22,11 +22,13 @@
         </div>
 
         <h2>Session Length: {{session_length}} minutes</h2>
+        
+        <form method="post" action="{{ url_for('ta_routes.insessionta') }}">
+            <button type="submit" name="action" value="end_session" class="button-link">End Session</button>
+        </form>
 
-        <div class="actions">
-            <button class="button-link" onclick="location.href='/endessionta'">End Session</button>
-        </div>
     </div>
     {% include 'footer.html' %}
 </body>
 </html>
+
