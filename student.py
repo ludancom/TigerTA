@@ -195,7 +195,7 @@ def insessionstudent():
     response = flask.make_response(html_code)
 
     # Set TA name cookie for the end session page
-    response.set_cookie('ta_name', ta_name)
+    # response.set_cookie('ta_name', ta_name)
     
     return response
 
