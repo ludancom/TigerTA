@@ -63,10 +63,15 @@ def roleselection():
         # If the student role is selected, send them to the student
         # queue entry
         else:
-            response = flask.redirect('/queueentry')
-
-        # Set net_id cookie
-        response.set_cookie('net_id', net_id)
+            status = database.student_already_in_queue(net_id)
+            print("STATUS:", status)
+            # Check if student is already in queue or being helped. If so, redirect them to the correct page. 
+            if(status == "InQueue"):
+                response = flask.redirect('/queuestatus')
+            elif(status == "InSession"):
+                response = flask.redirect('/insessionstudent')  
+            else:
+                response = flask.redirect('/queueentry')
 
         return response
 
@@ -80,8 +85,8 @@ def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
 
-    # Get the user's net id from cookies
-    student_netid = flask.request.cookies.get('net_id')
+    # Get the user's net id 
+    student_netid = auth.get_username()
     
     if flask.request.method == 'POST':
         

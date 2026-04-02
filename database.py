@@ -42,7 +42,8 @@ def main():
                     CREATE TABLE IF NOT EXISTS student (
                     student_netid TEXT NOT NULL,
                     student_name TEXT,
-                    PRIMARY KEY (student_netid)
+                    PRIMARY KEY (student_netid),
+                    UNIQUE (student_netid)
                     )
                 ''')
                 cursor.execute('''
@@ -61,7 +62,8 @@ def main():
                     assignment TEXT,
                     bug_description TEXT,
                     time_joined TEXT,
-                    PRIMARY KEY (session_id)
+                    PRIMARY KEY (session_id),
+                    UNIQUE (student_netid)
                     )
                 ''')
                 cursor.execute('''
@@ -200,24 +202,29 @@ def match(course, student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-    def student_already_in_queue(student_netid):
-    """ Method that ensures a student is not rejoining the queue. """
+# Ensure that the student is not rejoining the queue
+def student_already_in_queue(student_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Get Student name
-                statement_str = """SELECT student_netid 
+                statement_str = """SELECT ta_netid
                 FROM session
                 WHERE student_netid = %s 
                 """
                 cursor.execute(statement_str, (student_netid,))
-                table = cursor.fetchone()
-                # Student's netid will be None if they are not in the queue
-                student_session_netid = table[0]
-                return student_session_netid is not None
+                row = cursor.fetchone()
+                if row is None: 
+                    return "DoesNotExist"
+                db_ta_netid = row[0]
+                # Student is in queue
+                if(db_ta_netid is None):
+                    status = "InQueue"
+                # Student is being helped
+                if(db_ta_netid is not None):
+                    status = "InSession"
+                return status
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
 
 #-----------------------------------------------------------------------
 # TA functions
