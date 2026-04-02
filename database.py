@@ -339,7 +339,7 @@ def set_clockin_expire(ta_netid, expires_epoch):
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
                     UPDATE ta
-                    SET clockin_expires = TO_TIMESTAMP(%s)
+                    SET clockin_expire = TO_TIMESTAMP(%s)
                     WHERE ta_netid = %s
                 """, (int(expires_epoch), ta_netid))
                 connection.commit()
@@ -353,7 +353,7 @@ def get_clockin_expire(ta_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT EXTRACT(EPOCH FROM clockin_expires)::BIGINT
+                    SELECT EXTRACT(EPOCH FROM clockin_expire)::BIGINT
                     FROM ta
                     WHERE ta_netid = %s
                 """, (ta_netid,))
