@@ -241,8 +241,9 @@ def get_session_info(ta_netid):
                 cursor.execute("""
                     SELECT student_name, course, assignment, bug_description,
                     session_id
-                    FROM session
+                    FROM session, student
                     WHERE ta_netid = %s
+                    AND session.student_netid = student.student_netid
                     ORDER BY session_id DESC
                 """, (ta_netid,))
                 table = cursor.fetchall()
