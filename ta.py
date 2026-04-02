@@ -62,14 +62,14 @@ def workhub():
         if action == 'start_session':
             # Update their availability to true
             database.set_available(ta_netid)
+            return flask.redirect('/workhub')
 
-        # button is disabled if clocked in
-        current_time = int(time.time())
-        expires = database.get_clockin_expire(ta_netid) or 0
-        clock_disabled = expires > current_time
-        return flask.render_template('workhub.html', clock_disabled=clock_disabled)
+    # button is disabled if clocked in
+    current_time = int(time.time())
+    expires = database.get_clockin_expire(ta_netid) or 0
+    clock_disabled = expires > current_time
          
-    return flask.render_template('workhub.html')
+    return flask.render_template('workhub.html', clock_disabled=clock_disabled)
 
 #-----------------------------------------------------------------------
 # In Session TA Page:
