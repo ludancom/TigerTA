@@ -5,7 +5,7 @@ html, body {
 
 body {
     font-family: 'League Spartan', sans-serif;
-    background-color: #e9d1b5;
+    background-color: #ebe8e4;
     color: #222;
     display: flex;
     flex-direction: column;
@@ -28,7 +28,7 @@ h1 {
 }
 
 .section-title {
-    color: #e58a2b;
+    color: #35136f;
     font-size: 34px;
     font-weight: 700;
     margin: 34px auto 12px;
@@ -58,12 +58,14 @@ h1 {
     gap: 8px;
 }
 
-.status-label {
-    color: #e58a2b;
-    font-size: 30px;
-    font-weight: 700;
-    margin: 0;
-    text-align: left;
+.button-link.primary {
+    background-color: #2f2373;
+    color: white;
+}
+
+.button-link.primary:hover {
+    background-color: #2f2373;  
+    opacity: 0.9;
 }
 
 .button-link,
@@ -94,10 +96,18 @@ h1 {
 }
 
 .button-link-disabled {
-    background-color: #d9c4df;
-    color: #2f2373;
-    opacity: 1;
+    min-width: 310px;
+    padding: 24px 34px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 26px;
+
+    background-color: #d9c4df;   
+    color: #8a8a8a;         
+    border: none;
+
     cursor: not-allowed;
+    opacity: 0.8;
 }
 
 .table-wrap {
@@ -240,43 +250,4 @@ hr {
     padding: 8px 0 14px;
     font-size: 16px;
     color: #5a5562;
-}
-
-@media (max-width: 900px) {
-    h1 {
-        font-size: 48px;
-    }
-
-    .actions-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .left-action-group,
-    .right-action-group {
-        width: 100%;
-        align-items: center;
-    }
-
-    .status-label {
-        text-align: center;
-    }
-
-    .button-link,
-    .button-link-disabled {
-        width: 100%;
-        min-width: 0;
-        font-size: 24px;
-        padding: 20px 24px;
-    }
-
-    .section-title {
-        text-align: center;
-    }
-
-    .student-table th,
-    .student-table td {
-        font-size: 18px;
-        padding: 14px 12px;
-    }
 }
