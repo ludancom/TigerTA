@@ -15,12 +15,12 @@
     <hr>
     <div class="container">
         <h1>LabTA Hub</h1>
-        <p>Welcome, {{ ta_name }}</p> <!-- this needs to be the name assoc with the netid -->
 
+        <div class="actions-row">
         <!-- clock in button: disabled for 2 hours -->
          {% if clock_disabled %}
         <form method="post" action="">
-            <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link" disabled>
+            <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link-disabled" disabled>
                 Clocked in (shift will last for 2 hours)
             </button>
         </form>
@@ -34,13 +34,15 @@
 
         <br>
         <form method="post" action="">
-            <button type="submit" name="action" value="start_session" class="button-link">
+            <button type="submit" name="action" value="start_session" class="button-link outline">
                 Start Session
             </button>
         </form>
+        </div>
 
-        <h2>Queue</h2>
-        <table border="1">
+        <h2 class="section-title">Queue</h2>
+        <div class="table-wrap">
+        <table class="student-table">
             <thead>
                 <tr>
                     <th>Student</th>
@@ -68,9 +70,11 @@
                 {% endif %}
             </tbody>
         </table>
+        </div>
 
-        <h2>Active Sessions</h2>
-        <table border="1">
+        <h2 class="section-title">Active Sessions</h2>
+        <div class="table-wrap">
+        <table class="student-table">
             <thead>
                 <tr>
                     <th>Student</th>
@@ -98,6 +102,7 @@
                 {% endif %}
             </tbody>
         </table>
+        </div>
         <hr>
         {% include 'footer.html' %}
     </div>
