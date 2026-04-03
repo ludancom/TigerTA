@@ -16,8 +16,6 @@
 
         <div class="actions-row">
             <div class="left-action-group">
-                <p class="status-label">Status</p>
-
                 {% if clock_disabled %}
                 <form method="post" action="">
                     <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link-disabled" disabled>
@@ -35,7 +33,7 @@
 
             <div class="right-action-group">
                 <form method="post" action="">
-                    <button type="submit" name="action" value="start_session" class="button-link">
+                    <button type="submit" name="action" value="start_session" class="button-link primary">
                         Start a Session
                     </button>
                 </form>
