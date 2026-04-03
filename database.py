@@ -239,8 +239,8 @@ def get_session_info(ta_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT student_name, course, assignment, bug_description,
-                    session_id
+                    SELECT student_name, session.student_netid, course, assignment,
+                    bug_description, session_id
                     FROM session, student
                     WHERE ta_netid = %s
                     AND session.student_netid = student.student_netid
@@ -255,10 +255,11 @@ def get_session_info(ta_netid):
                 # Otherwise, return session information
                 session_info = {
                     'student_name': table[0][0],
-                    'course': table[0][1],
-                    'assignment': table[0][2],
-                    'bug_description': table[0][3],
-                    'session_id': table[0][4]
+                    'student_netid': table[0][1],
+                    'course': table[0][2],
+                    'assignment': table[0][3],
+                    'bug_description': table[0][4],
+                    'session_id': table[0][5]
                 }
 
                 return session_info
@@ -283,7 +284,7 @@ def set_available(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-def remove_session(session_id):
+def remove_session(session_id, student_netid):
     """ Method that reomves a session from the session list after it has
     ended. """
     try:
@@ -293,7 +294,13 @@ def remove_session(session_id):
                 WHERE session_id = %s
                 """
                 cursor.execute(statement_str, (session_id,))
+
+                statement_str = """DELETE FROM student
+                WHERE student_netid = %s
+                """
+                cursor.execute(statement_str, (student_netid,))
                 connection.commit()
+                
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 

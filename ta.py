@@ -82,8 +82,11 @@ def insessionta():
     # Get session info cookie
     session_info = flask.request.cookies.get('session_info')
 
-    # Get student info
+    # Get student name
     student_name = session_info['student_name']
+
+    # Get student net id
+    student_netid = session_info['student_netid']
 
     # Get session id
     session_id = session_info['session_id']
@@ -115,7 +118,7 @@ def insessionta():
         if action == 'end_session':
 
             # Remove the session from the queue after session ends
-            database.remove_session(session_id)
+            database.remove_session(session_id, student_netid)
 
             # Redirect to the end session page
             response = flask.redirect('/endsessionta')
