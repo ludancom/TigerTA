@@ -39,6 +39,126 @@ h1 {
     text-align: center;
 }
 
+form {
+    margin: 0;
+}
+
+input[type="text"],
+select,
+textarea {
+    width: 100%;
+    max-width: 360px;
+    padding: 10px 12px;
+    margin: 8px auto 0;
+    display: block;
+    border: 1.5px solid #c9c2d3;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: 'League Spartan', sans-serif;
+    background-color: #ffffff;
+    color: #222;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #2f2373;
+    box-shadow: 0 0 0 2px rgba(47, 35, 115, 0.10);
+}
+
+textarea {
+    min-height: 90px;
+    resize: vertical;
+    max-width: 420px;
+}
+
+.course-options {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: wrap;
+    margin: 10px 0 6px;
+}
+
+.course-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #2a2a2a;
+    background-color: transparent;
+    padding: 0;
+    width: auto;
+    margin: 0;
+    border-radius: 0;
+}
+
+.course-options input[type="radio"] {
+    margin: 0;
+    transform: scale(1.1);
+}
+
+input[type="submit"] {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 11px 18px;
+    background-color: #2f2373;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+input[type="submit"]:hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+}
+
+.container p {
+    max-width: 620px;
+    margin: 14px auto;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #444;
+}
+
+.status-box {
+    margin: 20px auto 14px;
+    padding: 12px 16px;
+    max-width: 280px;
+    background-color: #ece6f3;
+    color: #2f2373;
+    border-radius: 12px;
+    border: 1px solid #d8d0e2;
+    box-shadow: 0 3px 10px rgba(47, 35, 115, 0.05);
+    font-size: 16px;
+}
+
+.problem-box {
+    margin: 18px auto 0;
+    padding: 16px 18px;
+    max-width: 500px;
+    background-color: #ffffff;
+    border: 1px solid #ddd6e5;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(47, 35, 115, 0.05);
+    text-align: center;
+}
+
+.problem-box p {
+    margin: 10px 0 0;
+    color: #333;
+}
+
+
 .actions-row {
     display: flex;
     justify-content: space-between;
