@@ -9,6 +9,7 @@ import psycopg
 import dotenv
 import contextlib
 import time
+from datetime import datetime
 import random
 
 dotenv.load_dotenv()
@@ -310,6 +311,13 @@ def clock_in(ta_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
+                #make sure that the TA exists already
+                cursor.execute("""
+                    INSERT INTO ta (ta_netid, ta_name, available)
+                    VALUES (%s, %s, TRUE)
+                    ON CONFLICT (ta_netid) DO NOTHING
+                """, (ta_netid, ta_netid))
+                
                 # Create a new shift entry
                 cursor.execute('''
                     INSERT INTO shifts (ta_netid, date)
@@ -352,7 +360,7 @@ def set_clockin_expire(ta_netid, expires_epoch):
                 """, (int(expires_epoch), ta_netid))
                 connection.commit()
     except Exception as ex:
-        print(f'set_clockin_expiry: {ex}', file=sys.stderr)
+        print(f'set_clockin_expire: {ex}', file=sys.stderr)
 
 def get_clockin_expire(ta_netid):
     """ Method that gets the updated remaining time for the TAs shift. """
@@ -368,7 +376,7 @@ def get_clockin_expire(ta_netid):
                 row = cursor.fetchone()
                 return int(row[0]) if row and row[0] is not None else 0
     except Exception as ex:
-        print(f'get_clockin_expiry: {ex}', file=sys.stderr)
+        print(f'get_clockin_expire: {ex}', file=sys.stderr)
         return 0
             
 
