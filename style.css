@@ -31,6 +31,12 @@ h1 {
     margin-bottom: 20px;
 }
 
+h2 {
+    font-size: 24px;
+    margin: 22px 0 10px;
+    font-weight: 700;
+}
+
 .section-title {
     color: #35136f;
     font-size: 22px;
@@ -46,21 +52,32 @@ form {
 input[type="text"],
 select,
 textarea {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
     width: 100%;
     max-width: 360px;
-    padding: 10px 12px;
+    padding: 12px 14px;
     margin: 8px auto 0;
     display: block;
+
     border: 1.5px solid #c9c2d3;
     border-radius: 10px;
     font-size: 16px;
     font-family: 'League Spartan', sans-serif;
+
     background-color: #ffffff;
     color: #222;
     box-sizing: border-box;
 }
 
-input[type="text"]:focus,
+input::placeholder,
+textarea::placeholder {
+    color: #7d7d7d;
+}
+
+input:focus,
 select:focus,
 textarea:focus {
     outline: none;
@@ -68,11 +85,22 @@ textarea:focus {
     box-shadow: 0 0 0 2px rgba(47, 35, 115, 0.10);
 }
 
-textarea {
-    min-height: 90px;
-    resize: vertical;
-    max-width: 420px;
+
+select {
+    cursor: pointer;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none'><path d='M4 6l4 4 4-4' stroke='%232f2373' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
 }
+
+
+textarea {
+    min-height: 95px;
+    max-width: 420px;
+    resize: vertical;
+}
+
 
 .course-options {
     display: flex;
@@ -90,29 +118,27 @@ textarea {
     font-size: 16px;
     font-weight: 500;
     color: #2a2a2a;
-    background-color: transparent;
-    padding: 0;
-    width: auto;
-    margin: 0;
-    border-radius: 0;
 }
 
 .course-options input[type="radio"] {
     margin: 0;
-    transform: scale(1.1);
+    transform: scale(1.05);
+    accent-color: #2f2373;
 }
 
 input[type="submit"] {
-    display: inline-block;
-    margin-top: 18px;
+    appearance: none;
+    margin-top: 16px;
     padding: 11px 18px;
     background-color: #2f2373;
     color: #ffffff;
-    border: none;
+    border: 1.5px solid #2f2373;
     border-radius: 12px;
+
     font-family: 'League Spartan', sans-serif;
     font-size: 16px;
     font-weight: 600;
+
     cursor: pointer;
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
@@ -139,7 +165,6 @@ input[type="submit"]:hover {
     border-radius: 12px;
     border: 1px solid #d8d0e2;
     box-shadow: 0 3px 10px rgba(47, 35, 115, 0.05);
-    font-size: 16px;
 }
 
 .problem-box {
@@ -150,7 +175,6 @@ input[type="submit"]:hover {
     border: 1px solid #ddd6e5;
     border-radius: 14px;
     box-shadow: 0 4px 12px rgba(47, 35, 115, 0.05);
-    text-align: center;
 }
 
 .problem-box p {
@@ -168,23 +192,14 @@ input[type="submit"]:hover {
     width: 100%;
 }
 
-.actions-row form {
-    margin: 0;
-}
-
 .left-action-group,
 .right-action-group {
     flex: 1;
     display: flex;
 }
 
-.left-action-group {
-    justify-content: flex-start;
-}
-
-.right-action-group {
-    justify-content: flex-end;
-}
+.left-action-group { justify-content: flex-start; }
+.right-action-group { justify-content: flex-end; }
 
 .button-link,
 .button-link-disabled {
@@ -209,14 +224,11 @@ input[type="submit"]:hover {
 
 .button-link.primary {
     background-color: #2f2373;
-    color: #ffffff;
-    border: 2px solid #2f2373;
+    color: white;
 }
 
 .button-link.primary:hover {
-    background-color: #2f2373;
     opacity: 0.94;
-    transform: translateY(-1px);
 }
 
 .button-link-disabled {
@@ -224,23 +236,18 @@ input[type="submit"]:hover {
     color: #9a9a9a;
     border: 2px solid #d4ccd8;
     cursor: not-allowed;
-    opacity: 1;
 }
+
 
 .table-wrap {
     width: 100%;
-    max-width: 100%;
     margin: 0 auto 20px;
     overflow-x: auto;
 }
 
-
 .student-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
     border-radius: 18px;
-    overflow: hidden;
     background-color: #ffffff;
     border: 1px solid #ddd6e5;
     box-shadow: 0 4px 14px rgba(47, 35, 115, 0.06);
@@ -256,97 +263,25 @@ input[type="submit"]:hover {
     background-color: #ddd0e3;
     color: #2f2373;
     font-weight: 700;
-    text-align: center;
-    border-bottom: 1px solid #d2c8dc;
 }
 
 .student-table tbody td {
-    background-color: #ffffff;
-    color: #2a2a2a;
     border-bottom: 1px solid #ece6f2;
-    text-align: center;
 }
 
 .student-table tbody tr:nth-child(even) td {
     background-color: #f7f3f9;
 }
 
-.student-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.student-table tbody tr.empty-row td {
-    text-align: center;
-    color: #666;
-    background-color: #ffffff;
-    font-weight: 500;
-}
-
-.student-table td.description,
-.student-table th.description {
-    text-align: left;
-}
-
-.student-table.queue-table th:nth-child(1),
-.student-table.queue-table td:nth-child(1) {
-    width: 18%;
-}
-
-.student-table.queue-table th:nth-child(2),
-.student-table.queue-table td:nth-child(2) {
-    width: 14%;
-}
-
-.student-table.queue-table th:nth-child(3),
-.student-table.queue-table td:nth-child(3) {
-    width: 14%;
-}
-
-.student-table.queue-table th:nth-child(4),
-.student-table.queue-table td:nth-child(4) {
-    width: 40%;
-}
-
-.student-table.queue-table th:nth-child(5),
-.student-table.queue-table td:nth-child(5) {
-    width: 14%;
-}
-
-.student-table.session-table th:nth-child(1),
-.student-table.session-table td:nth-child(1) {
-    width: 18%;
-}
-
-.student-table.session-table th:nth-child(2),
-.student-table.session-table td:nth-child(2) {
-    width: 14%;
-}
-
-.student-table.session-table th:nth-child(3),
-.student-table.session-table td:nth-child(3) {
-    width: 14%;
-}
-
-.student-table.session-table th:nth-child(4),
-.student-table.session-table td:nth-child(4) {
-    width: 14%;
-}
-
-.student-table.session-table th:nth-child(5),
-.student-table.session-table td:nth-child(5) {
-    width: 40%;
-}
 
 hr {
     border: none;
     border-top: 1px solid rgba(47, 35, 115, 0.14);
-    width: 100%;
     margin: 28px auto 18px;
 }
 
 .footer {
     text-align: center;
-    padding: 6px 0 0;
     font-size: 15px;
     color: #5a5562;
 }
