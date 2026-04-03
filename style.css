@@ -14,29 +14,28 @@ body {
 }
 
 .container {
-    width: 88%;
-    max-width: 1180px;
-    margin: 24px auto;
+    width: 85%;
+    max-width: 900px;
+    margin: 20px auto;
     background-color: #f8f6f3;
-    padding: 42px 54px 28px;
-    border-radius: 26px;
+    padding: 24px 28px;
+    border-radius: 18px;
     text-align: center;
-    box-shadow: 0 8px 24px rgba(47, 35, 115, 0.08);
-    box-sizing: border-box;
+    box-shadow: 0 6px 16px rgba(47, 35, 115, 0.06);
 }
 
 h1 {
     color: #2f2373;
-    font-size: 56px;
+    font-size: 40px;
     font-weight: 700;
-    margin: 0 0 32px;
+    margin-bottom: 20px;
 }
 
 .section-title {
     color: #35136f;
-    font-size: 30px;
+    font-size: 22px;
     font-weight: 700;
-    margin: 34px 0 14px;
+    margin: 22px 0 8px;
     text-align: center;
 }
 
@@ -44,8 +43,8 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 28px;
-    margin: 8px 0 34px;
+    margin: 10px 0 22px;
+    gap: 16px;
     width: 100%;
 }
 
@@ -69,17 +68,11 @@ h1 {
 
 .button-link,
 .button-link-disabled {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 290px;
-    padding: 20px 30px;
-    border-radius: 22px;
-    font-family: 'League Spartan', sans-serif;
-    font-size: 24px;
-    font-weight: 700;
-    text-decoration: none;
-    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+    min-width: 180px;
+    padding: 12px 18px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 600;
 }
 
 .button-link {
@@ -116,10 +109,11 @@ h1 {
 
 .table-wrap {
     width: 100%;
-    max-width: 980px;
-    margin: 0 auto 30px;
+    max-width: 100%;
+    margin: 0 auto 20px;
     overflow-x: auto;
 }
+
 
 .student-table {
     width: 100%;
@@ -134,9 +128,8 @@ h1 {
 
 .student-table th,
 .student-table td {
-    padding: 16px 18px;
-    font-size: 20px;
-    vertical-align: middle;
+    padding: 10px 12px;
+    font-size: 14px;
 }
 
 .student-table thead th {
@@ -236,48 +229,4 @@ hr {
     padding: 6px 0 0;
     font-size: 15px;
     color: #5a5562;
-}
-
-@media (max-width: 900px) {
-    body {
-        padding: 16px;
-    }
-
-    .container {
-        width: 100%;
-        padding: 28px 20px 22px;
-    }
-
-    h1 {
-        font-size: 42px;
-    }
-
-    .actions-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .left-action-group,
-    .right-action-group {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .button-link,
-    .button-link-disabled {
-        width: 100%;
-        min-width: 0;
-        font-size: 22px;
-        padding: 18px 20px;
-    }
-
-    .section-title {
-        font-size: 26px;
-    }
-
-    .student-table th,
-    .student-table td {
-        font-size: 17px;
-        padding: 12px 10px;
-    }
 }
