@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -12,101 +11,107 @@
 </head>
 
 <body>
-    <hr>
     <div class="container">
         <h1>LabTA Hub</h1>
 
         <div class="actions-row">
-        <!-- clock in button: disabled for 2 hours -->
-         {% if clock_disabled %}
-        <form method="post" action="">
-            <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link-disabled" disabled>
-                Clocked in (shift will last for 2 hours)
-            </button>
-        </form>
-        {% else %}
-        <form method="post" action="">
-            <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
-                Clock In
-            </button>
-        </form>
-        {% endif %}
+            <div class="left-action-group">
+                <p class="status-label">Status</p>
 
-        <br>
-        <form method="post" action="">
-            <button type="submit" name="action" value="start_session" class="button-link outline">
-                Start Session
-            </button>
-        </form>
+                {% if clock_disabled %}
+                <form method="post" action="">
+                    <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link-disabled" disabled>
+                        Clocked in
+                    </button>
+                </form>
+                {% else %}
+                <form method="post" action="">
+                    <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
+                        Clock In
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="right-action-group">
+                <form method="post" action="">
+                    <button type="submit" name="action" value="start_session" class="button-link">
+                        Start a Session
+                    </button>
+                </form>
+            </div>
         </div>
 
         <h2 class="section-title">Queue</h2>
         <div class="table-wrap">
-        <table class="student-table">
-            <thead>
-                <tr>
-                    <th>Student</th>
-                    <th>Class</th>
-                    <th>Assignment</th>
-                    <th>Bug Description</th>
-                    <th>Queue #</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if queue_students %}
-                {% for student in queue_students %}
-                <tr>
-                    <td>{{ student["student_netid"] }}</td>
-                    <td>{{ student["course"] }}</td>
-                    <td>{{ student["assignment"] }}</td>
-                    <td>{{ student["bug_description"] }}</td>
-                    <td>{{ student["queue_number"] }}</td>
-                </tr>
-                {% endfor %}
-                {% else %}
-                <tr>
-                    <td colspan="5">No students currently in queue.</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+            <table class="student-table queue-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Class</th>
+                        <th>Assign<br>ment</th>
+                        <th class="description">Bug Description</th>
+                        <th>Queue #</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if queue_students %}
+                        {% for student in queue_students %}
+                        <tr>
+                            <td>{{ student["student_netid"] }}</td>
+                            <td>{{ student["course"] }}</td>
+                            <td>{{ student["assignment"] }}</td>
+                            <td class="description">{{ student["bug_description"] }}</td>
+                            <td>{{ student["queue_number"] }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="empty-row">
+                            <td colspan="5">No students currently in queue.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
 
         <h2 class="section-title">Active Sessions</h2>
         <div class="table-wrap">
-        <table class="student-table">
-            <thead>
-                <tr>
-                    <th>Student</th>
-                    <th>TA</th>
-                    <th>Class</th>
-                    <th>Assignment</th>
-                    <th>Bug Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if active_sessions %}
-                {% for session in active_sessions %}
-                <tr>
-                    <td>{{ session["student_netid"] }}</td>
-                    <td>{{ session["ta_netid"] }}</td>
-                    <td>{{ session["course"] }}</td>
-                    <td>{{ session["assignment"] }}</td>
-                    <td>{{ session["bug_description"] }}</td>
-                </tr>
-                {% endfor %}
-                {% else %}
-                <tr>
-                    <td colspan="5">No active sessions right now.</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+            <table class="student-table session-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>TA</th>
+                        <th>Class</th>
+                        <th>Assign<br>ment</th>
+                        <th class="description">Bug Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if active_sessions %}
+                        {% for session in active_sessions %}
+                        <tr>
+                            <td>{{ session["student_netid"] }}</td>
+                            <td>{{ session["ta_netid"] }}</td>
+                            <td>{{ session["course"] }}</td>
+                            <td>{{ session["assignment"] }}</td>
+                            <td class="description">{{ session["bug_description"] }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="empty-row">
+                            <td colspan="5">No active sessions right now.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
+
         <hr>
         {% include 'footer.html' %}
     </div>
-    <script> setInterval(async function () {
+
+    <script>
+        setInterval(async function () {
             const response = await fetch('/workhub');
             const data = await response.json();
 
@@ -116,5 +121,4 @@
         }, 5000);
     </script>
 </body>
-
 </html>
