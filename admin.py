@@ -37,9 +37,7 @@ def add_ta():
     # Get the user's net id from CAS
     net_id = auth.get_username()
 
-    if role == 'admin':
-
-        if flask.request.method == 'POST':
+    if flask.request.method == 'POST':
 
         # Get the TA's net id from the form
         ta_net_id = flask.request.form.get('ta_net_id')
