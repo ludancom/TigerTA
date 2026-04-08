@@ -24,6 +24,10 @@
             <strong>Your problem:</strong>
             <p>{{ bug_description }}</p>
         </div>
+        
+        <form method="post" action="{{ url_for('student_routes.queuestatus') }}">
+            <button type="submit" name="action" value="leave_queue" class="button-link">Leave Queue</button>
+        </form> 
     </div>
     {% include 'footer.html' %}
     <script> setInterval (async function(){
