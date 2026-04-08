@@ -173,7 +173,7 @@ def find_ta_name(course, student_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 
-def match(course, student_netid):
+def match(course, student_netid, ta_netid):
     """ Method that matches a TA to a student by finding their netid,
     changing their availability, and adding their information to the
     session table. Returns their net id. """
@@ -181,30 +181,34 @@ def match(course, student_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Get TA netid
-                statement_str = """SELECT ta.ta_netid
-                FROM ta, ta_courses
-                WHERE ta_courses.course = %s
-                AND ta_courses.ta_netid = ta.ta_netid
-                AND ta.available = TRUE"""
-                cursor.execute(statement_str, (course,))
-                table = cursor.fetchall()
-                ta_netid = table[0][0]
+                # if the TA clicked start session, get their netid
+                if ta_netid is not None:
+                    chosen_ta_netid = ta_netid
+                else:
+                    #otherwise find any available TA for the course
+                    statement_str = """SELECT ta.ta_netid
+                    FROM ta, ta_courses
+                    WHERE ta_courses.course = %s
+                    AND ta_courses.ta_netid = ta.ta_netid
+                    AND ta.available = TRUE"""
+                    cursor.execute(statement_str, (course,))
+                    table = cursor.fetchall()
+                    chosen_ta_netid = table[0][0]
 
                 # Set TA to unavailable
                 statement_str = """UPDATE ta 
                 SET available = FALSE
                 WHERE ta_netid = %s"""
-                cursor.execute(statement_str, (ta_netid,))
+                cursor.execute(statement_str, (chosen_ta_netid,))
 
                 # Add TA's netid to session table
                 statement_str = """UPDATE session 
                 SET ta_netid = %s
                 WHERE student_netid = %s"""
-                cursor.execute(statement_str, (ta_netid, student_netid))
+                cursor.execute(statement_str, (chosen_ta_netid, student_netid))
 
                 connection.commit()
-                return ta_netid
+                return chosen_ta_netid
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -431,25 +435,30 @@ def start_session(ta_netid):
                 if row is None:
                     return None
 
-                session_id = row[0]
+                student_netid = row[0]
+                course = row[1]
 
-                #assign TA to that student in that session
-                cursor.execute("""
-                    UPDATE session
-                    SET ta_netid = %s
-                    WHERE session_id = %s
-                """, (ta_netid, session_id))
+                # use match() to assign the ta
+                assigned_ta = match(course, student_netid, ta_netid)
 
-                #update TA and mark them as busy...
-                #not sure if this is redundant?
-                cursor.execute("""
-                    UPDATE ta
-                    SET available = FALSE
-                    WHERE ta_netid = %s
-                """, (ta_netid,))
+                if assigned_ta is None:
+                    return None
+                
+                # return the session id after assignment
+                with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+                    with contextlib.closing(connection.cursor()) as cursor:
+                        cursor.execute("""
+                            SELECT session_id
+                            FROM session
+                            WHERE student_netid = %s
+                            AND ta_netid = %s
+                            ORDER BY session_id DESC
+                            LIMIT 1
+                        """, (student_netid, ta_netid))
+                        row = cursor.fetchone()
+                        return row[0] if row else None
 
-                connection.commit()
-                return session_id
+                
 
     except Exception as ex:
         print(f'start_session: {ex}', file=sys.stderr)
