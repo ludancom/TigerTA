@@ -240,7 +240,6 @@ def get_session_info_student(student_netid):
                     bug_description, session_id
                     FROM session, ta
                     WHERE session.student_netid = %s
-                    AND session.student_netid = student.student_netid
                     AND ta.ta_netid = session.ta_netid
                     ORDER BY session_id DESC
                 """, (student_netid,))
