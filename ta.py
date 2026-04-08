@@ -20,8 +20,8 @@ def workhub():
     """ Method that displays the work hub page for TAs and allows
     them to clock in and start a session. """
 
-    # Get netid cookie
-    ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
+    # Get TA netid
+    ta_netid = auth.get_username()
 
     if not ta_netid:
         return flask.redirect('/')
@@ -77,7 +77,10 @@ def workhub():
 @ta_routes.route('/workhub_status', methods=['GET'])
 def workhub_status():
     """JSON checker for determining whether TA has been matched."""
-    ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
+
+    # Get TA net id
+    ta_netid = auth.get_username()
+
     if not ta_netid:
         return {'matched': False}
     
@@ -93,11 +96,8 @@ def insessionta():
     """ Method that displays the student the TA was matched with and
     their session details. """
 
-    #get the current ta net id
-    ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
-
-    if not ta_netid:
-        return flask.redirect('/')
+    # Get the TA net id
+    ta_netid = auth.get_username()
 
     # Get session info
     session_info = database.get_session_info_ta(ta_netid)
@@ -134,8 +134,6 @@ def insessionta():
             # Redirect to the end session page
             response = flask.redirect('/endsessionta')
 
-            # Set student name cookie for the end session page
-            response.set_cookie('student_name', student_name)
             return response
 
     return flask.render_template('insessionta.html', student_name=student_name,
@@ -151,8 +149,14 @@ def endsessionta():
     """ Method that displays the end page, the student's name, and
     a button to return back to home. """
 
-    # Get student name cookie
-    student_name = flask.request.cookies.get('student_name')
+    # Get the TA net id
+    ta_netid = auth.get_username()
+
+    # Get relevant session info
+    session_info = get_session_info_ta(ta_netid)
+
+    # Get student name
+    student_name = session_info['student_name']
 
     if flask.request.method == 'POST':
         action = flask.request.form.get('action')
