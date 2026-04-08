@@ -227,6 +227,44 @@ def student_already_in_queue(student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+def get_session_info_student(student_netid):
+    """ Method that checks for a student's session information and
+    returns relevant info. """
+
+    # Select session information for the student's session
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT ta.ta_name, session.ta_netid, course, assignment,
+                    bug_description, session_id
+                    FROM session, ta
+                    WHERE session.student_netid = %s
+                    AND session.student_netid = student.student_netid
+                    AND ta.ta_netid = session.ta_netid
+                    ORDER BY session_id DESC
+                """, (student_netid,))
+                table = cursor.fetchall()
+
+                # If the table doesn't exist, then the TA is not matched
+                if not table:
+                    return None
+
+                # Otherwise, return session information
+                session_info = {
+                    'ta_name': table[0][0],
+                    'ta_netid': table[0][1],
+                    'course': table[0][2],
+                    'assignment': table[0][3],
+                    'bug_description': table[0][4],
+                    'session_id': table[0][5]
+                }
+
+                return session_info
+    
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
 #-----------------------------------------------------------------------
 # TA functions
 #-----------------------------------------------------------------------

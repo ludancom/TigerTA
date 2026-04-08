@@ -144,8 +144,14 @@ def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
     student_netid = auth.get_username()
-    # Get cookies
+
+    # Get relevant session data:
+    
+
+    # Get bug description
     bug_description = flask.request.cookies.get('bug_description')
+
+    # Get course
     course = flask.request.cookies.get('course')
 
     # Continue displaying queue status page if user does not match with TA
