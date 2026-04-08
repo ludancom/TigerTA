@@ -10,6 +10,7 @@ import sys
 import argparse
 from student import student_routes
 from ta import ta_routes
+from admin import admin_routes
 
 #-----------------------------------------------------------------------
 # Create app
