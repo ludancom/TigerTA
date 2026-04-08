@@ -166,9 +166,13 @@ def queuestatus():
 #-----------------------------------------------------------------------
 @student_routes.route('/trymatch', methods={'GET'})
 def trymatch():
-    # Get cookies
+    # Get student net id
     student_netid = auth.get_username()
-    course = flask.request.cookies.get('course')
+
+    # Get relevant session data:
+    session_info = database.get_session_info_student(student_netid)
+
+    course = session_info['course']
     
     # If TA is found, Queue Status page will redirect to In Session page
     student_place = database.find_student_place(course, student_netid)
@@ -191,17 +195,19 @@ def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
     
-    # Get cookies
-    ta_name = flask.request.cookies.get('ta_name')
-    bug_description = flask.request.cookies.get('bug_description')
+    # Get relevant session data:
+    session_info = database.get_session_info_student(student_netid)
+
+    # Get TA name
+    ta_name = session_info['ta_name']
+
+    # Get bug description
+    bug_description = session_info['bug_description']
 
     # Display in session page
     html_code = flask.render_template('insessionstudent.html', 
     bug_description = bug_description, ta_name = ta_name)
     response = flask.make_response(html_code)
-
-    # Set TA name cookie for the end session page
-    # response.set_cookie('ta_name', ta_name)
     
     return response
 
@@ -214,8 +220,11 @@ def endsessionstudent():
     """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
-    # Get TA name cookie
-    ta_name = flask.request.cookies.get('ta_name')
+    # Get relevant session data:
+    session_info = database.get_session_info_student(student_netid)
+
+    # Get TA name
+    ta_name = session_info['ta_name']
 
     # Display end session page
     html_code = flask.render_template('endsessionstudent.html', 

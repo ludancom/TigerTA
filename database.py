@@ -236,8 +236,7 @@ def get_session_info_student(student_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT ta.ta_name, session.ta_netid, course, assignment,
-                    bug_description, session_id
+                    SELECT ta.ta_name, course, bug_description
                     FROM session, ta
                     WHERE session.student_netid = %s
                     AND ta.ta_netid = session.ta_netid
@@ -252,11 +251,8 @@ def get_session_info_student(student_netid):
                 # Otherwise, return session information
                 session_info = {
                     'ta_name': table[0][0],
-                    'ta_netid': table[0][1],
-                    'course': table[0][2],
-                    'assignment': table[0][3],
-                    'bug_description': table[0][4],
-                    'session_id': table[0][5]
+                    'course': table[0][1],
+                    'bug_description': table[0][2],
                 }
 
                 return session_info
