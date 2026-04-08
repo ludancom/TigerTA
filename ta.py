@@ -60,8 +60,11 @@ def workhub():
 
         # If the TA wants to start a session...
         if action == 'start_session':
-            # Update their availability to true
+            #ta clicks the button to take the next queued student
             database.set_available(ta_netid)
+            session_id = database.start_session(ta_netid)
+            if session_id is not None:
+                return flask.redirect('/insessionta')
             return flask.redirect('/workhub')
 
     # button is disabled if clocked in
