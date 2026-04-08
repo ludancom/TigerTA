@@ -417,6 +417,7 @@ def start_session(ta_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
+                # Finds the next available student in the table
                 cursor.execute("""
                     SELECT session_id
                     FROM session
@@ -426,17 +427,21 @@ def start_session(ta_netid):
                 """)
                 row = cursor.fetchone()
 
+                #if there are no students waiting, do nothing
                 if row is None:
                     return None
 
                 session_id = row[0]
 
+                #assign TA to that student in that session
                 cursor.execute("""
                     UPDATE session
                     SET ta_netid = %s
                     WHERE session_id = %s
                 """, (ta_netid, session_id))
 
+                #update TA and mark them as busy...
+                #not sure if this is redundant?
                 cursor.execute("""
                     UPDATE ta
                     SET available = FALSE
