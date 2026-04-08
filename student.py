@@ -57,9 +57,9 @@ def roleselection():
             if is_ta:
                 response = flask.redirect(flask.url_for('ta_routes.workhub'))
 
-            # If the user is not a TA, send them to an error page
+            # If the user is not a TA, send them an error alert 
             else:
-                response = flask.redirect('/error') ### ADD IN POP UP ####
+                response = flask.redirect('/roleselection?error=not_ta')
 
         # If the Admin role is selected, validate that the user is actually an admin
         elif role == 'Admin':
@@ -72,7 +72,7 @@ def roleselection():
                 response = flask.redirect(flask.url_for('admin_routes.adminpage'))
             
             else:
-                response = flask.redirect('/error') ### ADD IN POP UP ####
+                response = flask.redirect('/roleselection?error=not_ta')
 
         # If the student role is selected, send them to the student
         # queue entry
