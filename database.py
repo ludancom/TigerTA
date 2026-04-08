@@ -250,10 +250,6 @@ def get_session_info_student(student_netid):
                 """, (student_netid,))
                 table = cursor.fetchall()
 
-                # If the table doesn't exist, then the TA is not matched
-                if not table:
-                    return None
-
                 # Otherwise, return session information
                 session_info = {
                     'ta_name': table[0][0],
