@@ -25,7 +25,7 @@ def workhub():
 
     # Check if TA was matched by seeing if session_info is able
     # to be extracted
-    session_info = database.get_session_info(ta_netid)
+    session_info = database.get_session_info_ta(ta_netid)
 
     # If they are matched, send them to the in session page
     if session_info:

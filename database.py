@@ -231,7 +231,7 @@ def student_already_in_queue(student_netid):
 # TA functions
 #-----------------------------------------------------------------------
 
-def get_session_info(ta_netid):
+def get_session_info_ta(ta_netid):
     """ Method that checks for a TA's session information. If they are
     matched to a session, returns relevant info. If they are not matched,
     return None. """
