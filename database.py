@@ -29,6 +29,7 @@ def main():
                 cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
                 cursor.execute('DROP TABLE IF EXISTS shifts')
+                cursor.execute('DROP TABLE IF EXISTS admins')
 
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS ta (
@@ -73,6 +74,12 @@ def main():
                     ta_netid TEXT,
                     date TIMESTAMP NOT NULL,
                     PRIMARY KEY (shift_id)
+                    )
+                ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS admins (
+                    admin_netid TEXT NOT NULL,
+                    PRIMARY KEY (admin_netid)
                     )
                 ''')
 
@@ -515,6 +522,40 @@ def get_active_sessions():
     except Exception as ex:
         print(f'get_active_sessions: {ex}', file=sys.stderr)
         return []
+    
+#-----------------------------------------------------------------------
+# Admin functions
+#-----------------------------------------------------------------------
+
+def add_ta(ta_netid):
+    """ Method that adds a TA to the database. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    INSERT INTO ta (ta_netid, ta_name, available)
+                    VALUES (%s, %s, FALSE)
+                    ON CONFLICT (ta_netid) DO NOTHING
+                """, (ta_netid, ta_netid))
+                connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+
+def remove_ta(ta_netid):
+    """ Method that removes a TA from the database. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    DELETE FROM ta_courses WHERE ta_netid = %s
+                """, (ta_netid,))
+                cursor.execute("""
+                    DELETE FROM ta WHERE ta_netid = %s
+                """, (ta_netid,))
+            connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 
 if __name__ == '__main__':
