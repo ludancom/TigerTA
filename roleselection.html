@@ -17,5 +17,18 @@
         </form>
     </div>
     {% include 'footer.html' %}
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get("error");
+
+        if(error === "not_ta"){
+            alert("You are not authorized as a TA. Please select the correct option.");
+        }
+
+        if(error === "not_admin"){
+            alert("You are not authorized as an Admin. Please select the correct option.");
+        }
+
+    </script>
 </body>
 </html>
