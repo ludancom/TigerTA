@@ -122,15 +122,9 @@ def queueentry():
         if ta_name:
             # Display in session page
             response = flask.redirect('/insessionstudent')
-            # Set TA name cookie
-            response.set_cookie('ta_name', ta_name)
         else: 
             # Otherwise, display queue entry page
             response = flask.redirect('/queuestatus')
-
-        # Set cookies
-        response.set_cookie('bug_description', bug_description)
-        response.set_cookie('course', course)
 
         return response
 
