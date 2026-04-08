@@ -130,15 +130,24 @@ def queueentry():
         # Send session info to Neon database
         database.queue_entry(session)
 
+        #So basically what I had to do was figure out a way to use match
+        # and use it on both sides
+        #so i had to modify the match function to take in both student and TA net IDs
+        #and then i ended up calling match in start session for a TA
+        # so here we only want students to join the queue, then
+        # TA clicks start session and the match function is called
+        # and does the work instead
+        response = flask.redirect('/queuestatus')
+
         # Try to match student with TA
-        ta_name = database.find_ta_name(course, student_netid)
+        #ta_name = database.find_ta_name(course, student_netid)
         # If match is successful
-        if ta_name:
+        #if ta_name:
             # Display in session page
-            response = flask.redirect('/insessionstudent')
-        else: 
+            #response = flask.redirect('/insessionstudent')
+        #else: 
             # Otherwise, display queue entry page
-            response = flask.redirect('/queuestatus')
+            #response = flask.redirect('/queuestatus')
 
         return response
 
