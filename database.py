@@ -143,9 +143,7 @@ def find_student_place(course, student_netid):
                 cursor.execute(statement_str, (course, student_netid))
                 table = cursor.fetchone()
                 
-                return table[0]
-
-
+                return table[0] if table else None
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -373,19 +371,13 @@ def validate_ta(netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Get Student name
-                statement_str = """SELECT ta_netid 
-                FROM ta
-                WHERE ta_netid = %s 
-                """
-                cursor.execute(statement_str, (netid,))
-                table = cursor.fetchone()
-                ta_netid = table[0]
-                # if there is no 
-                if ta_netid == None:
-                    return False
-                return True
-                
+                cursor.execute("""
+                    SELECT ta_netid
+                    FROM ta
+                    WHERE ta_netid = %s
+                """, (netid,))
+                row = cursor.fetchone()
+                return row is not None
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
