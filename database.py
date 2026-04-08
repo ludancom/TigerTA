@@ -136,6 +136,7 @@ def find_student_place(course, student_netid):
                 ROW_NUMBER() OVER (ORDER BY session.session_id ASC) AS row_num
                 FROM session
                 WHERE course = %s
+                AND ta_netid IS NULL
                 ) AS iguessbro
                 WHERE student_netid = %s
                 """
