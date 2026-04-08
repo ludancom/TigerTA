@@ -23,25 +23,10 @@ def workhub():
     # Get netid cookie
     ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
 
-    # Check if TA was matched by seeing if session_info is able
-    # to be extracted
-    session_info = database.get_session_info_ta(ta_netid)
-
-    # If they are matched, send them to the in session page
-    if session_info:
-        response = flask.redirect('/insessionta')
-
-        # Set their cookies to send to the in session page
-        response.set_cookie('session_info', session_info)
-
-        return response
-
-        # If not matched yet...
-            # Refresh and check again every 5 seconds or so 
-            # (this is done in JS on frontend)
+    if not ta_netid:
+        return flask.redirect('/')
     
     if flask.request.method == 'POST':
-        
         # Get the user's button request
         action = flask.request.form.get('action')
 
@@ -67,12 +52,24 @@ def workhub():
                 return flask.redirect('/insessionta')
             return flask.redirect('/workhub')
 
+    # Check if TA was matched by seeing if session_info is able
+    # to be extracted
+    session_info = database.get_session_info_ta(ta_netid)
+     # If they are matched, send them to the in session page
+    if session_info:
+        return flask.redirect('/insessionta')
+
     # button is disabled if clocked in
     current_time = int(time.time())
     expires = database.get_clockin_expire(ta_netid) or 0
     clock_disabled = expires > current_time
-         
-    return flask.render_template('workhub.html', clock_disabled=clock_disabled)
+
+    queue_students = database.get_queue_students()
+    active_sessions = database.get_active_sessions()
+
+    return flask.render_template('workhub.html', clock_disabled=clock_disabled,
+                                   queue_students=queue_students,
+                                    active_sessions=active_sessions)
 
 #-----------------------------------------------------------------------
 # In Session TA Page:
