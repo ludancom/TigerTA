@@ -146,7 +146,7 @@ def queuestatus():
     student_netid = auth.get_username()
 
     # Get relevant session data:
-    session_info = get_session_info_student(student_netid)
+    session_info = database.get_session_info_student(student_netid)
 
     # Get bug description
     bug_description = session_info['bug_description']
