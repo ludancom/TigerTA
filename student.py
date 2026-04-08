@@ -235,7 +235,7 @@ def insessionstudent():
     session_info = database.get_session_info_student(student_netid)
 
     # Get TA name
-    ta_name = session_info['ta_name']
+    ta_name = database.get_session_ta_name(student_netid)
 
     # Get bug description
     bug_description = session_info['bug_description']
@@ -263,7 +263,7 @@ def endsessionstudent():
     session_info = database.get_session_info_student(student_netid)
 
     # Get TA name
-    ta_name = session_info['ta_name']
+    ta_name = database.get_session_ta_name(student_netid)
 
     # Display end session page
     html_code = flask.render_template('endsessionstudent.html', 
