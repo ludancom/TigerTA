@@ -167,6 +167,18 @@ def queuestatus():
     html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place)
     response = flask.make_response(html_code)
 
+    # Leave queue button takes them to queue entry page 
+    if flask.request.method == 'POST':
+        # Get the user's button request
+        action = flask.request.form.get('action')
+
+        if action == 'leave_queue':
+            # Remove the session from the queue after session ends
+            database.remove_session(session_id, student_netid)
+
+            # Redirect to the end session page
+            response = flask.redirect('/queueentry')
+
     return response
 
 #-----------------------------------------------------------------------
@@ -202,6 +214,9 @@ def trymatch():
 def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
+
+    # Get student net id
+    student_netid = auth.get_username()
     
     # Get relevant session data:
     session_info = database.get_session_info_student(student_netid)
@@ -228,6 +243,9 @@ def endsessionstudent():
     """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
+    # Get student net id
+    student_netid = auth.get_username()
+    
     # Get relevant session data:
     session_info = database.get_session_info_student(student_netid)
 
