@@ -147,6 +147,29 @@ def find_student_place(course, student_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+def get_num_available_tas(course)
+    """ Method that finds and returns the number of TAs available for a specific course. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor: 
+                # Get the number of TAs teaching a specific course
+                statement_str = """SELECT COUNT(*) FROM 
+                (
+                SELECT ta_netid
+                FROM ta
+                WHERE course = %s
+                AND available = TRUE
+                ) AS iguessbro
+                """
+                cursor.execute(statement_str, (course,))
+                row = cursor.fetchone()
+                available_tas = row[0]
+
+                # Return TA name to display to users
+                return available_tas
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
 
 def find_ta_name(course, student_netid):
     """ Method that finds and returns the name of a student's matched TA. """
