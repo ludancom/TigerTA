@@ -550,6 +550,26 @@ def remove_ta(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-
+def validate_admin(admin_netid):
+    """ Method that validates if a user with admin_netid is truly an admin."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Get Student name
+                statement_str = """SELECT admin_netid 
+                FROM admin
+                WHERE admin_netid = %s 
+                """
+                cursor.execute(statement_str, (admin_netid,))
+                table = cursor.fetchone()
+                admin_netid = table[0]
+                # if there is no 
+                if admin_netid == None:
+                    return False
+                return True
+                
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        
 if __name__ == '__main__':
     main()
