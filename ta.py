@@ -79,8 +79,16 @@ def insessionta():
     """ Method that displays the student the TA was matched with and
     their session details. """
 
-    # Get session info cookie
-    session_info = flask.request.cookies.get('session_info')
+    #get the current ta net id
+    ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
+
+    if not ta_netid:
+        return flask.redirect('/')
+
+    # Get session info
+    session_info = database.get_session_info_ta(ta_netid)
+    if not session_info:
+        return flask.redirect('/workhub')
 
     # Get student name
     student_name = session_info['student_name']
@@ -100,23 +108,12 @@ def insessionta():
     # Get bug description
     bug_description = session_info['bug_description']
 
-    # Display in session page
-    html_code = flask.render_template('insessionta.html', 
-    student_name = student_name, course = course, 
-    assignment = assignment, bug_description = bug_description)
-
-    response = flask.make_response(html_code)
-    
     # End session button takes them to next page
     if flask.request.method == 'POST':
-
         # Get the user's button request
         action = flask.request.form.get('action')
 
-        # If the user presses the end session button, it redirects 
-        # them  to the end session page
         if action == 'end_session':
-
             # Remove the session from the queue after session ends
             database.remove_session(session_id, student_netid)
 
@@ -125,10 +122,11 @@ def insessionta():
 
             # Set student name cookie for the end session page
             response.set_cookie('student_name', student_name)
+            return response
 
-        return response
-    
-    return response
+    return flask.render_template('insessionta.html', student_name=student_name,
+                                 course=course, assignment=assignment,
+                                 bug_description=bug_description)
 
 
 #-----------------------------------------------------------------------
@@ -142,23 +140,10 @@ def endsessionta():
     # Get student name cookie
     student_name = flask.request.cookies.get('student_name')
 
-    # Display end session page
-    html_code = flask.render_template('endsessionta.html', 
-    student_name = student_name)
-
-    response = flask.make_response(html_code)
-
-    # Back to work hub page if they press "Home" button
     if flask.request.method == 'POST':
-
-        # Get the user's button request
         action = flask.request.form.get('action')
-
-        # If the user presses the end session button, it redirects 
-        # them  to the end session page
         if action == 'home':
-
             # Redirect to the work hub  page
             response = flask.redirect('/workhub')
 
-    return response
+    return flask.render_template('endsessionta.html', student_name=student_name)
