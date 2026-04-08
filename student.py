@@ -176,7 +176,7 @@ def queueentry():
 #-----------------------------------------------------------------------
 # Queue Status Page:
 #-----------------------------------------------------------------------
-@student_routes.route('/queuestatus', methods={'GET', 'POST'})
+@student_routes.route('/queuestatus', methods=['GET', 'POST'])
 def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
