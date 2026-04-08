@@ -3,7 +3,7 @@
 <head>
    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>TigerTA Error</title>
+    <title>TigerTA Session</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,18 +13,18 @@
     <div class="container">
         <h1>You have been matched with a student! </h1>
         <div class="studentinfo-box">
-            <strong>Student: {{student_name}}</strong>
-            <strong>Course: {{course}}</strong>
-            <strong>Assignment: {{assignment}}</strong>
+            <strong>Student: {{ student_name }}</strong>
+            <strong>Course: {{ course }}</strong>
+            <strong>Assignment: {{ assignment }}</strong>
         </div>
 
         <div class="problem-box">
             <strong>Their problem:</strong>
             <p>{{ bug_description }}</p>
-        </div
+        </div>
 
-        <h2>Session Length: {{session_length}} minutes</h2>
-        
+        <h2>Session Length: {{ session_length }} minutes</h2>
+
         <form method="post" action="{{ url_for('ta_routes.insessionta') }}">
             <button type="submit" name="action" value="end_session" class="button-link">End Session</button>
         </form>
