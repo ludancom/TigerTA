@@ -57,9 +57,9 @@ def roleselection():
             if is_ta:
                 response = flask.redirect(flask.url_for('ta_routes.workhub'))
 
-            # If the user is not a TA, send them to an error page
+            # If the user is not a TA, send them an error alert 
             else:
-                response = flask.redirect('/error') ### ADD IN POP UP ####
+                response = flask.redirect('/roleselection?error=not_ta')
 
         # If the Admin role is selected, validate that the user is actually an admin
         elif role == 'Admin':
@@ -72,7 +72,7 @@ def roleselection():
                 response = flask.redirect(flask.url_for('admin_routes.adminpage'))
             
             else:
-                response = flask.redirect('/error') ### ADD IN POP UP ####
+                response = flask.redirect('/roleselection?error=not_admin')
 
         # If the student role is selected, send them to the student
         # queue entry
@@ -130,15 +130,24 @@ def queueentry():
         # Send session info to Neon database
         database.queue_entry(session)
 
+        #So basically what I had to do was figure out a way to use match
+        # and use it on both sides
+        #so i had to modify the match function to take in both student and TA net IDs
+        #and then i ended up calling match in start session for a TA
+        # so here we only want students to join the queue, then
+        # TA clicks start session and the match function is called
+        # and does the work instead
+        response = flask.redirect('/queuestatus')
+
         # Try to match student with TA
-        ta_name = database.find_ta_name(course, student_netid)
+        #ta_name = database.find_ta_name(course, student_netid)
         # If match is successful
-        if ta_name:
+        #if ta_name:
             # Display in session page
-            response = flask.redirect('/insessionstudent')
-        else: 
+            #response = flask.redirect('/insessionstudent')
+        #else: 
             # Otherwise, display queue entry page
-            response = flask.redirect('/queuestatus')
+            #response = flask.redirect('/queuestatus')
 
         return response
 
@@ -162,10 +171,26 @@ def queuestatus():
     # Get course
     course = session_info['course']
 
+    # Get session id 
+    session_id = session_info['session_id']
+
     # Continue displaying queue status page if user does not match with TA
     student_place = database.find_student_place(course, student_netid)
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place)
+    #available_tas = get_num_available_tas(course)
+    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place, available_tas = available_tas)
     response = flask.make_response(html_code)
+
+    # Leave queue button takes them to queue entry page 
+    if flask.request.method == 'POST':
+        # Get the user's button request
+        action = flask.request.form.get('action')
+
+        if action == 'leave_queue':
+            # Remove the session from the queue after session ends
+            database.remove_session(session_id, student_netid)
+
+            # Redirect to the end session page
+            response = flask.redirect('/queueentry')
 
     return response
 
@@ -202,6 +227,9 @@ def trymatch():
 def insessionstudent():
     """ Method that displays the TA the student was matched with and
     their bug description. """
+
+    # Get student net id
+    student_netid = auth.get_username()
     
     # Get relevant session data:
     session_info = database.get_session_info_student(student_netid)
@@ -228,6 +256,9 @@ def endsessionstudent():
     """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
+    # Get student net id
+    student_netid = auth.get_username()
+    
     # Get relevant session data:
     session_info = database.get_session_info_student(student_netid)
 

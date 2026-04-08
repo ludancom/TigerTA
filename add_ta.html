@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TigerTA Add TA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Please enter the information of the TA you would like to add</h1>
+
+        <form action="/add_ta" method="post" onsubmit="return validateForm()">
+            <h2>TA Name (First Last)</h2>
+            <input type="text" id="ta_name" name="ta_name" placeholder="TA's name" required>
+
+            <h2>TA Net ID</h2>
+            <input type="text" id="ta_net_id" name="ta_net_id" placeholder="TA's net ID" required>
+
+            <h2>TA Course</h2>
+            <div class="course-options">
+                <label>
+                    <input type="radio" name="course" value="COS 126" required>
+                    COS 126
+                </label>
+
+                <label>
+                    <input type="radio" name="course" value="COS 2XX" required>
+                    COS 2XX
+                </label>
+            </div>
+            <input type="submit" value="Add TA">
+        </form>
+    </div>
+    {% include 'footer.html' %}
+</body>
+</html>
