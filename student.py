@@ -72,7 +72,7 @@ def roleselection():
                 response = flask.redirect(flask.url_for('admin_routes.adminpage'))
             
             else:
-                response = flask.redirect('/roleselection?error=not_ta')
+                response = flask.redirect('/roleselection?error=not_admin')
 
         # If the student role is selected, send them to the student
         # queue entry
