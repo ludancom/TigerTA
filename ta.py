@@ -78,6 +78,9 @@ def workhub():
 def workhub_status():
     """JSON checker for determining whether TA has been matched."""
     ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
+    if not ta_netid:
+        return {'matched': False}
+    
     session_info = database.get_session_info_ta(ta_netid)
     #it is matched if there is session info inside
     return {'matched': session_info is not None}
@@ -155,6 +158,6 @@ def endsessionta():
         action = flask.request.form.get('action')
         if action == 'home':
             # Redirect to the work hub  page
-            response = flask.redirect('/workhub')
+            return flask.redirect('/workhub')
 
     return flask.render_template('endsessionta.html', student_name=student_name)
