@@ -146,13 +146,13 @@ def queuestatus():
     student_netid = auth.get_username()
 
     # Get relevant session data:
-    
+    session_info = get_session_info_student(student_netid)
 
     # Get bug description
-    bug_description = flask.request.cookies.get('bug_description')
+    bug_description = session_info['bug_description']
 
     # Get course
-    course = flask.request.cookies.get('course')
+    course = session_info['course']
 
     # Continue displaying queue status page if user does not match with TA
     student_place = database.find_student_place(course, student_netid)
