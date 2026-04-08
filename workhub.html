@@ -110,7 +110,7 @@
 
     <script>
         setInterval(async function () {
-            const response = await fetch('/workhub');
+            const response = await fetch('/workhub_status');
             const data = await response.json();
 
             if (data.matched) {
