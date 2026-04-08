@@ -72,6 +72,17 @@ def workhub():
                                     active_sessions=active_sessions)
 
 #-----------------------------------------------------------------------
+# JSON Helper for Workhub:
+#-----------------------------------------------------------------------
+@ta_routes.route('/workhub_status', methods=['GET'])
+def workhub_status():
+    """JSON checker for determining whether TA has been matched."""
+    ta_netid = auth.get_username() or flask.request.cookies.get('net_id')
+    session_info = database.get_session_info_ta(ta_netid)
+    #it is matched if there is session info inside
+    return {'matched': session_info is not None}
+
+#-----------------------------------------------------------------------
 # In Session TA Page:
 #-----------------------------------------------------------------------
 @ta_routes.route('/insessionta', methods=['GET', 'POST'])
