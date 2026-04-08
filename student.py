@@ -49,7 +49,8 @@ def roleselection():
 
         # If the TA role is selected, validate that the user is actually a TA
         if role == 'TA':
-            ### Implement this function later ###
+
+            # Returns true if they are truly a TA
             is_ta = database.validate_ta(net_id)
 
             # If the user is a TA, send them to the TA work hub
@@ -58,7 +59,20 @@ def roleselection():
 
             # If the user is not a TA, send them to an error page
             else:
-                response = flask.redirect('/error')
+                response = flask.redirect('/error') ### ADD IN POP UP ####
+
+        # If the Admin role is selected, validate that the user is actually an admin
+        elif role == 'Admin':
+            
+             # Returns true if they are truly an admin
+            is_admin = database.validate_admin(net_id)
+
+            # If the user is an admin, send them to the admin page
+            if is_admin:
+                response = flask.redirect(flask.url_for('admin_routes.adminpage'))
+            
+            else:
+                response = flask.redirect('/error') ### ADD IN POP UP ####
 
         # If the student role is selected, send them to the student
         # queue entry
