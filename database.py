@@ -29,6 +29,7 @@ def main():
                 cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
                 cursor.execute('DROP TABLE IF EXISTS shifts')
+                cursor.execute('DROP TABLE IF EXISTS admins')
 
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS ta (
@@ -51,7 +52,7 @@ def main():
                     CREATE TABLE IF NOT EXISTS ta_courses (
                     ta_netid TEXT NOT NULL,
                     course TEXT NOT NULL,
-                    PRIMARY KEY (ta_netid)
+                    PRIMARY KEY (ta_netid, course)
                     )
                 ''')
                 cursor.execute('''
@@ -62,7 +63,7 @@ def main():
                     course TEXT NOT NULL,
                     assignment TEXT,
                     bug_description TEXT,
-                    time_joined TEXT,
+                    time_joined TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (session_id),
                     UNIQUE (student_netid)
                     )
@@ -73,6 +74,12 @@ def main():
                     ta_netid TEXT,
                     date TIMESTAMP NOT NULL,
                     PRIMARY KEY (shift_id)
+                    )
+                ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS admins (
+                    admin_netid TEXT NOT NULL,
+                    PRIMARY KEY (admin_netid)
                     )
                 ''')
 
@@ -129,6 +136,7 @@ def find_student_place(course, student_netid):
                 ROW_NUMBER() OVER (ORDER BY session.session_id ASC) AS row_num
                 FROM session
                 WHERE course = %s
+                AND ta_netid IS NULL
                 ) AS iguessbro
                 WHERE student_netid = %s
                 """
@@ -411,7 +419,145 @@ def get_clockin_expire(ta_netid):
     except Exception as ex:
         print(f'get_clockin_expire: {ex}', file=sys.stderr)
         return 0
-            
+    
+def start_session(ta_netid):
+    """Starts the session for the TA and matches them to the student."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT session_id
+                    FROM session
+                    WHERE ta_netid IS NULL
+                    ORDER BY session_id ASC
+                    LIMIT 1
+                """)
+                row = cursor.fetchone()
+
+                if row is None:
+                    return None
+
+                session_id = row[0]
+
+                cursor.execute("""
+                    UPDATE session
+                    SET ta_netid = %s
+                    WHERE session_id = %s
+                """, (ta_netid, session_id))
+
+                cursor.execute("""
+                    UPDATE ta
+                    SET available = FALSE
+                    WHERE ta_netid = %s
+                """, (ta_netid,))
+
+                connection.commit()
+                return session_id
+
+    except Exception as ex:
+        print(f'start_session: {ex}', file=sys.stderr)
+        return None
+
+def get_queue_students():
+    """Return all students currently waiting in queue."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT s.session_id, s.student_netid, st.student_name,
+                           s.course, s.assignment, s.bug_description
+                    FROM session s
+                    LEFT JOIN student st ON s.student_netid = st.student_netid
+                    WHERE s.ta_netid IS NULL
+                    ORDER BY s.session_id ASC
+                """)
+                rows = cursor.fetchall()
+
+                result = []
+                i = 1
+                for r in rows:
+                    result.append({
+                        'session_id': r[0],
+                        'student_netid': r[1],
+                        'student_name': r[2],
+                        'course': r[3],
+                        'assignment': r[4],
+                        'bug_description': r[5],
+                        'queue_number': i
+                    })
+                    i += 1
+                return result
+
+    except Exception as ex:
+        print(f'get_queue_students: {ex}', file=sys.stderr)
+        return []
+    
+def get_active_sessions():
+    """Return all active sessions."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT s.session_id, s.student_netid, s.ta_netid,
+                           st.student_name, s.course, s.assignment, s.bug_description
+                    FROM session s
+                    LEFT JOIN student st ON s.student_netid = st.student_netid
+                    WHERE s.ta_netid IS NOT NULL
+                    ORDER BY s.session_id ASC
+                """)
+                rows = cursor.fetchall()
+
+                result = []
+                for r in rows:
+                    result.append({
+                        'session_id': r[0],
+                        'student_netid': r[1],
+                        'ta_netid': r[2],
+                        'student_name': r[3],
+                        'course': r[4],
+                        'assignment': r[5],
+                        'bug_description': r[6]
+                    })
+                return result
+
+    except Exception as ex:
+        print(f'get_active_sessions: {ex}', file=sys.stderr)
+        return []
+    
+#-----------------------------------------------------------------------
+# Admin functions
+#-----------------------------------------------------------------------
+
+def add_ta(ta_netid):
+    """ Method that adds a TA to the database. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    INSERT INTO ta (ta_netid, ta_name, available)
+                    VALUES (%s, %s, FALSE)
+                    ON CONFLICT (ta_netid) DO NOTHING
+                """, (ta_netid, ta_netid))
+                connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+
+def remove_ta(ta_netid):
+    """ Method that removes a TA from the database. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    DELETE FROM ta_courses WHERE ta_netid = %s
+                """, (ta_netid,))
+                cursor.execute("""
+                    DELETE FROM ta WHERE ta_netid = %s
+                """, (ta_netid,))
+            connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
 
 if __name__ == '__main__':
     main()

@@ -17,12 +17,12 @@ admin_routes = flask.Blueprint('admin_routes', __name__, template_folder='.')
 #-----------------------------------------------------------------------
 
 @admin_routes.route('/', methods={'GET'})
-@admin_routes.route('/home', methods={'GET'})
-def homepage():
+@admin_routes.route('/adminpage', methods={'GET'})
+def adminpage():
     """ Method that displays the homepage page to administrators. """
 
     # Send users to the HTML home page
-    html_code = flask.render_template('homepage.html')
+    html_code = flask.render_template('adminpage.html')
     response = flask.make_response(html_code)
 
     return response
