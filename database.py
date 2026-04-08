@@ -269,22 +269,53 @@ def get_session_info_student(student_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT ta.ta_name, course, bug_description
-                    FROM session, ta
+                    SELECT course, bug_description
+                    FROM session
+                    WHERE session.student_netid = %s
+                    ORDER BY session_id DESC
+                """, (student_netid,))
+                table = cursor.fetchall()
+
+                # In case the session does not exist
+                if not table:
+                    return None
+                
+                # Otherwise, return session information
+                session_info = {
+                    'course': table[0][0],
+                    'bug_description': table[0][1],
+                }
+
+                return session_info
+    
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+def get_session_ta_name(student_netid):
+    """ Method that checks for a student's session and gets
+    their already matched TA. """
+
+    # Select TA name
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT ta_name
+                    FROM ta, session
                     WHERE session.student_netid = %s
                     AND ta.ta_netid = session.ta_netid
                     ORDER BY session_id DESC
                 """, (student_netid,))
                 table = cursor.fetchall()
 
-                # Otherwise, return session information
-                session_info = {
-                    'ta_name': table[0][0],
-                    'course': table[0][1],
-                    'bug_description': table[0][2],
-                }
+                # In case the session does not exist
+                if not table:
+                    return None
 
-                return session_info
+                # Otherwise, return TA name
+                ta_name = table[0][0]
+
+                return ta_name
     
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
