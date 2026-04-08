@@ -133,7 +133,7 @@ def insessionta():
 
             # Redirect to the end session page
             response = flask.redirect('/endsessionta')
-
+            response.set_cookie('student_name', student_name)
             return response
 
     return flask.render_template('insessionta.html', student_name=student_name,
@@ -148,15 +148,9 @@ def insessionta():
 def endsessionta():
     """ Method that displays the end page, the student's name, and
     a button to return back to home. """
-
-    # Get the TA net id
-    ta_netid = auth.get_username()
-
-    # Get relevant session info
-    session_info = get_session_info_ta(ta_netid)
-
-    # Get student name
-    student_name = session_info['student_name']
+    
+    # Getting student name because when the session ends, we need to know who the student was
+    student_name = flask.request.cookies.get('student_name')
 
     if flask.request.method == 'POST':
         action = flask.request.form.get('action')
