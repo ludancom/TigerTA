@@ -46,7 +46,7 @@ def add_ta():
         database.add_ta(ta_net_id)
 
         # Send the user to a confirmation page
-        response = flask.redirect(flask.url_for('admin_routes.view_tas'))
+        response = flask.redirect('/view_tas')
 
 @admin_routes.route('/remove_ta', methods=['GET', 'POST'])
 def remove_ta():
@@ -67,7 +67,7 @@ def remove_ta():
         database.remove_ta(ta_net_id)
 
         # Send the user to a confirmation page
-        response = flask.redirect(flask.url_for('admin_routes.view_tas'))
+        response = flask.redirect('/view_tas')
 
 @admin_routes.route('/view_tas', methods=['GET', 'POST'])
 def view_tas():
