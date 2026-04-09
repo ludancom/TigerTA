@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TigerTA Add TA</title>
+    <title>TigerTA - Add TA</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -9,10 +9,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>Please enter the information of the TA you would like to add</h1>
+        <h1>Please enter the information of the TA you would like to add.</h1>
 
-        <form action="/add_ta" method="post" onsubmit="return validateForm()">
-            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+        <form action="/add_ta" method="post">
             <h2>TA Name (First Last)</h2>
             <input type="text" id="ta_name" name="ta_name" placeholder="TA's name" required>
 
@@ -25,15 +24,16 @@
                     <input type="radio" name="course" value="COS 126" required>
                     COS 126
                 </label>
-
                 <label>
-                    <input type="radio" name="course" value="COS 2XX" required>
+                    <input type="radio" name="course" value="COS 2XX">
                     COS 2XX
                 </label>
             </div>
+
             <input type="submit" value="Add TA">
         </form>
     </div>
+
     {% include 'footer.html' %}
 </body>
 </html>

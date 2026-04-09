@@ -35,6 +35,7 @@ flask_wtf.csrf.CSRFProtect(app)
 # register routes
 app.register_blueprint(student_routes)
 app.register_blueprint(ta_routes)
+app.register_blueprint(admin_routes)
 
 #-----------------------------------------------------------------------
 # running

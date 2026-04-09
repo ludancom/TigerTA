@@ -9,72 +9,69 @@ import database
 import auth
 
 #-----------------------------------------------------------------------
-#new workflow needs this
+# New workflow needs this
 admin_routes = flask.Blueprint('admin_routes', __name__, template_folder='.')
 
 #-----------------------------------------------------------------------
-# Home Page:
+# Secure Https Use:
 #-----------------------------------------------------------------------
 
-@admin_routes.route('/', methods={'GET'})
-@admin_routes.route('/adminpage', methods={'GET'})
+@admin_routes.before_request
+def before_request():
+    is_running_locally = '//localhost:' in flask.request.url_root
+    is_using_https = flask.request.is_secure
+    if (not is_running_locally) and (not is_using_https):
+        url = flask.request.url.replace('http://', 'https://', 1)
+        return flask.redirect(url, code=301)
+    return None
+
+#-----------------------------------------------------------------------
+# Admin Page:
+#-----------------------------------------------------------------------
+
+@admin_routes.route('/adminpage', methods=['GET'])
 def adminpage():
-    """ Method that displays the homepage page to administrators. """
+    """ Method that displays the adminpage to administrators. """
+    return flask.render_template('adminpage.html')
 
-    # Send users to the HTML home page
-    html_code = flask.render_template('adminpage.html')
-    response = flask.make_response(html_code)
-
-    return response
+#-----------------------------------------------------------------------
+# Add TA Page:
+#-----------------------------------------------------------------------
 
 @admin_routes.route('/add_ta', methods=['GET', 'POST'])
 def add_ta():
     """ Method that adds a TA to the database. """
 
-    # Authenticate CAS
-    auth.authenticate()
-
-    # Get the user's net id from CAS
-    net_id = auth.get_username()
-
     if flask.request.method == 'POST':
-
-        # Get the TA's net id from the form
         ta_net_id = flask.request.form.get('ta_net_id')
+        ta_name = flask.request.form.get('ta_name')
+        course = flask.request.form.get('course')
+        database.add_ta(ta_net_id, ta_name, course)
+        return flask.redirect('/view_tas')
 
-        # Add the TA to the database
-        database.add_ta(ta_net_id)
+    return flask.render_template('add_ta.html')
 
-        # Send the user to a confirmation page
-        response = flask.redirect('/view_tas')
+#-----------------------------------------------------------------------
+# Remove TA Page:
+#-----------------------------------------------------------------------
 
 @admin_routes.route('/remove_ta', methods=['GET', 'POST'])
 def remove_ta():
     """ Method that removes a TA from the database. """
 
-    # Authenticate CAS
-    auth.authenticate()
-
-    # Get the user's net id from CAS
-    net_id = auth.get_username()
-
     if flask.request.method == 'POST':
-
-        # Get the TA's net id from the form
         ta_net_id = flask.request.form.get('ta_net_id')
-
-        # Remove the TA from the database
         database.remove_ta(ta_net_id)
+        return flask.redirect('/view_tas')
 
-        # Send the user to a confirmation page
-        response = flask.redirect('/view_tas')
+    return flask.render_template('remove_ta.html')
 
-@admin_routes.route('/view_tas', methods=['GET', 'POST'])
+#-----------------------------------------------------------------------
+# View TAs Page:
+#-----------------------------------------------------------------------
+
+@admin_routes.route('/view_tas', methods=['GET'])
 def view_tas():
     """ Method that displays the list of TAs to the user. """
-
-    # Send users to the HTML page with the list of TAs
-    html_code = flask.render_template('view_tas.html')
-    response = flask.make_response(html_code)
-
-    return response
+    tas = database.get_all_tas()
+    return flask.render_template('view_tas.html', tas=tas)
