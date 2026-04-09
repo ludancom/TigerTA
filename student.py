@@ -112,26 +112,30 @@ def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
 
-    # Get the user's net id 
+    # Get student net id
     student_netid = auth.get_username()
-    
+
     if flask.request.method == 'POST':
-        
-        # Get the user's name
+        # check before inserting student into queue
+        status = database.student_already_in_queue(student_netid)
+        if status == "InQueue":
+            return flask.redirect('/queuestatus?error=already_in_queue')
+        elif status == "InSession":
+            return flask.redirect('/insessionstudent?error=already_in_session')
+
+        # get student name
         student_name = flask.request.form.get('student_name')
 
-        # Get the user's course
+        # get course
         course = flask.request.form.get('course')
 
-        # Get the user's assignment
+        # get assignment
         assignment = flask.request.form.get('assignment')
 
-        # Get the user's bug description
-        bug_description = flask.request.form.get('bug_description')
-        if bug_description is None:
-            bug_description = ''
+        # get bug description
+        bug_description = flask.request.form.get('bug_description') or ''
 
-        # Create the list of session information
+        # get session info
         session = {
             'student_netid': student_netid,
             'student_name': student_name,
@@ -140,36 +144,9 @@ def queueentry():
             'bug_description': bug_description
         }
 
-        # Send session info to Neon database
+        # insert the session into the database
         database.queue_entry(session)
-
-        #So basically what I had to do was figure out a way to use match
-        # and use it on both sides
-        #so i had to modify the match function to take in both student and TA net IDs
-        #and then i ended up calling match in start session for a TA
-        # so here we only want students to join the queue, then
-        # TA clicks start session and the match function is called
-        # and does the work instead
-        response = flask.redirect('/queuestatus')
-
-        # Try to match student with TA
-        #ta_name = database.find_ta_name(course, student_netid)
-        # If match is successful
-        #if ta_name:
-            # Display in session page
-            #response = flask.redirect('/insessionstudent')
-        #else: 
-            # Otherwise, display queue entry page
-            #response = flask.redirect('/queuestatus')
-
-        # If user tries to rejoin queue, alert them that they must leave the queue 
-        # first and redirect them to correct page 
-        status = database.student_already_in_queue(student_netid)
-        if(status == "InQueue"):
-            return flask.redirect('/queuestatus?error=already_in_queue')
-        elif(status == "InSession"):
-            return flask.redirect('/insessionstudent?error=already_in_session') 
-        return response
+        return flask.redirect('/queuestatus')
 
     return flask.render_template('queueentry.html')
 
@@ -180,37 +157,43 @@ def queueentry():
 def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
+    #Get student ent id
     student_netid = auth.get_username()
 
-    # Get relevant session data:
+    # Get relevant session info
     session_info = database.get_session_info_student(student_netid)
+    if not session_info:
+        return flask.redirect('/queueentry')
+
+    # if TA has already been assigned, go to the in session page
+    ta_name = database.get_session_ta_name(student_netid)
+    if ta_name is not None:
+        return flask.redirect('/insessionstudent')
 
     # Get bug description
     bug_description = session_info['bug_description']
 
-    # Get course
+    #Get course
     course = session_info['course']
 
-    # Continue displaying queue status page if user does not match with TA
+    # get student place
     student_place = database.find_student_place(course, student_netid)
+
+    #get number of available tas
     num_helping_tas = database.get_num_helping_tas(course)
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place, num_helping_tas = num_helping_tas)
-    response = flask.make_response(html_code)
 
-    # Leave queue button takes them to queue entry page 
     if flask.request.method == 'POST':
-        # Get the user's button request
         action = flask.request.form.get('action')
-
         if action == 'leave_queue':
-            # Remove the session from the queue 
             database.remove_session(student_netid)
+            return flask.redirect('/queueentry')
 
-            # Redirect to the queue entry page
-            response = flask.redirect('/queueentry')
-
-    return response
-
+    return flask.render_template(
+        'queuestatus.html',
+        bug_description=bug_description,
+        student_place=student_place,
+        num_helping_tas=num_helping_tas
+    )
 #-----------------------------------------------------------------------
 # Match Attempt (For Queue Status Page):
 #-----------------------------------------------------------------------
@@ -219,22 +202,26 @@ def trymatch():
     # Get student net id
     student_netid = auth.get_username()
 
-    # Get relevant session data:
+    # if the session no longer exists
     session_info = database.get_session_info_student(student_netid)
+    if not session_info:
+        return {
+            "matched": False,
+            "student_place": None
+        }
 
+    #Get course
     course = session_info['course']
-    
-    # If TA is found, Queue Status page will redirect to In Session page
-    student_place = database.find_student_place(course, student_netid)
-    ta_name = None
 
-    # Only try to match a student if they are first in the queue
-    if(student_place == 1):
-        ta_name = database.find_ta_name(course, student_netid)
-    # Javascript Object Format
+    #Get student place
+    student_place = database.find_student_place(course, student_netid)
+
+    # check whether a TA has already been assigned
+    ta_name = database.get_session_ta_name(student_netid)
+
     return {
         "matched": ta_name is not None,
-        "student_place": student_place  
+        "student_place": student_place
     }
 
 #-----------------------------------------------------------------------
@@ -247,22 +234,25 @@ def insessionstudent():
 
     # Get student net id
     student_netid = auth.get_username()
-    
-    # Get relevant session data:
-    session_info = database.get_session_info_student(student_netid)
 
-    # Get TA name
+    # Get session info
+    session_info = database.get_session_info_student(student_netid)
+    if not session_info:
+        return flask.redirect('/queueentry')
+
+    # Get ta name
     ta_name = database.get_session_ta_name(student_netid)
+    if ta_name is None:
+        return flask.redirect('/queuestatus')
 
     # Get bug description
     bug_description = session_info['bug_description']
 
-    # Display in session page
-    html_code = flask.render_template('insessionstudent.html', 
-    bug_description = bug_description, ta_name = ta_name)
-    response = flask.make_response(html_code)
-    
-    return response
+    return flask.render_template(
+        'insessionstudent.html',
+        bug_description=bug_description,
+        ta_name=ta_name
+    )
 
 
 #-----------------------------------------------------------------------
