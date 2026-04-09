@@ -158,7 +158,7 @@ def get_num_available_tas(course):
                 FROM ta, ta_courses
                 WHERE ta.ta_netid = ta_courses.ta_netid
                 AND ta_courses.course = %s
-                AND ta_available = TRUE
+                AND ta.available = TRUE
                 """
                 cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
