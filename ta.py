@@ -90,16 +90,17 @@ def workhub():
 @ta_routes.route('/workhub_status', methods=['GET'])
 def workhub_status():
     """JSON checker for determining whether TA has been matched."""
+    queue_students = database.get_queue_students()
+    active_sessions = database.get_active_sessions()
 
-    # Get TA net id
-    ta_netid = auth.get_username()
+    # determine whether this TA was matched
+    matched = False  
 
-    if not ta_netid:
-        return {'matched': False}
-    
-    session_info = database.get_session_info_ta(ta_netid)
-    #it is matched if there is session info inside
-    return {'matched': session_info is not None}
+    return flask.jsonify({
+        "matched": matched,
+        "queue_students": queue_students,
+        "active_sessions": active_sessions
+    })
 
 #-----------------------------------------------------------------------
 # In Session TA Page:
