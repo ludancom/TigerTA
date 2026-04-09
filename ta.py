@@ -13,6 +13,19 @@ import time
 ta_routes = flask.Blueprint('ta_routes', __name__, template_folder='.')
 
 #-----------------------------------------------------------------------
+# Secure Https Use:
+#-----------------------------------------------------------------------
+
+@ta_routes.before_request
+def before_request():
+    is_running_locally = '//localhost:' in flask.request.url_root
+    is_using_https = flask.request.is_secure
+    if (not is_running_locally) and (not is_using_https):
+        url = flask.request.url.replace('http://', 'https://', 1)
+        return flask.redirect(url, code=301)
+    return None
+
+#-----------------------------------------------------------------------
 # Work Hub Page:
 #-----------------------------------------------------------------------
 @ta_routes.route('/workhub', methods=['GET', 'POST'])

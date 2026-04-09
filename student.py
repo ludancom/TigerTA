@@ -9,8 +9,21 @@ import database
 import auth
 
 #-----------------------------------------------------------------------
-#new workflow needs this
+# New workflow needs this
 student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
+
+#-----------------------------------------------------------------------
+# Secure Https Use:
+#-----------------------------------------------------------------------
+
+@student_routes.before_request
+def before_request():
+    is_running_locally = '//localhost:' in flask.request.url_root
+    is_using_https = flask.request.is_secure
+    if (not is_running_locally) and (not is_using_https):
+        url = flask.request.url.replace('http://', 'https://', 1)
+        return flask.redirect(url, code=301)
+    return None
 
 #-----------------------------------------------------------------------
 # Home Page:

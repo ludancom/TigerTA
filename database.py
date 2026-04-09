@@ -24,12 +24,12 @@ def main():
             with contextlib.closing(connection.cursor()) as cursor:
                 #-------------------------------------------------------
 
-                cursor.execute('DROP TABLE IF EXISTS ta')
-                cursor.execute('DROP TABLE IF EXISTS student')
                 cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
                 cursor.execute('DROP TABLE IF EXISTS shifts')
-                cursor.execute('DROP TABLE IF EXISTS admins')
+                cursor.execute('DROP TABLE IF EXISTS admin')
+                cursor.execute('DROP TABLE IF EXISTS ta')
+                cursor.execute('DROP TABLE IF EXISTS student')
 
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS ta (
@@ -43,41 +43,44 @@ def main():
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS student (
                     student_netid TEXT NOT NULL,
-                    student_name TEXT,
-                    PRIMARY KEY (student_netid),
-                    UNIQUE (student_netid)
+                    student_name TEXT NOT NULL,
+                    PRIMARY KEY (student_netid)
                     )
                 ''')
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS ta_courses (
                     ta_netid TEXT NOT NULL,
                     course TEXT NOT NULL,
-                    PRIMARY KEY (ta_netid, course)
+                    PRIMARY KEY (ta_netid, course),
+                    FOREIGN KEY (ta_netid) REFERENCES ta(ta_netid)
                     )
                 ''')
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS session (
-                    session_id BIGSERIAL,
+                    session_id BIGSERIAL NOT NULL,
                     student_netid TEXT NOT NULL,
                     ta_netid TEXT,
                     course TEXT NOT NULL,
-                    assignment TEXT,
-                    bug_description TEXT,
+                    assignment TEXT NOT NULL,
+                    bug_description TEXT NOT NULL,
                     time_joined TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (session_id),
-                    UNIQUE (student_netid)
+                    UNIQUE (student_netid),
+                    FOREIGN KEY (student_netid) REFERENCES student(student_netid),
+                    FOREIGN KEY (ta_netid) REFERENCES ta(ta_netid)
                     )
                 ''')
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS shifts (
-                    shift_id BIGSERIAL,
-                    ta_netid TEXT,
+                    shift_id BIGSERIAL NOT NULL,
+                    ta_netid TEXT NOT NULL,
                     date TIMESTAMP NOT NULL,
-                    PRIMARY KEY (shift_id)
+                    PRIMARY KEY (shift_id),
+                    FOREIGN KEY (ta_netid) REFERENCES ta(ta_netid)
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS admins (
+                    CREATE TABLE IF NOT EXISTS admin (
                     admin_netid TEXT NOT NULL,
                     PRIMARY KEY (admin_netid)
                     )
