@@ -162,6 +162,13 @@ def queueentry():
             # Otherwise, display queue entry page
             #response = flask.redirect('/queuestatus')
 
+        # If user tries to rejoin queue, alert them that they must leave the queue 
+        # first and redirect them to correct page 
+        status = database.student_already_in_queue(student_netid)
+        if(status == "InQueue"):
+            return flask.redirect('/queuestatus?error=already_in_queue')
+        elif(status == "InSession"):
+            return flask.redirect('/insessionstudent?error=already_in_session') 
         return response
 
     return flask.render_template('queueentry.html')

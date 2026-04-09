@@ -32,6 +32,17 @@
 
     </div>
     {% include 'footer.html' %}
+
+    </script>
+
+        <script>
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get("error");
+
+        if(error === "already_in_session"){
+            alert("You’re currently being helped by a TA. You can rejoin the queue once your TA ends your session.");
+        }
+    </script>
 </body>
 </html>
 

@@ -54,5 +54,14 @@
     }, 5000);
     </script>
 
+        <script>
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get("error");
+
+        if(error === "already_in_queue"){
+            alert("You’re already in the queue. To restart your place, please leave and join again.");
+        }
+    </script>
+
 </body>
 </html>
