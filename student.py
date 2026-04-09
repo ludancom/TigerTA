@@ -156,7 +156,7 @@ def queueentry():
 #-----------------------------------------------------------------------
 # Queue Status Page:
 #-----------------------------------------------------------------------
-@student_routes.route('/queuestatus', methods={'GET'})
+@student_routes.route('/queuestatus', methods={'GET', 'POST'})
 def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
@@ -186,10 +186,10 @@ def queuestatus():
         action = flask.request.form.get('action')
 
         if action == 'leave_queue':
-            # Remove the session from the queue after session ends
+            # Remove the session from the queue 
             database.remove_session(session_id, student_netid)
 
-            # Redirect to the end session page
+            # Redirect to the queue entry page
             response = flask.redirect('/queueentry')
 
     return response
