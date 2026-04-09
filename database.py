@@ -618,7 +618,7 @@ def remove_ta(ta_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def validate_admin(admin_netid):
-    """ Method that validates if a user with admin_netid is truly an admin."""
+    """ Method that validates if a user with admin_netid is truly an admin. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:

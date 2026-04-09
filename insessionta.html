@@ -26,6 +26,7 @@
         <h2>Session Length: {{ session_length }} minutes</h2>
 
         <form method="post" action="{{ url_for('ta_routes.insessionta') }}">
+            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <button type="submit" name="action" value="end_session" class="button-link">End Session</button>
         </form>
 

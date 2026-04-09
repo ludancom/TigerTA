@@ -11,6 +11,7 @@ import argparse
 from student import student_routes
 from ta import ta_routes
 from admin import admin_routes
+import flask_wtf.csrf
 
 #-----------------------------------------------------------------------
 # Create app
@@ -28,6 +29,8 @@ _APP_SECRET_KEY = os.getenv('APP_SECRET_KEY')
 app.secret_key = _APP_SECRET_KEY
 auth.init(app)
 
+# Security Measures
+flask_wtf.csrf.CSRFProtect(app)
 #-----------------------------------------------------------------------
 # register routes
 app.register_blueprint(student_routes)

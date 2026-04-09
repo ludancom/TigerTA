@@ -12,6 +12,7 @@
         <h1>To join the queue, please enter the following:</h1>
 
         <form action="/queueentry" method="post" onsubmit="return validateForm()">
+            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <h2>Enter your name</h2>
             <input type="text" id="student_name" name="student_name" placeholder="Your name" required>
 

@@ -12,6 +12,7 @@
         <h1>Please enter the information of the TA you would like to add</h1>
 
         <form action="/add_ta" method="post" onsubmit="return validateForm()">
+            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <h2>TA Name (First Last)</h2>
             <input type="text" id="ta_name" name="ta_name" placeholder="TA's name" required>
 

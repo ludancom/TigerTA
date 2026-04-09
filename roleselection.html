@@ -11,6 +11,7 @@
     <div class="container">
         <h1>Please select your role.</h1>
          <form method="post" action="{{ url_for('student_routes.roleselection') }}">
+            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <button type="submit" name="role" value="TA" class="button-link">TA</button>
             <button type="submit" name="role" value="Student" class="button-link">Student</button>
             <button type="submit" name="role" value="Admin" class="button-link">Admin</button>
