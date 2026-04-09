@@ -587,7 +587,7 @@ def get_active_sessions():
 # Admin functions
 #-----------------------------------------------------------------------
 
-def add_ta(ta_netid):
+def add_ta(ta_netid, ta_name, course):
     """ Method that adds a TA to the database. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
@@ -596,11 +596,15 @@ def add_ta(ta_netid):
                     INSERT INTO ta (ta_netid, ta_name, available)
                     VALUES (%s, %s, FALSE)
                     ON CONFLICT (ta_netid) DO NOTHING
-                """, (ta_netid, ta_netid))
+                """, (ta_netid, ta_name))
+                cursor.execute("""
+                    INSERT INTO ta_courses (ta_netid, course)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                """, (ta_netid, course))
                 connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
 
 def remove_ta(ta_netid):
     """ Method that removes a TA from the database. """
@@ -613,30 +617,49 @@ def remove_ta(ta_netid):
                 cursor.execute("""
                     DELETE FROM ta WHERE ta_netid = %s
                 """, (ta_netid,))
-            connection.commit()
+                connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-def validate_admin(admin_netid):
-    """ Method that validates if a user with admin_netid is truly an admin. """
+def get_all_tas():
+    """ Method that returns all TAs in the database. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Get Student name
-                statement_str = """SELECT admin_netid 
-                FROM admin
-                WHERE admin_netid = %s 
-                """
-                cursor.execute(statement_str, (admin_netid,))
-                table = cursor.fetchone()
-                admin_netid = table[0]
-                # if there is no 
-                if admin_netid == None:
-                    return False
-                return True
-                
+                cursor.execute("""
+                    SELECT ta.ta_netid, ta.ta_name, ta.available,
+                    STRING_AGG(ta_courses.course, ', ') AS courses
+                    FROM ta
+                    LEFT JOIN ta_courses ON ta.ta_netid = ta_courses.ta_netid
+                    GROUP BY ta.ta_netid, ta.ta_name, ta.available
+                """)
+                rows = cursor.fetchall()
+                tas = []
+                for row in rows:
+                    tas.append({
+                        'ta_netid': row[0],
+                        'ta_name': row[1],
+                        'available': row[2],
+                        'courses': row[3]
+                    })
+                return tas
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return []
+
+def validate_admin(admin_netid):
+    """ Method that validates if a user is truly an admin. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT admin_netid FROM admin
+                    WHERE admin_netid = %s
+                """, (admin_netid,))
+                return cursor.fetchone() is not None
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return False
         
 if __name__ == '__main__':
     main()
