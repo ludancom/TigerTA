@@ -25,6 +25,7 @@
                 </form>
                 {% else %}
                 <form method="post" action="">
+                    <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
                     <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
                         Clock In
                     </button>
@@ -34,6 +35,7 @@
 
             <div class="right-action-group">
                 <form method="post" action="">
+                    <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
                     <button type="submit" name="action" value="start_session" class="button-link primary">
                         Start a Session
                     </button>
