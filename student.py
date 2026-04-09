@@ -176,8 +176,8 @@ def queuestatus():
 
     # Continue displaying queue status page if user does not match with TA
     student_place = database.find_student_place(course, student_netid)
-    available_tas = database.get_num_available_tas(course)
-    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place, available_tas = available_tas)
+    num_helping_tas = database.get_num_helping_tas(course)
+    html_code = flask.render_template('queuestatus.html', bug_description = bug_description, student_place = student_place, num_helping_tas = num_helping_tas)
     response = flask.make_response(html_code)
 
     # Leave queue button takes them to queue entry page 
