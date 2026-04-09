@@ -476,7 +476,7 @@ def start_session(ta_netid):
             with contextlib.closing(connection.cursor()) as cursor:
                 # Finds the next available student in the table
                 cursor.execute("""
-                    SELECT session_id
+                    SELECT student_netid, course
                     FROM session
                     WHERE ta_netid IS NULL
                     ORDER BY session_id ASC
