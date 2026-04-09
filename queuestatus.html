@@ -27,7 +27,7 @@
         
         <form method="post" action="{{ url_for('student_routes.queuestatus') }}">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
-            <button type="submit" name="action" value="leave_queue" class="button-link">Leave Queue</button>
+            <button type="submit" name="action" value="leave_queue">Leave Queue</button>
         </form> 
     </div>
     {% include 'footer.html' %}
