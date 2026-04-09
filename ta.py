@@ -135,6 +135,8 @@ def insessionta():
     # Get bug description
     bug_description = session_info['bug_description']
 
+    response.set_cookie('student_name', student_name)
+
     # End session button takes them to next page
     if flask.request.method == 'POST':
         # Get the user's button request
@@ -146,7 +148,7 @@ def insessionta():
 
             # Redirect to the end session page
             response = flask.redirect('/endsessionta')
-            response.set_cookie('student_name', student_name)
+            
             return response
 
     return flask.render_template('insessionta.html', student_name=student_name,
