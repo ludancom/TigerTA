@@ -171,9 +171,6 @@ def queuestatus():
     # Get course
     course = session_info['course']
 
-    # Get session id 
-    session_id = session_info['session_id']
-
     # Continue displaying queue status page if user does not match with TA
     student_place = database.find_student_place(course, student_netid)
     num_helping_tas = database.get_num_helping_tas(course)
@@ -187,7 +184,7 @@ def queuestatus():
 
         if action == 'leave_queue':
             # Remove the session from the queue 
-            database.remove_session(session_id, student_netid)
+            database.remove_session(student_netid)
 
             # Redirect to the queue entry page
             response = flask.redirect('/queueentry')

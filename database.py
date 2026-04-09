@@ -378,16 +378,16 @@ def set_available(ta_netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-def remove_session(session_id, student_netid):
+def remove_session(student_netid):
     """ Method that reomves a session from the session list after it has
     ended. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 statement_str = """DELETE FROM session
-                WHERE session_id = %s
+                WHERE student_netid = %s
                 """
-                cursor.execute(statement_str, (session_id,))
+                cursor.execute(statement_str, (student_netid,))
 
                 statement_str = """DELETE FROM student
                 WHERE student_netid = %s

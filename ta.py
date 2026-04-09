@@ -129,7 +129,7 @@ def insessionta():
 
         if action == 'end_session':
             # Remove the session from the queue after session ends
-            database.remove_session(session_id, student_netid)
+            database.remove_session(student_netid)
 
             # Redirect to the end session page
             response = flask.redirect('/endsessionta')
