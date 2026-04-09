@@ -236,10 +236,21 @@ input[type="submit"]:hover {
 }
 
 .button-link {
-    background-color: #d9c4df;
-    color: #2f2373;
-    border: 2px solid #d9c4df;
-    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    max-width: 360px;
+    padding: 12px 14px;
+    margin: 8px auto 0;
+    display: block;
+    border: 1.5px solid #c9c2d3;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: 'League Spartan', sans-serif;
+    background-color: #ffffff;
+    color: #222;
+    box-sizing: border-box;
 }
 
 .button-link:hover {
