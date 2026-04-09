@@ -18,14 +18,14 @@
             <div class="left-action-group">
                 {% if clock_disabled %}
                 <form method="post" action="">
-                <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link-disabled" disabled>
                         Clocked in
                     </button>
                 </form>
                 {% else %}
                 <form method="post" action="">
-                    <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
                         Clock In
                     </button>
@@ -35,7 +35,7 @@
 
             <div class="right-action-group">
                 <form method="post" action="">
-                    <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" name="action" value="start_session" class="button-link primary">
                         Start a Session
                     </button>
@@ -55,7 +55,7 @@
                         <th>Queue #</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="queue-body">
                     {% if queue_students %}
                         {% for student in queue_students %}
                         <tr>
@@ -87,7 +87,7 @@
                         <th class="description">Bug Description</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="session-body">
                     {% if active_sessions %}
                         {% for session in active_sessions %}
                         <tr>
@@ -112,14 +112,77 @@
     </div>
 
     <script>
-        setInterval(async function () {
-            const response = await fetch('/workhub_status');
-            const data = await response.json();
+        function renderQueue(queueStudents) {
+            const queueBody = document.getElementById("queue-body");
 
-            if (data.matched) {
-                location.href = "/insessionta";
+            if (!queueStudents || queueStudents.length === 0) {
+                queueBody.innerHTML = `
+                    <tr class="empty-row">
+                        <td colspan="5">No students currently in queue.</td>
+                    </tr>
+                `;
+                return;
             }
-        }, 5000);
+
+            let html = "";
+            for (const student of queueStudents) {
+                html += `
+                    <tr>
+                        <td>${student.student_netid}</td>
+                        <td>${student.course}</td>
+                        <td>${student.assignment}</td>
+                        <td class="description">${student.bug_description}</td>
+                        <td>${student.queue_number}</td>
+                    </tr>
+                `;
+            }
+            queueBody.innerHTML = html;
+        }
+
+        function renderSessions(activeSessions) {
+            const sessionBody = document.getElementById("session-body");
+
+            if (!activeSessions || activeSessions.length === 0) {
+                sessionBody.innerHTML = `
+                    <tr class="empty-row">
+                        <td colspan="5">No active sessions right now.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = "";
+            for (const session of activeSessions) {
+                html += `
+                    <tr>
+                        <td>${session.student_netid}</td>
+                        <td>${session.ta_netid}</td>
+                        <td>${session.course}</td>
+                        <td>${session.assignment}</td>
+                        <td class="description">${session.bug_description}</td>
+                    </tr>
+                `;
+            }
+            sessionBody.innerHTML = html;
+        }
+
+        async function updateWorkhub() {
+            try {
+                const response = await fetch('/workhub_status');
+                const data = await response.json();
+
+                renderQueue(data.queue_students);
+                renderSessions(data.active_sessions);
+
+                if (data.matched) {
+                    window.location.href = "/insessionta";
+                }
+            } catch (error) {
+                console.error("Error updating workhub:", error);
+            }
+        }
+
+        setInterval(updateWorkhub, 3000);
     </script>
 </body>
 </html>
