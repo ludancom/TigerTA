@@ -153,13 +153,12 @@ def get_num_available_tas(course):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 # Get the number of TAs teaching a specific course
-                statement_str = """SELECT COUNT(*) FROM 
-                (
-                SELECT ta_netid
-                FROM ta
-                WHERE course = %s
-                AND available = TRUE
-                ) AS iguessbro
+                statement_str = """
+                SELECT COUNT(*)
+                FROM ta, ta_courses
+                WHERE ta.ta_netid = ta_courses.ta_netid
+                AND ta_courses.course = %s
+                AND ta_available = TRUE
                 """
                 cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
@@ -269,7 +268,7 @@ def get_session_info_student(student_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT course, bug_description
+                    SELECT course, bug_description, session_id
                     FROM session
                     WHERE session.student_netid = %s
                     ORDER BY session_id DESC
@@ -284,6 +283,7 @@ def get_session_info_student(student_netid):
                 session_info = {
                     'course': table[0][0],
                     'bug_description': table[0][1],
+                    'session_id': table[0][2]
                 }
 
                 return session_info
