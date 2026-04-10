@@ -12,12 +12,12 @@
     <body>
         <h1>Session Complete!</h1>
 
-        <p><b>Thanks for using TigerTA!</p>
+        <p><b>Thanks for using TigerTA!</b></p>
 
         <h2> Student: {{ student_name }}</h2>
 
          <!-- Return to previous search page -->
-        <a href="/workhub.html">Return Home</a>
+        <a href="{{ url_for('ta_routes.workhub') }}">Return Home</a>
 
     </body>
 </html>
