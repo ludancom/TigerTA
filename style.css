@@ -285,6 +285,24 @@ input[type="submit"]:hover {
     overflow-x: auto;
 }
 
+.studentinfo-box {
+    margin: 16px auto;
+    padding: 16px 18px;
+    max-width: 500px;
+    background-color: #ffffff;
+    border: 1px solid #ddd6e5;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(47, 35, 115, 0.05);
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.studentinfo-box strong {
+    display: block;
+}
+
 .student-table {
     width: 100%;
     border-collapse: separate;
