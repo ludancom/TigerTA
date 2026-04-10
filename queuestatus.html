@@ -42,12 +42,6 @@
         const response = await fetch('/trymatch');
         const data = await response.json();
 
-        // if the session ended, go to end session page
-        if (data.ended) {
-            window.location.href = "/endsessionstudent";
-            return;
-        }
-
         // if student matched, go to session page
         if (data.matched) {
             window.location.href = "/insessionstudent";
@@ -59,8 +53,8 @@
             document.getElementById("placeText").innerText =
                 "You are number " + data.student_place + " in line!";
         }
-        } catch (err) {
-        console.log("Polling error:", err);
+        } catch (error) {
+        console.log("matching error:", error);
         }
     }, 5000);
     </script>

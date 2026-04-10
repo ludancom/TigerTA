@@ -207,7 +207,6 @@ def trymatch():
     if not session_info:
         return {
             "matched": False,
-            "ended": True,
             "student_place": None
         }
 
@@ -222,7 +221,6 @@ def trymatch():
 
     return {
         "matched": ta_name is not None,
-        "ended": False,
         "student_place": student_place
     }
 

@@ -18,6 +18,23 @@
         </div>
     </div>
     {% include 'footer.html' %}
+    
+    <script>
+    setInterval(async function () {
+        try {
+            const response = await fetch('/trymatch');
+            const data = await response.json();
+
+            // if no longer matched then send to end session page
+            if (!data.matched) {
+                window.location.href = "/endsessionstudent";
+            }
+
+        } catch (err) {
+        console.log("Polling error:", err);
+        }
+    }, 3000);
+    </script>
 
     </script>
 
