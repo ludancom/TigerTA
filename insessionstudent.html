@@ -27,6 +27,13 @@
 
             // if no longer matched then send to end session page
             if (!data.matched) {
+                // setting the cookie for the ta name
+                const taName = "{{ ta_name }}";
+
+                // saving it here so it doesnt get lost
+                document.cookie = "ta_name=" + taName + "; path=/";
+
+                //send to end session page
                 window.location.href = "/endsessionstudent";
             }
 

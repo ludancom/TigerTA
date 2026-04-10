@@ -263,11 +263,8 @@ def endsessionstudent():
     """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
-    # Get the student name
-    student_netid = auth.get_username()
-
-    # Get the ta name
-    ta_name = database.get_session_ta_name(student_netid) 
+    # Get the ta name from the cookie
+    ta_name = flask.request.cookies.get('ta_name')
 
     # If the student clicks the home button
     if flask.request.method == 'POST':
