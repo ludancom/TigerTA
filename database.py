@@ -415,7 +415,6 @@ def clock_in(ta_netid):
                     VALUES (%s, %s, TRUE, TRUE, NULL)
                     ON CONFLICT (ta_netid)
                     DO UPDATE SET
-                        available = TRUE,
                         clockin = TRUE
                 """, (ta_netid, ta_netid))
 
@@ -481,7 +480,8 @@ def refresh_clockin_status(ta_netid):
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
                     UPDATE ta
-                    SET clockin = FALSE
+                    SET clockin = FALSE,
+                        available = FALSE
                     WHERE ta_netid = %s
                       AND clockin_expire IS NOT NULL
                       AND clockin_expire <= NOW()
