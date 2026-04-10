@@ -27,7 +27,7 @@ def main():
                 cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
                 cursor.execute('DROP TABLE IF EXISTS shifts')
-                cursor.execute('DROP TABLE IF EXISTS admins')
+                cursor.execute('DROP TABLE IF EXISTS admin')
                 cursor.execute('DROP TABLE IF EXISTS ta')
                 cursor.execute('DROP TABLE IF EXISTS student')
 
@@ -80,7 +80,7 @@ def main():
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS admins (
+                    CREATE TABLE IF NOT EXISTS admin (
                     admin_netid TEXT NOT NULL,
                     PRIMARY KEY (admin_netid)
                     )
@@ -156,16 +156,19 @@ def get_num_on_shift_tas(course):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 # Get the number of TAs teaching a specific course
-                cursor.execute("""
-                    SELECT COUNT(*)
-                    FROM ta
-                    JOIN ta_courses ON ta.ta_netid = ta_courses.ta_netid
-                    WHERE ta_courses.course = %s
-                    AND ta.clockin_expire IS NOT NULL
-                    AND ta.clockin_expire > NOW()
-                """, (course,))
+                statement_str = """
+                SELECT COUNT(*)
+                FROM ta, ta_courses
+                WHERE ta.ta_netid = ta_courses.ta_netid
+                AND ta_courses.course = %s
+                AND ta.clockin = TRUE
+                """
+                cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
-                return row[0] if row else 0
+                num_on_shift_tas = row[0]
+
+                # Return TA name to display to users
+                return num_on_shift_tas
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -650,7 +653,7 @@ def validate_admin(admin_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT admin_netid FROM admins
+                    SELECT admin_netid FROM admin
                     WHERE admin_netid = %s
                 """, (admin_netid,))
                 return cursor.fetchone() is not None

@@ -46,12 +46,18 @@ def workhub():
         # Update the TA's attendance when they clock in
         ### Implement this function later ###
         if action == 'clock_in':
+            print("CLOCK IN CLICKED")
+            print("ta_netid:", ta_netid)
             # creating the 2 hour shift for the TA when clocked in
             current_time = int(time.time())
             expires = database.get_clockin_expire(ta_netid) or 0
+            print("current_time:", current_time)
+            print("expires:", expires)
             if expires <= current_time:
                 # add the shift to the clock in table, and expire in 2 hours
+                print("calling database.clock_in()")
                 database.clock_in(ta_netid)
+                print("calling set_clockin_expire()")
                 database.set_clockin_expire(ta_netid, current_time + 60*60*2)
             # redirect so they cant submit twice
             return flask.redirect('/workhub')
