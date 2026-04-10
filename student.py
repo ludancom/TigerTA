@@ -207,6 +207,7 @@ def trymatch():
     if not session_info:
         return {
             "matched": False,
+            "ended": True,
             "student_place": None
         }
 
@@ -221,6 +222,7 @@ def trymatch():
 
     return {
         "matched": ta_name is not None,
+        "ended": False,
         "student_place": student_place
     }
 
@@ -263,32 +265,16 @@ def endsessionstudent():
     """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
-    # Get student net id
+    # Get the student name
     student_netid = auth.get_username()
-    
-    # Get relevant session data:
-    session_info = database.get_session_info_student(student_netid)
 
-    # Get TA name
-    ta_name = database.get_session_ta_name(student_netid)
+    # Get the ta name
+    ta_name = database.get_session_ta_name(student_netid) 
 
-    # Display end session page
-    html_code = flask.render_template('endsessionstudent.html', 
-    ta_name = ta_name)
-
-    response = flask.make_response(html_code)
-
-    # Back to work hub page if they press "Home" button
+    # If the student clicks the home button
     if flask.request.method == 'POST':
+        if flask.request.form.get('action') == 'home':
+            # take them back to the queue entry page
+            return flask.redirect('/queueentry')
 
-        # Get the user's button request
-        action = flask.request.form.get('action')
-
-        # If the user presses the end session button, it redirects 
-        # them to the end session page
-        if action == 'home':
-
-            # Redirect to the queue entry page
-            response = flask.redirect('/queueentry')
-
-    return response
+    return flask.render_template('endsessionstudent.html', ta_name=ta_name)

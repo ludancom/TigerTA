@@ -36,17 +36,25 @@
         </form> 
     </div>
     {% include 'footer.html' %}
-    
+
     <script> setInterval (async function(){
          try {
         const response = await fetch('/trymatch');
         const data = await response.json();
 
+        // if the session ended, go to end session page
+        if (data.ended) {
+            window.location.href = "/endsessionstudent";
+            return;
+        }
+
+        // if student matched, go to session page
         if (data.matched) {
             window.location.href = "/insessionstudent";
             return;
         }
 
+        // otherwise show their place in line and update it
         if (data.student_place !== null) {
             document.getElementById("placeText").innerText =
                 "You are number " + data.student_place + " in line!";
