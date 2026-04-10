@@ -94,7 +94,9 @@ def workhub_status():
     active_sessions = database.get_active_sessions()
 
     # determine whether this TA was matched
-    matched = False  
+    ta_netid = auth.get_username()
+    session_info = database.get_session_info_ta(ta_netid)
+    matched = session_info is not None
 
     return flask.jsonify({
         "matched": matched,
