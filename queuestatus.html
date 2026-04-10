@@ -36,28 +36,27 @@
         </form> 
     </div>
     {% include 'footer.html' %}
+    
     <script> setInterval (async function(){
-        fetch ('/queuestatus')
-        const response = await fetch ('/trymatch');
+         try {
+        const response = await fetch('/trymatch');
         const data = await response.json();
 
-        if (data.matched){
-            location.href = "/insessionstudent";
+        if (data.matched) {
+            window.location.href = "/insessionstudent";
+            return;
+        }
+
+        if (data.student_place !== null) {
+            document.getElementById("placeText").innerText =
+                "You are number " + data.student_place + " in line!";
+        }
+        } catch (err) {
+        console.log("Polling error:", err);
         }
     }, 5000);
     </script>
 
-     <script> setInterval (async function(){
-        const response = await fetch ('/trymatch');
-        const data = await response.json();
-
-        if (data.matched){
-            location.href = "/insessionstudent";
-        }
-
-        document.getElementById("placeText").innerText = "You are number " + data.student_place + " in line!"
-    }, 5000);
-    </script>
 
         <script>
         const params = new URLSearchParams(window.location.search);

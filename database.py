@@ -156,19 +156,16 @@ def get_num_on_shift_tas(course):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 # Get the number of TAs teaching a specific course
-                statement_str = """
-                SELECT COUNT(*)
-                FROM ta, ta_courses
-                WHERE ta.ta_netid = ta_courses.ta_netid
-                AND ta_courses.course = %s
-                AND ta.clockin = TRUE
-                """
-                cursor.execute(statement_str, (course,))
+                cursor.execute("""
+                    SELECT COUNT(*)
+                    FROM ta
+                    JOIN ta_courses ON ta.ta_netid = ta_courses.ta_netid
+                    WHERE ta_courses.course = %s
+                    AND ta.clockin_expire IS NOT NULL
+                    AND ta.clockin_expire > NOW()
+                """, (course,))
                 row = cursor.fetchone()
-                num_on_shift_tas = row[0]
-
-                # Return TA name to display to users
-                return num_on_shift_tas
+                return row[0] if row else 0
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
