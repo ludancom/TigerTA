@@ -17,7 +17,11 @@
         </p>
 
         <div class="status-box">
-            <strong>{{ num_helping_tas }} TAs are helping with your course.</strong> 
+        {% if num_on_shift_tas == 1 %}
+            <strong> 1 TA is currently on shift for your course.</strong> 
+        {% else %}
+            <strong>{{ num_on_shift_tas }} TAs are currently on shift for your course.</strong> 
+        {% endif %}
         </div>
 
         <div class="problem-box">
@@ -27,7 +31,8 @@
         
         <form method="post" action="{{ url_for('student_routes.queuestatus') }}">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
-            <button type="submit" name="action" value="leave_queue" class="button-link">Leave Queue</button>
+            <button type="submit" name="action" value="leave_queue" onclick="return confirm('Are you sure you want to leave the queue?');"
+            class="button-link">Leave Queue</button>
         </form> 
     </div>
     {% include 'footer.html' %}

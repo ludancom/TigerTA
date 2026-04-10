@@ -180,7 +180,7 @@ def queuestatus():
     student_place = database.find_student_place(course, student_netid)
 
     #get number of available tas
-    num_helping_tas = database.get_num_helping_tas(course)
+    num_on_shift_tas = database.get_num_on_shift_tas(course)
 
     if flask.request.method == 'POST':
         action = flask.request.form.get('action')
@@ -192,7 +192,7 @@ def queuestatus():
         'queuestatus.html',
         bug_description=bug_description,
         student_place=student_place,
-        num_helping_tas=num_helping_tas
+        num_on_shift_tas=num_on_shift_tas
     )
 #-----------------------------------------------------------------------
 # Match Attempt (For Queue Status Page):
