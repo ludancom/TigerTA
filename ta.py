@@ -39,6 +39,8 @@ def workhub():
     if not ta_netid:
         return flask.redirect('/')
     
+    database.refresh_clockin_status(ta_netid)
+    
     if flask.request.method == 'POST':
         # Get the user's button request
         action = flask.request.form.get('action')
@@ -49,7 +51,7 @@ def workhub():
             print("CLOCK IN CLICKED")
             print("ta_netid:", ta_netid)
             # creating the 2 hour shift for the TA when clocked in
-            current_time = int(time.time())
+            current_time = int(time.time()) 
             expires = database.get_clockin_expire(ta_netid) or 0
             print("current_time:", current_time)
             print("expires:", expires)

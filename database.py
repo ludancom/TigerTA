@@ -36,6 +36,7 @@ def main():
                     ta_netid TEXT NOT NULL,
                     ta_name TEXT NOT NULL,
                     available BOOLEAN NOT NULL,
+                    clockin BOOLEAN NOT NULL,
                     clockin_expire TIMESTAMP,
                     PRIMARY KEY (ta_netid)
                     )
@@ -162,6 +163,8 @@ def get_num_on_shift_tas(course):
                 WHERE ta.ta_netid = ta_courses.ta_netid
                 AND ta_courses.course = %s
                 AND ta.clockin = TRUE
+                AND ta.clockin_expire IS NOT NULL
+                AND ta.clockin_expire > NOW()
                 """
                 cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
@@ -407,18 +410,19 @@ def clock_in(ta_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                #make sure that the TA exists already
                 cursor.execute("""
-                    INSERT INTO ta (ta_netid, ta_name, available)
-                    VALUES (%s, %s, TRUE)
-                    ON CONFLICT (ta_netid) DO NOTHING
+                    INSERT INTO ta (ta_netid, ta_name, available, clockin, clockin_expire)
+                    VALUES (%s, %s, TRUE, TRUE, NULL)
+                    ON CONFLICT (ta_netid)
+                    DO UPDATE SET
+                        available = TRUE,
+                        clockin = TRUE
                 """, (ta_netid, ta_netid))
-                
-                # Create a new shift entry
-                cursor.execute('''
+
+                cursor.execute("""
                     INSERT INTO shifts (ta_netid, date)
                     VALUES (%s, %s)
-                ''', (ta_netid, datetime.now()))
+                """, (ta_netid, datetime.now()))
                 connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -445,7 +449,8 @@ def set_clockin_expire(ta_netid, expires_epoch):
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
                     UPDATE ta
-                    SET clockin_expire = TO_TIMESTAMP(%s)
+                    SET clockin = TRUE,
+                        clockin_expire = TO_TIMESTAMP(%s)
                     WHERE ta_netid = %s
                 """, (int(expires_epoch), ta_netid))
                 connection.commit()
@@ -468,6 +473,22 @@ def get_clockin_expire(ta_netid):
     except Exception as ex:
         print(f'get_clockin_expire: {ex}', file=sys.stderr)
         return 0
+    
+def refresh_clockin_status(ta_netid):
+    """Mark a TA as no longer clocked in if their shift expired."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    UPDATE ta
+                    SET clockin = FALSE
+                    WHERE ta_netid = %s
+                      AND clockin_expire IS NOT NULL
+                      AND clockin_expire <= NOW()
+                """, (ta_netid,))
+                connection.commit()
+    except Exception as ex:
+        print(f'refresh_clockin_status: {ex}', file=sys.stderr)
     
 def start_session(ta_netid):
     """Starts the session for the TA and matches them to the student."""
@@ -593,8 +614,8 @@ def add_ta(ta_netid, ta_name, course):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    INSERT INTO ta (ta_netid, ta_name, available)
-                    VALUES (%s, %s, FALSE)
+                    INSERT INTO ta (ta_netid, ta_name, available, clockin, clockin_expire)
+                    VALUES (%s, %s, FALSE, FALSE, NULL)
                     ON CONFLICT (ta_netid) DO NOTHING
                 """, (ta_netid, ta_name))
                 cursor.execute("""
