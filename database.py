@@ -27,7 +27,7 @@ def main():
                 cursor.execute('DROP TABLE IF EXISTS ta_courses')
                 cursor.execute('DROP TABLE IF EXISTS session')
                 cursor.execute('DROP TABLE IF EXISTS shifts')
-                cursor.execute('DROP TABLE IF EXISTS admin')
+                cursor.execute('DROP TABLE IF EXISTS admins')
                 cursor.execute('DROP TABLE IF EXISTS ta')
                 cursor.execute('DROP TABLE IF EXISTS student')
 
@@ -80,7 +80,7 @@ def main():
                     )
                 ''')
                 cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS admin (
+                    CREATE TABLE IF NOT EXISTS admins (
                     admin_netid TEXT NOT NULL,
                     PRIMARY KEY (admin_netid)
                     )
@@ -650,7 +650,7 @@ def validate_admin(admin_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT admin_netid FROM admin
+                    SELECT admin_netid FROM admins
                     WHERE admin_netid = %s
                 """, (admin_netid,))
                 return cursor.fetchone() is not None
