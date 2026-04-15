@@ -63,14 +63,12 @@
             <form method="post" action="{{ url_for('admin_routes.edit_ta') }}">
                 <!-- CSRF token to protect against attacks -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-                <input type="hidden" id="edit_netid_original" name="original_netid">
 
                 <label for="edit_name">Name</label>
                 <input type="text" id="edit_name" name="ta_name" required>
 
                 <label for="edit_netid">NetID</label>
-                <input type="text" id="edit_netid" name="ta_netid" required>
+                <input type="text" id="edit_netid" name="ta_netid" readonly>
 
                 <label for="edit_email">Email</label>
                 <input type="email" id="edit_email" name="email" required>
@@ -90,7 +88,6 @@
 
         const editName = document.getElementById("edit_name");
         const editNetid = document.getElementById("edit_netid");
-        const editOriginalNetid = document.getElementById("edit_original_netid");
         const editEmail = document.getElementById("edit_email");
         const editCourses = document.getElementById("edit_courses");
 
@@ -103,7 +100,6 @@
 
                 editName.value = name;
                 editNetid.value = netid;
-                editOriginalNetid.value = netid; // Store original NetID for reference
                 editEmail.value = email;
                 editCourses.value = courses;
 

@@ -67,7 +67,24 @@ def remove_ta():
     return flask.render_template('remove_ta.html')
 
 #-----------------------------------------------------------------------
-# View TAs Page:
+# Edit TA Modal:
+#-----------------------------------------------------------------------
+
+@admin_routes.route('/edit_ta', methods=['POST'])
+def edit_ta():
+    """ Method that edits a TA in the database. """
+
+    if flask.request.method == 'POST':
+        ta_net_id = flask.request.form.get('ta_net_id')
+        ta_name = flask.request.form.get('ta_name')
+        course = flask.request.form.get('course')
+        database.edit_ta(ta_net_id, ta_name, course)
+        return flask.redirect('/view_tas')
+
+    return flask.render_template('edit_ta.html')
+
+#-----------------------------------------------------------------------
+# View TAs Page: i dont think we need this?
 #-----------------------------------------------------------------------
 
 @admin_routes.route('/view_tas', methods=['GET'])
