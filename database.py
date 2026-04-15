@@ -227,15 +227,15 @@ def match(course, student_netid, ta_netid):
                         chosen_ta_netid = table[0][0]
 
                     else:
-                    # otherwise find any available TA for the course
-                    statement_str = """SELECT ta.ta_netid
-                    FROM ta, ta_courses
-                    WHERE ta_courses.course = %s
-                    AND ta_courses.ta_netid = ta.ta_netid
-                    AND ta.available = TRUE"""
-                    cursor.execute(statement_str, (course,))
-                    table = cursor.fetchall()
-                    chosen_ta_netid = table[0][0]
+                        # otherwise find any available TA for the course
+                        statement_str = """SELECT ta.ta_netid
+                        FROM ta, ta_courses
+                        WHERE ta_courses.course = %s
+                        AND ta_courses.ta_netid = ta.ta_netid
+                        AND ta.available = TRUE"""
+                        cursor.execute(statement_str, (course,))
+                        table = cursor.fetchall()
+                        chosen_ta_netid = table[0][0]
 
                 # Set TA to unavailable
                 statement_str = """UPDATE ta 
