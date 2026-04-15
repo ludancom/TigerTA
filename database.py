@@ -218,6 +218,12 @@ def match(course, student_netid, ta_netid):
                     # 200 level TAs can help with 100 level classes
                     overflow = detect_overflow()
 
+                    # Any 200 level student can be helped by any 2XX TA
+                    if course == 'COS 226' or course == 'COS 217':
+                        course = 'COS 2XX'
+
+                    # If there is overflow and the student is a 126 student,
+                    # they can be matched to 200 level TAs
                     if course == 'COS 126' and overflow:
                         statement_str = """SELECT ta.ta_netid
                         FROM ta
@@ -226,8 +232,9 @@ def match(course, student_netid, ta_netid):
                         table = cursor.fetchall()
                         chosen_ta_netid = table[0][0]
 
+                    # Otherwise, if there is no overflow, or if the student is
+                    # 2XX level, match to a TA in their course
                     else:
-                        # otherwise find any available TA for the course
                         statement_str = """SELECT ta.ta_netid
                         FROM ta, ta_courses
                         WHERE ta_courses.course = %s
