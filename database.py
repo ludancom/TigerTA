@@ -204,7 +204,7 @@ def find_ta_name(course, student_netid):
 def match(course, student_netid, ta_netid):
     """ Method that matches a TA to a student by finding their netid,
     changing their availability, and adding their information to the
-    session table. Returns their net id. """
+    session table. Handles overflow. Returns their net id. """
 
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
@@ -213,7 +213,21 @@ def match(course, student_netid, ta_netid):
                 if ta_netid is not None:
                     chosen_ta_netid = ta_netid
                 else:
-                    #otherwise find any available TA for the course
+                    # Check if overflow handling is necessary
+                    # AKA if there are too many 126 students in the queue and 
+                    # not a lot of 200 level, the 200 level TAs can TA 126
+                    overflow = detect_overflow()
+
+                    if course == 'COS 126' and overflow:
+                        statement_str = """SELECT ta.ta_netid
+                        FROM ta
+                        AND ta.available = TRUE"""
+                        cursor.execute(statement_str)
+                        table = cursor.fetchall()
+                        chosen_ta_netid = table[0][0]
+
+                    else:
+                    # otherwise find any available TA for the course
                     statement_str = """SELECT ta.ta_netid
                     FROM ta, ta_courses
                     WHERE ta_courses.course = %s
@@ -237,6 +251,33 @@ def match(course, student_netid, ta_netid):
 
                 connection.commit()
                 return chosen_ta_netid
+
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+def detect_overflow():
+    """ Method that detects if there are more than double the amount of 
+    100 level students in the queue than 200 level. If so, return true.
+    Otherwise, return false. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                
+                # Extract the queue entries
+                statement_str = """SELECT course
+                FROM session
+                WHERE ta_netid = NONE"""
+                cursor.execute(statement_str)
+                table = cursor.fetchall()
+                num_100_students = sum([i.count('COS 126') for i in table])
+                num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
+
+                # If there are more than double the amount of students in 126 queue than 200, return true
+                if num_100_students >= num_200_students * 2:
+                    return True
+                
+                else:
+                    return False
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
