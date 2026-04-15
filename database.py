@@ -272,8 +272,10 @@ def detect_overflow():
                 num_100_students = sum([i.count('COS 126') for i in table])
                 num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
 
-                # If there are more than double the amount of students in 126 queue than 200, return true
-                if num_100_students >= num_200_students * 2:
+                # If there are 5 or more students in 126 queue and there are more 
+                # than double the amount of students in 126 queue than 200 level queue, 
+                # return true
+                if num_100_students >= 5 and num_100_students >= num_200_students * 2:
                     return True
                 
                 else:
