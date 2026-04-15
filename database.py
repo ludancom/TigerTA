@@ -214,8 +214,8 @@ def match(course, student_netid, ta_netid):
                     chosen_ta_netid = ta_netid
                 else:
                     # Check if overflow handling is necessary
-                    # AKA if there are too many 126 students in the queue and 
-                    # not a lot of 200 level, the 200 level TAs can TA 126
+                    # AKA if there are no 200 level students in the queue,
+                    # 200 level TAs can help with 100 level classes
                     overflow = detect_overflow()
 
                     if course == 'COS 126' and overflow:
@@ -256,9 +256,8 @@ def match(course, student_netid, ta_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def detect_overflow():
-    """ Method that detects if there are more than double the amount of 
-    100 level students in the queue than 200 level. If so, return true.
-    Otherwise, return false. """
+    """ Method that detects if there are no 200 level students in the queue.
+    If there are none, return true. Otherwise, return false. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -269,13 +268,10 @@ def detect_overflow():
                 WHERE ta_netid = NULL"""
                 cursor.execute(statement_str)
                 table = cursor.fetchall()
-                num_100_students = sum([i.count('COS 126') for i in table])
                 num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
 
-                # If there are 5 or more students in 126 queue and there are more 
-                # than double the amount of students in 126 queue than 200 level queue, 
-                # return true
-                if num_100_students >= 5 and num_100_students >= num_200_students * 2:
+                # If there are no 200 level students in the queue, return true
+                if num_200_students == 0:
                     return True
                 
                 else:
