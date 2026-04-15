@@ -21,6 +21,7 @@
                         <th>Email</th> <!-- still need to add email -->
                         <th>Courses</th> <!-- do i need to change how this is displayed?-->
                         <!-- because we're getting from the courses tables?-->
+                        <th>Edit</th>
                     </tr>
                 </thead>
 
@@ -30,6 +31,17 @@
                             <td>{{ ta["ta_netid"] }}</td>
                             <td>{{ ta["ta_email"] }}</td>
                             <td>{{ ta["courses"] }}</td>
+                            <td>
+                                <button 
+                                    type="button"
+                                    class="button-link edit-ta-btn"
+                                    data-netid="{{ ta['ta_netid'] }}"
+                                    data-name="{{ ta['ta_name'] }}"
+                                    data-email="{{ ta['ta_email'] }}"
+                                    data-courses="{{ ta['courses'] }}">
+                                    Edit
+                                </button>
+                            </td>
                         </tr>
                 </tbody>
             </table>
@@ -39,9 +51,62 @@
 
         <a href="{{ url_for('admin_routes.add_ta') }}" class="button-link">Add TA</a>
         <a href="{{ url_for('admin_routes.remove_ta') }}" class="button-link">Remove TA</a>
-        <a href="{{ url_for('admin_routes.edit_ta') }}" class="button-link">Edit TA</a>
 
         {% include 'footer.html' %}
     </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <h2>Edit TA</h2>
+            <!-- Triggers this modal when the button is clicked-->
+            <form method="post" action="{{ url_for('admin_routes.edit_ta') }}">
+                <!-- CSRF token to protect against attacks -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <label for="edit_name">Name</label>
+                <input type="text" id="edit_name" name="ta_name" required>
+
+                <label for="edit_netid">NetID</label>
+                <input type="text" id="edit_netid" name="ta_netid" readonly>
+
+                <label for="edit_email">Email</label>
+                <input type="email" id="edit_email" name="email" required>
+
+                <label for="edit_courses">Courses</label>
+                <input type="text" id="edit_courses" name="courses" placeholder="COS 126, COS 226" required>
+
+                <button type="submit" class="button-link primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById("editModal");
+        const closeModal = document.getElementById("closeModal");
+        const editButtons = document.querySelectorAll(".edit-ta-btn");
+
+        const editName = document.getElementById("edit_name");
+        const editNetid = document.getElementById("edit_netid");
+        const editEmail = document.getElementById("edit_email");
+        const editCourses = document.getElementById("edit_courses");
+
+        editButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                const netid = button.getAttribute("data-netid");
+                const name = button.getAttribute("data-name");
+                const email = button.getAttribute("data-email");
+                const courses = button.getAttribute("data-courses");
+
+                editName.value = name;
+                editNetid.value = netid;
+                editEmail.value = email;
+                editCourses.value = courses;
+
+                modal.style.display = "block";
+            });
+        });
+
+    </script>
 </body>
 </html>
