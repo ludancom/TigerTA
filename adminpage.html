@@ -1,20 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Control TA Information</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>View TAs</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
-        <h1>Control TA Information</h1>
+        <h1>All TAs</h1>
+
+        <div class="table-wrap">
+            <table class="student-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>NetID</th>
+                        <th>Email</th> <!-- still need to add email -->
+                        <th>Courses</th> <!-- do i need to change how this is displayed?-->
+                        <!-- because we're getting from the courses tables?-->
+                    </tr>
+                </thead>
+
+                <tbody>
+                        <tr>
+                            <td>{{ ta["ta_name"] }}</td>
+                            <td>{{ ta["ta_netid"] }}</td>
+                            <td>{{ ta["ta_email"] }}</td>
+                            <td>{{ ta["courses"] }}</td>
+                        </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <hr>
+
         <a href="{{ url_for('admin_routes.add_ta') }}" class="button-link">Add TA</a>
         <a href="{{ url_for('admin_routes.remove_ta') }}" class="button-link">Remove TA</a>
-        <a href="{{ url_for('admin_routes.view_tas') }}" class="button-link">View TAs</a>
-    </div>
+        <a href="{{ url_for('admin_routes.edit_ta') }}" class="button-link">Edit TA</a>
 
-    {% include 'footer.html' %}
+        {% include 'footer.html' %}
+    </div>
 </body>
 </html>
