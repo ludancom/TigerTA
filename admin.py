@@ -74,14 +74,13 @@ def remove_ta():
 def edit_ta():
     """ Method that edits a TA in the database. """
 
-    if flask.request.method == 'POST':
-        ta_net_id = flask.request.form.get('ta_net_id')
-        ta_name = flask.request.form.get('ta_name')
-        course = flask.request.form.get('course')
-        database.edit_ta(ta_net_id, ta_name, course)
-        return flask.redirect('/view_tas')
+    ta_net_id = flask.request.form.get('ta_net_id').strip()
+    ta_name = flask.request.form.get('ta_name').strip()
+    ta_email = flask.request.form.get('email').strip()
+    courses = flask.request.form.get('courses').strip()
+    database.edit_ta(ta_net_id, ta_name, ta_email, courses)
 
-    return flask.render_template('edit_ta.html')
+    return flask.redirect(flask.url_for('admin_routes.view_tas'))
 
 #-----------------------------------------------------------------------
 # View TAs Page: i dont think we need this?
