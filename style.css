@@ -70,6 +70,7 @@ form {
 }
 
 input[type="text"],
+input[type="email"],
 select,
 textarea {
     appearance: none;
@@ -87,6 +88,11 @@ textarea {
     background-color: #ffffff;
     color: #222;
     box-sizing: border-box;
+}
+
+input[readonly] {
+    background-color: #f2eef6;
+    color: #555;
 }
 
 input::placeholder,
@@ -412,6 +418,19 @@ hr {
 
 .modal-content button {
     margin-top: 18px;
+}
+
+.edit-ta-btn{
+    min-width: 100px;
+    padding: 10px 14px;
+    margin-top: 0;
+}
+
+.admin-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 .footer {
