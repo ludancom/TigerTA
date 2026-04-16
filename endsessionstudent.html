@@ -17,9 +17,7 @@
     <div class="container">
         <h1>Session Complete!</h1>
 
-        <p>Thanks for using TigerTA!</p>
-
-        <h2>TA: {{ ta_name }}</h2>
+        <p>Thanks for using TigerTA! Your TA was <span class="name"> {{ ta_name }}</span>.</p>
 
         <!-- Return to previous queue entry page-->
         <a href="{{ url_for('student_routes.queueentry') }}" class="button-link">

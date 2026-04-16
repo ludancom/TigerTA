@@ -16,14 +16,13 @@
             <strong>Student: </strong> {{ student_name }}
             <strong>Course: </strong> {{ course }}
             <strong>Assignment: </strong> {{ assignment }}
+            <strong class = important-info>Session Length: {{ session_length }} minutes</strong>
         </div>
 
         <div class="problem-box">
             <strong>Their problem:</strong>
             <p>{{ bug_description }}</p>
         </div>
-
-        <h2>Session Length: {{ session_length }} minutes</h2>
 
         <form method="post" action="{{ url_for('ta_routes.insessionta') }}">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">

@@ -12,7 +12,7 @@
         <h1 id="placeText">You are number {{ student_place }} in line!</h1>
 
         <p>
-            Thanks for joining the queue! You will receive an email notification when you are next in the queue and when it is your turn.
+            Thanks for joining the queue! We'll email you when you are next in the queue and when it is your turn.
             If you are working with a partner, only one person should join the queue.
         </p>
 
@@ -32,7 +32,7 @@
         <form method="post" action="{{ url_for('student_routes.queuestatus') }}">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <button type="submit" name="action" value="leave_queue" onclick="return confirm('Are you sure you want to leave the queue?');"
-            class="button-link">Leave Queue</button>
+            class="button-link secondary">Leave Queue</button>
         </form> 
     </div>
     {% include 'footer.html' %}

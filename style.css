@@ -121,7 +121,7 @@ textarea {
     align-items: center;
     gap: 22px;
     flex-wrap: wrap;
-    margin: 10px 0 6px;
+    margin: 15px 0 6px;
 }
 
 .course-options label {
@@ -172,9 +172,9 @@ input[type="submit"]:hover {
     margin: 20px auto 14px;
     padding: 12px 16px;
     max-width: 280px;
-    background-color: #ece6f3;
+    background-color: #faf9ff;
     color: #2f2373;
-    border-radius: 12px;
+    border-radius: 6px;
     border: 1px solid #d8d0e2;
     box-shadow: 0 3px 10px rgba(47, 35, 115, 0.05);
 }
@@ -185,13 +185,18 @@ input[type="submit"]:hover {
     max-width: 500px;
     background-color: #ffffff;
     border: 1px solid #ddd6e5;
-    border-radius: 14px;
+    border-radius: 6px;
     box-shadow: 0 4px 12px rgba(47, 35, 115, 0.05);
 }
 
 .problem-box p {
     margin: 10px 0 0;
     color: #333;
+}
+
+.name {
+    color: #2f2373;
+    font-weight: 600;
 }
 
 .actions-row {
@@ -257,6 +262,28 @@ input[type="submit"]:hover {
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
+.button-link.secondary {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1.5px solid #d1d5db;
+    background-color: #ffffff;
+    color: #4b5563;
+    margin-top: 16px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-family: 'League Spartan', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.button-link.secondary:hover {
+background-color:  #d3bdd9;
+border: #d3bdd9;
+color: #374151;
+}
+
 .button-link:hover {
     transform: translateY(-1px);
     background-color: #d3bdd9;
@@ -291,13 +318,18 @@ input[type="submit"]:hover {
     overflow-x: auto;
 }
 
+.important-info{
+    margin-top: 16px;
+    color: rgba(47, 35, 115, 0.7);
+}
+
 .studentinfo-box {
     margin: 16px auto;
     padding: 16px 18px;
     max-width: 500px;
     background-color: #ffffff;
     border: 1px solid #ddd6e5;
-    border-radius: 14px;
+    border-radius: 6px;
     box-shadow: 0 4px 12px rgba(47, 35, 115, 0.05);
 
     display: flex;

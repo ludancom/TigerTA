@@ -9,14 +9,14 @@
 </head>
 <body>
     <div class="container">
-        <h1>To join the queue, please enter the following:</h1>
+        <h1>Join the Queue</h1>
 
         <form action="/queueentry" method="post" onsubmit="return validateForm()">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
-            <h2>Enter your name</h2>
+            <h2>Name</h2>
             <input type="text" id="student_name" name="student_name" placeholder="Your name" required>
 
-            <h2>Select your course</h2>
+            <h2>Course</h2>
             <div class="course-options">
                 <label>
                     <input type="radio" name="course" value="COS 126" onclick="updateAssignments()" required>
@@ -34,13 +34,13 @@
                 </label>
             </div>
 
-            <h2>Select your assignment</h2>
+            <h2>Assignment</h2>
             <select id="assignments" name="assignment" required>
                 <option value="">Choose an assignment</option>
             </select>
 
-            <h2>Describe your problem</h2>
-            <textarea id="bug_description" name="bug_description" required></textarea>
+            <h2>Your problem</h2>
+            <textarea id="bug_description" name="bug_description" required placeholder = "Briefly describe what you need help with"></textarea>
 
             <input type="submit" value="Join Queue">
         </form>
