@@ -36,7 +36,7 @@
 
             <h2>Assignment</h2>
             <select id="assignments" name="assignment" required>
-                <option value="">Choose an assignment</option>
+                <option value="" disabled selected>Choose an assignment</option>
             </select>
 
             <h2>Your problem</h2>
@@ -51,7 +51,7 @@
             let selectedCourse = document.querySelector('input[name="course"]:checked');
             let dropdown = document.getElementById("assignments");
 
-            dropdown.innerHTML = '<option value="">Choose an assignment</option>';
+            dropdown.innerHTML = '<option value="" disabled selected>Choose an assignment</option>';
 
             if (!selectedCourse) return;
 

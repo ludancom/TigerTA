@@ -100,6 +100,14 @@ textarea::placeholder {
     color: #7d7d7d;
 }
 
+#assignments {
+    color: #7d7d7d;
+}
+
+#assignments:valid {
+    color: #333 
+}
+
 input:focus,
 select:focus,
 textarea:focus {
@@ -107,7 +115,6 @@ textarea:focus {
     border-color: #2f2373;
     box-shadow: 0 0 0 2px rgba(47, 35, 115, 0.10);
 }
-
 
 textarea {
     min-height: 95px;
@@ -262,32 +269,27 @@ input[type="submit"]:hover {
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.button-link.secondary {
-    appearance: none;
-    -webkit-appearance: none;
-    border: 1.5px solid #d1d5db;
-    background-color: #ffffff;
-    color: #4b5563;
-    margin-top: 16px;
-    padding: 8px 14px;
-    border-radius: 10px;
-    font-family: 'League Spartan', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.button-link.secondary:hover {
-background-color:  #d3bdd9;
-border: #d3bdd9;
-color: #374151;
-}
-
 .button-link:hover {
     transform: translateY(-1px);
     background-color: #d3bdd9;
     border-color: #d3bdd9;
+}
+
+.button-link.secondary {
+    background-color: #ffffff;
+    color: #374151;
+    border: 2px solid #d1d5db;
+    padding: 8px 14px; 
+    font-size: 14px;   
+    min-width: auto;     
+    cursor: pointer
+}
+
+.button-link.secondary:hover {
+    transform: translateY(-1px);
+    background-color:  #d3bdd9;
+    border-color: #d3bdd9;
+    opacity: 1;
 }
 
 .button-link.primary {
