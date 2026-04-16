@@ -9,7 +9,7 @@
 </head>
 <body>
     <div class="container">
-        <h1 id="placeText">You are number {{ student_place }} in line!</h1>
+        <h1 id="placeText"></h1>
 
         <p>
             Thanks for joining the queue! We'll email you when you are next in the queue and when it is your turn.
@@ -37,8 +37,18 @@
     </div>
     {% include 'footer.html' %}
 
-    <script> setInterval (async function(){
-         try {
+    <script> 
+    let place = "{{ student_place }}";
+    document.getElementById("placeText").innerText = "You're " + getOrdinal(place) + " in line!";
+
+    function getOrdinal(n) {
+        var s=["th","st","nd","rd"],
+        v=n%100;
+        return n+(s[(v-20)%10]||s[v]||s[0]);
+    }
+    
+    setInterval (async function(){
+        try {
         const response = await fetch('/trymatch');
         const data = await response.json();
 
@@ -51,15 +61,14 @@
         // otherwise show their place in line and update it
         if (data.student_place !== null) {
             document.getElementById("placeText").innerText =
-                "You are number " + data.student_place + " in line!";
+                "You're " + getOrdinal(data.student_place) + " in line!";
         }
         } catch (error) {
         console.log("matching error:", error);
         }
     }, 5000);
+
     </script>
-
-
         <script>
         const params = new URLSearchParams(window.location.search);
         const error = params.get("error");
