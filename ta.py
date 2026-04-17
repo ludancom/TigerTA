@@ -149,9 +149,6 @@ def insessionta():
     # Get session start time 
     time_session_began = database.get_time_session_began(session_id)
 
-    if time_session_began:
-        time_session_began = time_session_began.isoformat()
-
     # End session button takes them to next page
     if flask.request.method == 'POST':
         # Get the user's button request
