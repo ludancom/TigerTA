@@ -65,6 +65,7 @@ def main():
                     assignment TEXT NOT NULL,
                     bug_description TEXT NOT NULL,
                     time_joined TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    time_session_began TIMESTAMP,
                     PRIMARY KEY (session_id),
                     UNIQUE (student_netid),
                     FOREIGN KEY (student_netid) REFERENCES student(student_netid),
@@ -564,6 +565,13 @@ def start_session(ta_netid):
                 if assigned_ta is None:
                     return None
                 
+                # add the session start time to the database
+                statement_str = """UPDATE session 
+                SET time_session_began = CURRENT_TIMESTAMP
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (assigned_ta,))
+                connection.commit()
+
                 # return the session id after assignment
                 with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
                     with contextlib.closing(connection.cursor()) as cursor:
@@ -583,6 +591,31 @@ def start_session(ta_netid):
     except Exception as ex:
         print(f'start_session: {ex}', file=sys.stderr)
         return None
+
+def get_time_session_began(session_id):
+    """Return the time the session began."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT time_session_began
+                    FROM session
+                    WHERE session_id = %s
+                """, (session_id,))
+                table = cursor.fetchall()
+
+                # In case the session does not exist
+                if not table:
+                    return None
+
+                # Otherwise, return the time the session began
+                time_session_began = table[0][0]
+
+                return time_session_began
+
+    except Exception as ex:
+        print(f'get_queue_students: {ex}', file=sys.stderr)
+        return []
 
 def get_queue_students():
     """Return all students currently waiting in queue."""

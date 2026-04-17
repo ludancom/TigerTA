@@ -31,7 +31,7 @@
         
         <form method="post" action="{{ url_for('student_routes.queuestatus') }}">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
-            <button type="submit" name="action" value="leave_queue" onclick="return confirm('Are you sure you want to leave the queue?');"
+            <button type="submit" name="action" value="leave_queue" onclick="return confirm('Are you sure you want to leave the queue? This action cannot be undone.');"
             class="button-link secondary">Leave Queue</button>
         </form> 
     </div>

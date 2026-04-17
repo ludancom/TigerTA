@@ -146,6 +146,11 @@ def insessionta():
     # Get bug description
     bug_description = session_info['bug_description']
 
+    # Get session start time 
+    time_session_began = database.get_time_session_began(session_id)
+
+    if time_session_began:
+        time_session_began = time_session_began.isoformat()
 
     # End session button takes them to next page
     if flask.request.method == 'POST':
@@ -165,7 +170,8 @@ def insessionta():
 
     return flask.render_template('insessionta.html', student_name=student_name,
                                  course=course, assignment=assignment,
-                                 bug_description=bug_description)
+                                 bug_description=bug_description, 
+                                 time_session_began = time_session_began)
 
 
 #-----------------------------------------------------------------------

@@ -16,7 +16,7 @@
             <strong>Student: </strong> {{ student_name }}
             <strong>Course: </strong> {{ course }}
             <strong>Assignment: </strong> {{ assignment }}
-            <strong class = important-info>Session Length: {{ session_length }} minutes</strong>
+            <strong class = important-info><span id="timer"></span></strong>
         </div>
 
         <div class="problem-box">
@@ -28,8 +28,22 @@
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <button type="submit" name="action" value="end_session" class="button-link">End Session</button>
         </form>
-
     </div>
+    <script>
+        const startTime = new Date("{{ time_session_began }}Z");
+        function updateTimer() {
+            const now = new Date();
+            const diff = Math.floor((now - startTime) / 1000);
+
+            const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
+            const seconds = String(diff % 60).padStart(2, '0');
+
+            document.getElementById("timer").innerHTML =
+                "Session length: " + minutes + " min " + seconds + " sec";
+        }
+        setInterval(updateTimer, 1000);
+        updateTimer();
+    </script>
     {% include 'footer.html' %}
 
     
