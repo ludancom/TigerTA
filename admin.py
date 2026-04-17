@@ -47,7 +47,7 @@ def add_ta():
         ta_name = flask.request.form.get('ta_name')
         course = flask.request.form.get('course')
         database.add_ta(ta_net_id, ta_name, course)
-        return flask.redirect('/view_tas')
+        return flask.redirect('/adminpage')
 
     return flask.render_template('add_ta.html')
 
@@ -62,7 +62,7 @@ def remove_ta():
     if flask.request.method == 'POST':
         ta_net_id = flask.request.form.get('ta_net_id')
         database.remove_ta(ta_net_id)
-        return flask.redirect('/view_tas')
+        return flask.redirect('/adminpage')
 
     return flask.render_template('remove_ta.html')
 

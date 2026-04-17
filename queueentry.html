@@ -14,7 +14,7 @@
         <form action="/queueentry" method="post" onsubmit="return validateForm()">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <h2>Name</h2>
-            <input type="text" id="student_name" name="student_name" required placeholder="Enter your name" maxlength="50">
+            <input type="text" id="student_name" name="student_name" placeholder="Enter your name"  required maxlength="50">
 
             <h2>Course</h2>
             <div class="course-options">
@@ -40,7 +40,7 @@
             </select>
 
             <h2>How can we help?</h2>
-            <textarea id="bug_description" name="bug_description" required placeholder = "Briefly describe what you'd like help with" required maxlength="200"></textarea>
+            <textarea id="bug_description" name="bug_description" placeholder = "Briefly describe what you'd like help with" required maxlength="200"></textarea>
             <p id="charCount">200 characters remaining</p>
             <input type="submit" class="button-link" value="Join Queue">
         </form>

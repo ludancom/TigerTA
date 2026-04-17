@@ -9,16 +9,16 @@
 </head>
 <body>
     <div class="container">
-        <h1>Please enter the information of the TA you would like to add.</h1>
-
+        <h1>Add New TA</h1>
         <form action="/add_ta" method="post">
-            <h2>TA Name (First Last)</h2>
-            <input type="text" id="ta_name" name="ta_name" placeholder="TA's name" required>
+            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+            <h2>Full Name</h2>
+            <input type="text" id="ta_name" name="ta_name" placeholder="Enter the TA's first and last name" required  maxlength="50">
 
-            <h2>TA Net ID</h2>
-            <input type="text" id="ta_net_id" name="ta_net_id" placeholder="TA's net ID" required>
+            <h2>NetID</h2>
+            <input type="text" id="ta_net_id" name="ta_net_id" placeholder="Enter the TA's netID" required  maxlength="8">
 
-            <h2>TA Course</h2>
+            <h2>Course</h2>
             <div class="course-options">
                 <label>
                     <input type="radio" name="course" value="COS 126" required>
@@ -30,7 +30,7 @@
                 </label>
             </div>
 
-            <input type="submit" value="Add TA">
+            <input type="submit" value="Add TA" class="button-link">
         </form>
     </div>
 

@@ -10,7 +10,7 @@
 
 <body>
     <div class="container">
-        <h1>All TAs</h1>
+        <h1>TA Management</h1>
 
         <div class="table-wrap">
             <table class="student-table">
@@ -53,8 +53,6 @@
 
         <a href="{{ url_for('admin_routes.add_ta') }}" class="button-link">Add TA</a>
         <a href="{{ url_for('admin_routes.remove_ta') }}" class="button-link">Remove TA</a>
-
-        {% include 'footer.html' %}
     </div>
 
     <div id="editModal" class="modal">
@@ -120,5 +118,6 @@
         });
 
     </script>
+    {% include 'footer.html' %}
 </body>
 </html>

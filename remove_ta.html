@@ -9,15 +9,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>Please enter the net ID of the TA you would like to remove.</h1>
+        <h1>Remove TA</h1>
 
         <form action="/remove_ta" method="post">
-            <h2>TA Net ID</h2>
-            <input type="text" id="ta_net_id" name="ta_net_id" placeholder="TA's net ID" required>
-
-            <p>Please ensure this is the correct Net ID before moving forward. This action is not reversible.</p>
-
-            <input type="submit" value="Remove TA">
+            <h2>Net ID</h2>
+            <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+            <input type="text" id="ta_net_id" name="ta_net_id" placeholder="Enter the TA's netID" required maxlength="8">
+            <input type="submit" value="Remove TA" class="button-link" onclick="return confirm('Please confirm this is the netID of the TA you want to delete before continuing. This action cannot be undone.')";>
         </form>
     </div>
 
