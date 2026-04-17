@@ -14,7 +14,7 @@
         <form action="/queueentry" method="post" onsubmit="return validateForm()">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <h2>Name</h2>
-            <input type="text" id="student_name" name="student_name" placeholder="Enter your name" required>
+            <input type="text" id="student_name" name="student_name" required placeholder="Enter your name" maxlength="50">
 
             <h2>Course</h2>
             <div class="course-options">
@@ -39,14 +39,21 @@
                 <option value="" disabled selected>Select an assignment</option>
             </select>
 
-            <h2>Describe your problem</h2>
-            <textarea id="bug_description" name="bug_description" required placeholder = "Briefly describe what you need help with"></textarea>
-
-            <input type="submit" value="Join Queue">
+            <h2>How can we help?</h2>
+            <textarea id="bug_description" name="bug_description" required placeholder = "Briefly describe what you'd like help with" required maxlength="200"></textarea>
+            <p id="charCount">200 characters remaining</p>
+            <input type="submit" class="button-link" value="Join Queue">
         </form>
     </div>
 
     <script>
+        const problembox = document.getElementById("bug_description");
+        const charCount = document.getElementById("charCount");
+
+        problembox.addEventListener("input", function () {
+            charCount.innerHTML = (200 - problembox.value.length ) + " characters remaining";
+        });
+
         function updateAssignments() {
             let selectedCourse = document.querySelector('input[name="course"]:checked');
             let dropdown = document.getElementById("assignments");

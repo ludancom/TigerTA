@@ -108,6 +108,13 @@ textarea::placeholder {
     color: #333 
 }
 
+#charCount {
+    font-size: 15px;
+    color: #7d7d7d;
+    margin-left: 20px;
+    margin-top: 5px
+}
+
 input:focus,
 select:focus,
 textarea:focus {
@@ -199,6 +206,8 @@ input[type="submit"]:hover {
 .problem-box p {
     margin: 10px 0 0;
     color: #333;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .name {
@@ -239,8 +248,8 @@ input[type="submit"]:hover {
     align-items: center;
     justify-content: center;
     min-width: 220px;
-    padding: 14px 22px;
-    border-radius: 18px;
+    padding: 11px 18px;
+    border-radius: 12px;
     font-family: 'League Spartan', sans-serif;
     font-size: 16px;
     font-weight: 600;
@@ -251,21 +260,14 @@ input[type="submit"]:hover {
     box-sizing: border-box;
     box-shadow: none;
     outline: none;
+    margin-top: 16px;
+    cursor: pointer;
 }
 
 .button-link {
-    appearance: none;
-    -webkit-appearance: none;
     border: 1.5px solid #2f2373;
     background-color: #2f2373;
     color: #ffffff;
-    margin-top: 16px;
-    padding: 11px 18px;
-    border-radius: 12px;
-    font-family: 'League Spartan', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -277,26 +279,23 @@ input[type="submit"]:hover {
 
 .button-link.secondary {
     background-color: #ffffff;
-    color: #374151;
-    border: 2px solid #d1d5db;
-    padding: 8px 14px; 
-    font-size: 14px;   
-    min-width: auto;     
-    cursor: pointer
+    border: 1.5px solid #c9c9d3;  
+    color: #6b6b6b;              
+    padding: 8px 18px;
+    font-size: 14px;
+    min-width: auto;
 }
 
 .button-link.secondary:hover {
-    transform: translateY(-1px);
-    background-color:  #d3bdd9;
-    border-color: #d3bdd9;
-    opacity: 1;
+    border-color: #3b2e7e;        /* your purple */
+    color: #3b2e7e;
+    background-color: #f5f4fa;
 }
 
 .button-link.primary {
     background-color: #d9c4df;
     color: #2f2373;
     border: 2px solid #d9c4df;
-    cursor: pointer;
 }
 
 .button-link.primary:hover {
@@ -458,6 +457,11 @@ hr {
     min-width: 100px;
     padding: 10px 14px;
     margin-top: 0;
+}
+
+.admin-btn {
+    display: block;
+    margin: 16px auto 0 auto;
 }
 
 .admin-actions {

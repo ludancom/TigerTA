@@ -16,27 +16,21 @@
 
         <div class="actions-row">
             <div class="left-action-group">
-                {% if clock_disabled %}
                 <form method="post" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link-disabled" disabled>
+                    <button id="clock_in" type="submit" name="action" value="clock_in" class="{% if clock_disabled %}button-link-disabled{% else %}button-link{% endif %}"
+                    {% if clock_disabled %}disabled{% endif %}>
                         Clocked in
                     </button>
                 </form>
-                {% else %}
-                <form method="post" action="">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button id="clock_in" type="submit" name="action" value="clock_in" class="button-link">
-                        Clock In
-                    </button>
-                </form>
-                {% endif %}
             </div>
 
             <div class="right-action-group">
                 <form method="post" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" name="action" value="start_session" class="button-link">
+                    <button type="submit" name="action" value="start_session" 
+                    class="{% if queue_students %}button-link{% else %}button-link-disabled{% endif %}"
+                    {% if not queue_students %}disabled{% endif %}>
                         Start a Session
                     </button>
                 </form>
@@ -177,11 +171,22 @@
                 if (data.matched) {
                     window.location.href = "/insessionta";
                 }
+
+                const startButton = document.querySelector('button[name="action"][value="start_session"]');
+
+                if (data.queue_students && data.queue_students.length > 0) {
+                    startButton.disabled = false;
+                    startButton.classList.remove("button-link-disabled");
+                    startButton.classList.add("button-link");
+                } else {
+                    startButton.disabled = true;
+                    startButton.classList.remove("button-link");
+                    startButton.classList.add("button-link-disabled");
+                }
             } catch (error) {
                 console.error("Error updating workhub:", error);
             }
         }
-        
         updateWorkhub();
         setInterval(updateWorkhub, 3000);
     </script>
