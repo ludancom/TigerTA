@@ -43,11 +43,28 @@ def homepage():
 #-----------------------------------------------------------------------
 # Logout Helper for All Pages:
 #-----------------------------------------------------------------------
-
-@student_routes.route('/', methods={'GET'})
 @student_routes.route('/logout', methods={'GET'})
 def logout():
-    """ Method that displays the homepage page to students. """
+    """ Method that logs out students. """
+    
+    # Get the user's net id from CAS   
+    netid = auth.get_username()
+    # Get the user's role
+    role = flask.session['role']
+
+    if role == 'Student':
+        # Remove session from database if student is in the queue (slightly buggy rn, will fix)
+        status = database.student_already_in_queue(netid)
+        print("student")
+        if(status == "InQueue"):
+            database.remove_session(netid)
+
+    if role == 'TA':
+        # Remove session from database if TA is helping student 
+        print("TA")
+        session_info = database.get_session_info_ta(netid)
+        student_netid = session_info['student_netid']
+        database.remove_session(student_netid)
 
     # Log out
     auth.logoutapp()
@@ -74,7 +91,7 @@ def roleselection():
 
         # Get the user's role
         role = flask.request.form.get('role')
-
+        flask.session['role'] = role
         # If the TA role is selected, validate that the user is actually a TA
         if role == 'TA':
 
@@ -106,7 +123,6 @@ def roleselection():
         # queue entry
         else:
             status = database.student_already_in_queue(net_id)
-            print("STATUS:", status)
             # Check if student is already in queue or being helped. If so, redirect them to the correct page. 
             if(status == "InQueue"):
                 response = flask.redirect('/queuestatus')
