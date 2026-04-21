@@ -9,16 +9,15 @@ body {
     color: #222;
     display: flex;
     flex-direction: column;
-    padding: 28px;
     box-sizing: border-box;
 }
 
 .container {
     width: 85%;
     max-width: 900px;
-    margin: 20px auto;
+    margin: 8vh auto 4vh auto;
     background-color: #f8f6f3;
-    padding: 32px 36px;
+    padding: 23px 36px;
     border-radius: 24px;
     text-align: center;
     box-shadow: 0 6px 16px rgba(47, 35, 115, 0.06);
@@ -68,8 +67,8 @@ h2 {
 .navigation-button {
     display: inline-block;
     padding: 14px 20px;
-    background-color:  #ebe8e4;
-    color: #2f2373;
+    background-color:  #2f2373;;
+    color:  #ffffff;
     border: 0px;
     border-radius: 0px;
     font-weight: 600;
@@ -85,14 +84,20 @@ h2 {
     display: flex;
     justify-content: space-between; 
     align-items: center;
-    padding: 2px 25px;
-    border-bottom: 1px solid #2f2373;
+    padding: 0px 25px;
+    background-color: #2f2373;
+    height: 50px;
+}
+
+.navigation-right {
+    display: flex;
+    gap: 16px;
 }
 
 .logo{
     font-size: 24px;
     font-weight: 700; 
-    color: #2f2373;
+    color: #ffffff;
 }
 
 form {
