@@ -38,10 +38,11 @@ def logoutapp():
     username = flask.session['username']
 
     # Optional:
-    database.delete_userinfo(username)
+    # database.delete_userinfo(username)
 
     flask.session.clear()
-    return flask.send_file('loggedout.html')
+    # return flask.send_file('loggedout.html')
+    return flask.redirect('/homepage')
 
 #-----------------------------------------------------------------------
 

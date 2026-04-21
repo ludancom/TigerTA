@@ -41,6 +41,21 @@ def homepage():
     return response
 
 #-----------------------------------------------------------------------
+# Logout Helper for All Pages:
+#-----------------------------------------------------------------------
+
+@student_routes.route('/', methods={'GET'})
+@student_routes.route('/logout', methods={'GET'})
+def logout():
+    """ Method that displays the homepage page to students. """
+
+    # Log out
+    auth.logoutapp()
+
+    # Go to Home Page
+    return flask.redirect('/home')
+
+#-----------------------------------------------------------------------
 # Role Selection Page:
 #-----------------------------------------------------------------------
 
