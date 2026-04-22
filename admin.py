@@ -32,7 +32,8 @@ def before_request():
 @admin_routes.route('/adminpage', methods=['GET'])
 def adminpage():
     """ Method that displays the adminpage to administrators. """
-    return flask.render_template('adminpage.html')
+    tas = database.get_all_tas()
+    return flask.render_template('adminpage.html', tas=tas)
 
 #-----------------------------------------------------------------------
 # Add TA Page:
@@ -79,7 +80,7 @@ def edit_ta():
 
     database.edit_ta(ta_net_id, ta_name, ta_email, courses)
 
-    return flask.redirect(flask.url_for('admin_routes.view_tas'))
+    return flask.redirect(flask.url_for('admin_routes.adminpage'))
 
 #-----------------------------------------------------------------------
 # View TAs Page: i dont think we need this?
