@@ -8,7 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
 </head>
 <body>
-    {% include 'navbar.html' %}
+    <div class="navigation-bar">
+        <div class="navigation-left">
+            <button onclick="history.back()" class="navigation-button">← Back</button>
+        </div>
+
+        <div class="logo">TigerTA</div>
+
+        <div class="navigation-right">
+            <a href="/roleselection" class="navigation-button">Switch Role</a>
+            <a href="/logout" class="navigation-button">Log Out</a>
+        </div>
+    </div>
     <div class="container">
         <h1>Welcome to TigerTA!</h1>
         <a href="/roleselection" class="button-link">Log In</a>
