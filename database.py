@@ -228,7 +228,7 @@ def match(course, student_netid, ta_netid):
                     if course == 'COS 126' and overflow:
                         statement_str = """SELECT ta.ta_netid
                         FROM ta
-                        AND ta.available = TRUE"""
+                        WHERE ta.available = TRUE"""
                         cursor.execute(statement_str)
                         table = cursor.fetchall()
                         chosen_ta_netid = table[0][0]
