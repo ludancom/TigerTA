@@ -231,7 +231,8 @@ def match(course, student_netid, ta_netid):
                     if course == 'COS 126' and overflow:
                         statement_str = """SELECT ta.ta_netid
                         FROM ta
-                        WHERE ta.available = TRUE"""
+                        WHERE ta.available = TRUE
+                        """
                         cursor.execute(statement_str)
                         table = cursor.fetchall()
                         chosen_ta_netid = table[0][0]
@@ -630,7 +631,7 @@ def start_session(ta_netid):
                 cursor.execute("""
                     SELECT student_netid, course
                     FROM session
-                    WHERE ta_netid IS NULL
+                    WHERE ta_netid IS NULL 
                     ORDER BY session_id ASC
                     LIMIT 1
                 """)
