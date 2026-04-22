@@ -283,7 +283,7 @@ def match(ta_netid):
                     FROM ta_courses
                     WHERE ta_netid = %s
                 """, (ta_netid,))
-                ta_course = cursor.fetchone()
+                ta_course = cursor.fetchone()[0]
                 
 
                 # Check if overflow handling is necessary
@@ -305,8 +305,11 @@ def match(ta_netid):
                         LIMIT 1
                         """
                         cursor.execute(statement_str)
-                        table = cursor.fetchall()
-                        student_netid = table[0][0]
+                        row = cursor.fetchone()
+                        if row is None:
+                            return None
+
+                        student_netid = row[0]
 
                     # Otherwise, if there is no overflow, 2xx level TAs
                     # can only match to 2xx students
@@ -318,8 +321,11 @@ def match(ta_netid):
                         ORDER BY session_id ASC
                         LIMIT 1"""
                         cursor.execute(statement_str)
-                        table = cursor.fetchall()
-                        student_netid = table[0][0] 
+                        row = cursor.fetchone()
+                        if row is None:
+                            return None
+
+                        student_netid = row[0]
 
                 # If the TA is 126 TA, match with 126 student
                 else:               
@@ -330,19 +336,12 @@ def match(ta_netid):
                     ORDER BY session_id ASC
                     LIMIT 1"""
                     cursor.execute(statement_str)
-                    table = cursor.fetchall()
-                    student_netid = table[0][0] 
+                    row = cursor.fetchone()
+                    if row is None:
+                        return None
 
-                #if there are no students waiting, do nothing
-                if student_netid is None:
-                    return None
+                    student_netid = row[0]
                 
-                # add the session start time to the database
-                statement_str = """UPDATE session 
-                SET time_session_began = CURRENT_TIMESTAMP
-                WHERE ta_netid = %s"""
-                cursor.execute(statement_str, (ta_netid,))
-                connection.commit()
 
                 # Set TA to unavailable
                 statement_str = """UPDATE ta 
@@ -354,7 +353,14 @@ def match(ta_netid):
                 statement_str = """UPDATE session 
                 SET ta_netid = %s
                 WHERE student_netid = %s"""
-                cursor.execute(statement_str, (chosen_ta_netid, student_netid))
+                cursor.execute(statement_str, (ta_netid, student_netid))
+                connection.commit()
+
+                # add the session start time to the database
+                statement_str = """UPDATE session 
+                SET time_session_began = CURRENT_TIMESTAMP
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
                 connection.commit()
 
                 # return the session id after assignment
