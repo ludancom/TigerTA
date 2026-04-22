@@ -53,6 +53,7 @@ def logout():
     role = flask.session.get('role')
 
     if role == 'Student':
+        print("student")
         # Remove session from database if student is in the queue (slightly buggy rn, will fix)
         status = database.student_already_in_queue(netid)
         print("student")
@@ -61,10 +62,11 @@ def logout():
 
     elif role == 'TA':
         # Remove session from database if TA is helping student 
-        print("TA")
+        print("ta")
         session_info = database.get_session_info_ta(netid)
-        student_netid = session_info['student_netid']
-        database.remove_session(student_netid)
+        if session_info is not None:
+            student_netid = session_info['student_netid']
+            database.remove_session(student_netid)
 
     # Log out
     auth.logoutapp()
