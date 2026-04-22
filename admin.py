@@ -44,7 +44,7 @@ def add_ta():
     if flask.request.method == 'POST':
         ta_net_id = flask.request.form.get('ta_net_id')
         ta_name = flask.request.form.get('ta_name')
-        ta_email = flask.request.form.get('email')
+        ta_email = f'{ta_net_id}@princeton.edu'
         course = flask.request.form.get('course')
         database.add_ta(ta_net_id, ta_name, ta_email, course)
         return flask.redirect('/adminpage')
