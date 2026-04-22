@@ -49,28 +49,20 @@ def logout():
     
     # Get the user's net id from CAS   
     netid = auth.get_username()
-    # Get the user's role
-    role = flask.session.get('role')
 
-    if role == 'Student':
-        print("student")
-        # Remove session from database if student is in the queue (slightly buggy rn, will fix)
-        status = database.student_already_in_queue(netid)
-        print("student")
-        if(status == "InQueue"):
-            database.remove_session(netid)
+    # Remove session from database if student is in the queue
+    status = database.student_already_in_queue(netid)
+    if(status == "InQueue" or status == "InSession"):
+        database.remove_session(netid)
 
-    elif role == 'TA':
-        # Remove session from database if TA is helping student 
-        print("ta")
-        session_info = database.get_session_info_ta(netid)
-        if session_info is not None:
-            student_netid = session_info['student_netid']
-            database.remove_session(student_netid)
-
+    # Remove session from database if TA is helping student 
+    ta_session_info = database.get_session_info_ta(netid)
+    if ta_session_info is not None:
+        student_netid = ta_session_info['student_netid']
+        database.remove_session(student_netid)
+    
     # Log out
     auth.logoutapp()
-
     # Go to Home Page
     return flask.redirect('/home')
 
@@ -93,7 +85,7 @@ def roleselection():
 
         # Get the user's role
         role = flask.request.form.get('role')
-        flask.session['role'] = role
+
         # If the TA role is selected, validate that the user is actually a TA
         if role == 'TA':
 
