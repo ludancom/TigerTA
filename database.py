@@ -761,5 +761,22 @@ def validate_admin(admin_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         return False
         
+
+def edit_ta(ta_netid, name, email, course):
+    """Update ta information to paramaters, or the values given to the admin"""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    UPDATE ta, ta_courses
+                    SET ta.name = %s, ta.email = %s, ta_courses.course = %s
+                    WHERE .a,ta_netid = %s 
+                    AND ta_courses.ta_netid = %s 
+                """, (name, email, course, ta_netid, ta_netid))
+                connection.commit()
+    except Exception as ex:
+        print(f'refresh_clockin_status: {ex}', file=sys.stderr)
+
+    
 if __name__ == '__main__':
     main()
