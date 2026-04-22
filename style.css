@@ -510,4 +510,10 @@ hr {
     text-align: center;
     font-size: 15px;
     color: #5a5562;
+    padding: 14px 16px 18px;
+}
+
+.footer-back-btn {
+    margin-top: 0;
+    margin-bottom: 10px;
 }
