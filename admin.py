@@ -75,7 +75,7 @@ def edit_ta():
 
     ta_net_id = flask.request.form.get('ta_netid', '').strip()
     ta_name = flask.request.form.get('ta_name', '').strip()
-    ta_email = flask.request.form.get('email', '').strip()
+    ta_email = f'{ta_net_id}@princeton.edu'
     courses = flask.request.form.get('courses', '').strip()
 
     database.edit_ta(ta_net_id, ta_name, ta_email, courses)

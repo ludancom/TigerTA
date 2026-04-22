@@ -23,6 +23,7 @@
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <input type="text" id="ta_net_id" name="ta_net_id" placeholder="Enter the TA's netID" required maxlength="8">
             <input type="submit" value="Remove TA" class="button-link" onclick="return confirm('Please confirm this is the netID of the TA you want to delete before continuing. This action cannot be undone.')";>
+            <a href="{{ url_for('admin_routes.adminpage') }}" class="button-link">Back</a>
         </form>
     </div>
 

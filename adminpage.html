@@ -78,12 +78,13 @@
                 <input type="text" id="edit_netid" name="ta_netid" readonly>
 
                 <label for="edit_email">Email</label>
-                <input type="email" id="edit_email" name="email" required>
+                <input type="email" id="edit_email" name="email" readonly>
 
                 <label for="edit_courses">Courses</label>
                 <input type="text" id="edit_courses" name="courses" placeholder="COS 126, COS 226" required>
 
                 <button type="submit" class="button-link primary">Save Changes</button>
+                <button type="button" class="button-link" id="cancelModal">Back</button>
             </form>
         </div>
     </div>
@@ -91,6 +92,7 @@
     <script>
         const modal = document.getElementById("editModal");
         const closeModal = document.getElementById("closeModal");
+        const cancelModal = document.getElementById("cancelModal");
         const editButtons = document.querySelectorAll(".edit-ta-btn");
 
         const editName = document.getElementById("edit_name");
@@ -115,6 +117,10 @@
         });
 
         closeModal.addEventListener("click", () => {
+            modal.style.display = "none";
+        });
+
+        cancelModal.addEventListener("click", () => {
             modal.style.display = "none";
         });
 
