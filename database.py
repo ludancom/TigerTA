@@ -37,8 +37,7 @@ def main():
                     ta_netid TEXT NOT NULL,
                     ta_name TEXT NOT NULL,
                     available BOOLEAN NOT NULL,
-                    clockin BOOLEAN NOT NULL,
-                    clockin_expire TIMESTAMP,
+                    clocked_in BOOLEAN NOT NULL,
                     PRIMARY KEY (ta_netid)
                     )
                 ''')
@@ -77,7 +76,6 @@ def main():
                     CREATE TABLE IF NOT EXISTS shifts (
                     shift_id BIGSERIAL NOT NULL,
                     ta_netid TEXT NOT NULL,
-                    date TIMESTAMP NOT NULL,
                     clock_in TIMESTAMP NOT NULL,
                     clock_out TIMESTAMP,
                     students_helped INTEGER NOT NULL DEFAULT 0,
@@ -167,10 +165,10 @@ def get_num_on_shift_tas(course):
                 FROM ta, ta_courses
                 WHERE ta.ta_netid = ta_courses.ta_netid
                 AND ta_courses.course = %s
-                AND ta.clockin = TRUE
-                AND ta.clockin_expire IS NOT NULL
-                AND ta.clockin_expire > NOW()
+                AND ta.clocked_in = TRUE
                 """
+                # AND ta.clockin_expire IS NOT NULL
+                # AND ta.clockin_expire > NOW()
                 cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
                 num_on_shift_tas = row[0]
@@ -461,30 +459,35 @@ def clock_in(ta_netid):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""
-                    INSERT INTO ta (ta_netid, ta_name, available, clockin, clockin_expire)
-                    VALUES (%s, %s, TRUE, TRUE, NULL)
-                    ON CONFLICT (ta_netid)
-                    DO UPDATE SET
-                        clockin = TRUE
-                """, (ta_netid, ta_netid))
+                # Set TA to clocked in
+                statement_str = """UPDATE ta
+                SET clocked_in = TRUE
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
 
+                # INSERT INTO ta (ta_netid, ta_name, available, clockin, clockin_expire)
+                # VALUES (%s, %s, TRUE, TRUE, NULL)
+                # ON CONFLICT (ta_netid)
+                # DO UPDATE SET
+                    #clockin = TRUE
+
+                # Adds their shift to table in database
                 cursor.execute("""
-                    INSERT INTO shifts (ta_netid, date, clock_in, clock_out, students_helped)
-                    VALUES (%s, %s, CURRENT_TIMESTAMP, NULL, 0)
+                    INSERT INTO shifts (ta_netid, clock_in, clock_out, students_helped)
+                    VALUES (%s, %s, NULL, 0)
                 """, (ta_netid, datetime.now()))
                 connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def clock_out(ta_netid):
-    """ Method that saves the shift information into the Google Sheet. """
+    """ Method that clocks the TA out and saves their shift information into the Google Sheet. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 # Set TA to clocked out
                 statement_str = """UPDATE ta 
-                SET clockin = FALSE
+                SET clocked_in = FALSE
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
 
@@ -495,8 +498,16 @@ def clock_out(ta_netid):
                 cursor.execute(statement_str, (datetime.now(), ta_netid))
                 connection.commit()
 
-                # Get Shift Information from Database
-                statement_str = """SELECT date, clock_in, clock_out, students_helped
+                # Get TA's name 
+                statement_str = """SELECT ta_name
+                FROM ta
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+                row = cursor.fetchone()
+                ta_name = row[0]
+
+                # Get shift information from database
+                statement_str = """SELECT clock_in, clock_out, students_helped
                 FROM shifts
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
@@ -504,9 +515,30 @@ def clock_out(ta_netid):
 
                 # Save shift information into the Google Sheet
                 if row is not None:
-                    googlesheet.log_shift(ta_netid, str(row[0]), str(row[1]), str(row[2]), str(row[3]))
+                    googlesheet.log_shift(ta_netid, ta_name, row[0].strftime("%m-%d-%Y"), row[0].strftime("%H:%M"), row[1].strftime("%H:%M"), str(row[2]))
 
-                # Delete Shift from Database (Implement Later)
+                # If shift is successfully added to sheet, delete shift from database (maybe check later first if was successfully added to sheet before deleting)
+                cursor.execute("""
+                    DELETE FROM shifts WHERE ta_netid = %s
+                """, (ta_netid,))
+                connection.commit()
+
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+def check_if_clocked_in(ta_netid):
+    """ Method that updates the number of students a TA helped during their shift."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT clocked_in
+                    FROM ta
+                    WHERE ta_netid = %s
+                """, (ta_netid,))
+                row = cursor.fetchone()
+                return row[0] if row else None
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -520,8 +552,8 @@ def update_num_students_helped(ta_netid):
                 SET students_helped = students_helped + 1
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
-
                 connection.commit()
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
                 
@@ -744,7 +776,7 @@ def add_ta(ta_netid, ta_name, course):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    INSERT INTO ta (ta_netid, ta_name, available, clockin, clockin_expire)
+                    INSERT INTO ta (ta_netid, ta_name, available, clocked_in)
                     VALUES (%s, %s, FALSE, FALSE, NULL)
                     ON CONFLICT (ta_netid) DO NOTHING
                 """, (ta_netid, ta_name))

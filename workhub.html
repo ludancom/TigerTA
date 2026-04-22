@@ -25,9 +25,9 @@
             <div class="left-action-group">
                 <form method="post" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button id="clock_in" type="submit" name="action" value="clock_in" class="{% if clock_disabled %}button-link-disabled{% else %}button-link{% endif %}"
-                    {% if clock_disabled %}disabled{% endif %}>
-                    {% if clock_disabled %}Clocked in{% else %}Clock in{% endif %}
+                    <button id="clock_in" type="submit" name="action" 
+                    value="{% if clocked_in %}clock_out{% else %}clock_in{% endif %}" class="button-link">
+                    {% if clocked_in %}Clock Out{% else %}Clock In{% endif %}
                     </button>
                 </form>
             </div>

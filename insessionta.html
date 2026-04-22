@@ -42,10 +42,9 @@
             const diff = Math.floor((now - startTime) / 1000);
 
             const minutes = String(Math.floor(diff / 60)).padStart(2, '0');
-            const seconds = String(diff % 60).padStart(2, '0');
 
             document.getElementById("timer").innerHTML =
-                "Session length: " + minutes + " min " + seconds + " sec";
+                "Session length: " + minutes + " min ";
         }
         setInterval(updateTimer, 1000);
         updateTimer();
