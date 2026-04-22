@@ -12,8 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
 </head>
-    {% include 'navbar.html' %}
+   
 <body>
+    {% include 'navbar.html' %}
     <div class="container">
         <h1>Session Complete!</h1>
 
@@ -25,6 +26,64 @@
         </a>
     </div>
 
+    <div id="feedbackModal" class="modal-overlay">
+        <div class="feedback-modal">
+            <button id="closeModal" class="close-modal">&times;</button>
+            <h2>LabTA Feedback</h2>
+
+            <form method="post" action="/submit_feedback">
+                <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+
+                <label class="feedback-label">Rate your experience:</label>
+
+                <div class="star-rating">
+                    <input type="radio" id="star5" name="rating" value="5" required>
+                    <label for="star5">&#9733;</label>
+
+                    <input type="radio" id="star4" name="rating" value="4">
+                    <label for="star4">&#9733;</label>
+
+                    <input type="radio" id="star3" name="rating" value="3">
+                    <label for="star3">&#9733;</label>
+
+                    <input type="radio" id="star2" name="rating" value="2">
+                    <label for="star2">&#9733;</label>
+
+                    <input type="radio" id="star1" name="rating" value="1">
+                    <label for="star1">&#9733;</label>
+                </div>
+
+                <label for="feedbackText" class="feedback-keyword">Additional Comments:</label>
+                <textarea
+                    id="feedbackText"
+                    name="feedback_text"
+                    rows="5"
+                    maxlength="500"
+                    placeholder="Share any thoughts about your session here..."></textarea>
+
+                <button type="submit" class="button-link">Submit</button>
+            </form>
+        </div>
+    </div>
     {% include 'footer.html' %}
+
+    <script>
+        const feedbackModal = document.getElementById("feedbackModal");
+        const closeModal = document.getElementById("closeModal");
+
+        window.addEventListener("load", () => {
+            feedbackModal.style.display = "flex";
+        });
+
+        closeModal.addEventListener("click", () => {
+            feedbackModal.style.display = "none";
+        });
+
+        window.addEventListener("click", (event) => {
+            if (event.target === feedbackModal) {
+                feedbackModal.style.display = "none";
+            }
+        });
+    </script>
 </body>
 </html>
