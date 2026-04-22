@@ -50,7 +50,7 @@ def logout():
     # Get the user's net id from CAS   
     netid = auth.get_username()
     # Get the user's role
-    role = flask.session['role']
+    role = flask.session.get('role')
 
     if role == 'Student':
         # Remove session from database if student is in the queue (slightly buggy rn, will fix)
@@ -59,7 +59,7 @@ def logout():
         if(status == "InQueue"):
             database.remove_session(netid)
 
-    if role == 'TA':
+    elif role == 'TA':
         # Remove session from database if TA is helping student 
         print("TA")
         session_info = database.get_session_info_ta(netid)
