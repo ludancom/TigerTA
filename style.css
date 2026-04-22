@@ -89,9 +89,22 @@ h2 {
     height: 50px;
 }
 
+.navigation-left {
+    flex: 1;
+}
+
 .navigation-right {
+    flex: 1;
     display: flex;
-    gap: 16px;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 700;
 }
 
 .logo{
@@ -322,7 +335,7 @@ input[type="submit"]:hover {
 }
 
 .button-link.secondary:hover {
-    border-color: #3b2e7e;        /* your purple */
+    border-color: #3b2e7e;   
     color: #3b2e7e;
     background-color: #f5f4fa;
 }
