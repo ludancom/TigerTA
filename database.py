@@ -777,9 +777,9 @@ def add_ta(ta_netid, ta_name, ta_email, course):
    try: 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""ed_in)
-                    VALUES (%s, %s, %s, FALSE, FALSEemail, available, clockin, clockin_expire)
-                    VALUES (%s, %s, %s, FALSE, FALSE, NULL)
+                cursor.execute("""
+                    INSERT INTO ta (ta_netid, ta_name, ta_email, available, clocked_in)
+                    VALUES (%s, %s, %s, FALSE, FALSE)
                     ON CONFLICT (ta_netid)
                     DO UPDATE SET
                         ta_name = EXCLUDED.ta_name,
