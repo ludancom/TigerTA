@@ -80,10 +80,13 @@ h2 {
     min-width: auto;
 }
 
-.navigation-bar {
+.navigation-bar{
     position: relative;
     display: flex;
     align-items: center;
+    padding: 0;
+    background-color: #2f2373;
+    height: 50px;
 }
 
 .navigation-left {
@@ -99,18 +102,17 @@ h2 {
     padding-right: 20px;
 }
 
-.navigation-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-}
-
 .logo {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     font-weight: 700;
+}
+
+.logo{
+    font-size: 24px;
+    font-weight: 700; 
+    color: #ffffff;
 }
 
 form {
