@@ -149,6 +149,9 @@ def insessionta():
     # Get session start time 
     time_session_began = database.get_time_session_began(session_id)
 
+    # Update number of students TA helped
+    database.update_num_students_helped(ta_netid)
+
     # End session button takes them to next page
     if flask.request.method == 'POST':
         # Get the user's button request
@@ -178,6 +181,10 @@ def insessionta():
 def endsessionta():
     """ Method that displays the end page, the student's name, and
     a button to return back to home. """
+    
+    # FOR TESING DELETEEEEEEEEEE
+    ta_netid = auth.get_username()
+    database.clock_out(ta_netid)
     
     # Getting student name because when the session ends, we need to know who the student was
     student_name = flask.request.cookies.get('student_name')

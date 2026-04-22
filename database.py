@@ -11,6 +11,7 @@ import contextlib
 import time
 from datetime import datetime
 import random
+import googlesheet
 
 dotenv.load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -77,6 +78,9 @@ def main():
                     shift_id BIGSERIAL NOT NULL,
                     ta_netid TEXT NOT NULL,
                     date TIMESTAMP NOT NULL,
+                    clock_in TIMESTAMP NOT NULL,
+                    clock_out TIMESTAMP,
+                    students_helped INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY (shift_id),
                     FOREIGN KEY (ta_netid) REFERENCES ta(ta_netid)
                     )
@@ -466,9 +470,57 @@ def clock_in(ta_netid):
                 """, (ta_netid, ta_netid))
 
                 cursor.execute("""
-                    INSERT INTO shifts (ta_netid, date)
-                    VALUES (%s, %s)
+                    INSERT INTO shifts (ta_netid, date, clock_in, clock_out, students_helped)
+                    VALUES (%s, %s, CURRENT_TIMESTAMP, NULL, 0)
                 """, (ta_netid, datetime.now()))
+                connection.commit()
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+def clock_out(ta_netid):
+    """ Method that saves the shift information into the Google Sheet. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Set TA to clocked out
+                statement_str = """UPDATE ta 
+                SET clockin = FALSE
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+
+                # Note time shift ends
+                statement_str = """UPDATE shifts
+                SET clock_out = %s
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (datetime.now(), ta_netid))
+                connection.commit()
+
+                # Get Shift Information from Database
+                statement_str = """SELECT date, clock_in, clock_out, students_helped
+                FROM shifts
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+                row = cursor.fetchone()
+
+                # Save shift information into the Google Sheet
+                if row is not None:
+                    googlesheet.log_shift(ta_netid, str(row[0]), str(row[1]), str(row[2]), str(row[3]))
+
+                # Delete Shift from Database (Implement Later)
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+def update_num_students_helped(ta_netid):
+    """ Method that updates the number of students a TA helped during their shift."""
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Add 1 to the number of students helped
+                statement_str = """UPDATE shifts 
+                SET students_helped = students_helped + 1
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+
                 connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -505,7 +557,6 @@ def set_clockin_expire(ta_netid, expires_epoch):
 
 def get_clockin_expire(ta_netid):
     """ Method that gets the updated remaining time for the TAs shift. """
-
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
