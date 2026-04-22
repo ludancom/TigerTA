@@ -180,118 +180,6 @@ def get_num_on_shift_tas(course):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 
-def find_ta_name(course, student_netid):
-    """ Method that finds and returns the name of a student's matched TA. """
-
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor: 
-                # Match student with a TA
-                ta_netid = match(course, student_netid)
-
-                # Get TA name
-                statement_str = """SELECT ta_name 
-                FROM ta
-                WHERE ta_netid = %s 
-                """
-                cursor.execute(statement_str, (ta_netid,))
-                table = cursor.fetchall()
-                ta_name = table[0][0]
-
-                # Return TA name to display to users
-                return ta_name
-
-    except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
-
-def match(course, student_netid, ta_netid):
-    """ Method that matches a TA to a student by finding their netid,
-    changing their availability, and adding their information to the
-    session table. Handles overflow. Returns their net id. """
-
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                # if the TA clicked start session, get their netid
-                if ta_netid is not None:
-                    chosen_ta_netid = ta_netid
-                else:
-                    # Check if overflow handling is necessary
-                    # AKA if there are no 200 level students in the queue,
-                    # 200 level TAs can help with 100 level classes
-                    overflow = detect_overflow()
-
-                    # Any 200 level student can be helped by any 2XX TA
-                    if course == 'COS 226' or course == 'COS 217':
-                        course = 'COS 2XX'
-
-                    # If there is overflow and the student is a 126 student,
-                    # they can be matched to 200 level TAs
-                    if course == 'COS 126' and overflow:
-                        statement_str = """SELECT ta.ta_netid
-                        FROM ta
-                        WHERE ta.available = TRUE
-                        """
-                        cursor.execute(statement_str)
-                        table = cursor.fetchall()
-                        chosen_ta_netid = table[0][0]
-
-                    # Otherwise, if there is no overflow, or if the student is
-                    # 2XX level, match to a TA in their course
-                    else:
-                        statement_str = """SELECT ta.ta_netid
-                        FROM ta, ta_courses
-                        WHERE ta_courses.course = %s
-                        AND ta_courses.ta_netid = ta.ta_netid
-                        AND ta.available = TRUE"""
-                        cursor.execute(statement_str, (course,))
-                        table = cursor.fetchall()
-                        chosen_ta_netid = table[0][0]
-
-                # Set TA to unavailable
-                statement_str = """UPDATE ta 
-                SET available = FALSE
-                WHERE ta_netid = %s"""
-                cursor.execute(statement_str, (chosen_ta_netid,))
-
-                # Add TA's netid to session table
-                statement_str = """UPDATE session 
-                SET ta_netid = %s
-                WHERE student_netid = %s"""
-                cursor.execute(statement_str, (chosen_ta_netid, student_netid))
-
-                connection.commit()
-                return chosen_ta_netid
-
-    except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
-def detect_overflow():
-    """ Method that detects if there are no 200 level students in the queue.
-    If there are none, return true. Otherwise, return false. """
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                
-                # Extract the queue entries
-                statement_str = """SELECT course
-                FROM session
-                WHERE ta_netid IS NULL"""
-                cursor.execute(statement_str)
-                table = cursor.fetchall()
-                num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
-
-                # If there are no 200 level students in the queue, return true
-                if num_200_students == 0:
-                    return True
-                
-                else:
-                    return False
-
-    except Exception as ex:
-        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
 # Ensure that the student is not rejoining the queue
 def student_already_in_queue(student_netid):
     try:
@@ -381,6 +269,136 @@ def get_session_ta_name(student_netid):
 # TA functions
 #-----------------------------------------------------------------------
 
+def match(ta_netid):
+    """ Method that matches a TA to a student by finding their netid,
+    changing their availability, and adding their information to the
+    session table. Handles overflow. Returns their net id. """
+
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                # Find the ta course
+                cursor.execute("""
+                    SELECT course
+                    FROM ta_courses
+                    WHERE ta_netid = %s
+                """, (ta_netid))
+                ta_course = cursor.fetchone()
+                
+
+                # Check if overflow handling is necessary
+                # AKA if there are no 200 level students in the queue,
+                # 200 level TAs can help with 100 level classes
+                overflow = detect_overflow()
+
+
+                # If the TA is a 2xx level TA:
+                if ta_course == 'COS 2XX':
+
+                    # If there is overflow, 2xx level TAs can match to
+                    # any student
+                    if overflow:
+                        statement_str = """SELECT student_netid
+                        FROM session
+                        WHERE ta_netid IS NULL 
+                        ORDER BY session_id ASC
+                        LIMIT 1
+                        """
+                        cursor.execute(statement_str)
+                        table = cursor.fetchall()
+                        student_netid = table[0][0]
+
+                    # Otherwise, if there is no overflow, 2xx level TAs
+                    # can only match to 2xx students
+                    else:
+                        statement_str = """SELECT student_netid
+                        FROM session
+                        WHERE ta_netid IS NULL 
+                        AND (course = 'COS 226' OR course = 'COS 217')
+                        ORDER BY session_id ASC
+                        LIMIT 1"""
+                        cursor.execute(statement_str)
+                        table = cursor.fetchall()
+                        student_netid = table[0][0] 
+
+                # If the TA is 126 TA, match with 126 student
+                else:               
+                    statement_str = """SELECT student_netid
+                    FROM session
+                    WHERE ta_netid IS NULL 
+                    AND course = 'COS 126'
+                    ORDER BY session_id ASC
+                    LIMIT 1"""
+                    cursor.execute(statement_str)
+                    table = cursor.fetchall()
+                    student_netid = table[0][0] 
+
+                #if there are no students waiting, do nothing
+                if student_netid is None:
+                    return None
+                
+                # add the session start time to the database
+                statement_str = """UPDATE session 
+                SET time_session_began = CURRENT_TIMESTAMP
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+                connection.commit()
+
+                # Set TA to unavailable
+                statement_str = """UPDATE ta 
+                SET available = FALSE
+                WHERE ta_netid = %s"""
+                cursor.execute(statement_str, (ta_netid,))
+                
+                # Add TA's netid to session table
+                statement_str = """UPDATE session 
+                SET ta_netid = %s
+                WHERE student_netid = %s"""
+                cursor.execute(statement_str, (chosen_ta_netid, student_netid))
+                connection.commit()
+
+                # return the session id after assignment
+                cursor.execute("""
+                    SELECT session_id
+                    FROM session
+                    WHERE student_netid = %s
+                    AND ta_netid = %s
+                    LIMIT 1
+                """, (student_netid, ta_netid))
+                row = cursor.fetchone()
+                return row[0] if row else None
+                
+
+    except Exception as ex:
+        print(f'match: {ex}', file=sys.stderr)
+        return None
+
+def detect_overflow():
+    """ Method that detects if there are no 200 level students in the queue.
+    If there are none, return true. Otherwise, return false. """
+    try:
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                
+                # Extract the queue entries
+                statement_str = """SELECT course
+                FROM session
+                WHERE ta_netid IS NULL"""
+                cursor.execute(statement_str)
+                table = cursor.fetchall()
+                num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
+
+                # If there are no 200 level students in the queue, return true
+                if num_200_students == 0:
+                    return True
+                
+                else:
+                    return False
+
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+
+        
 def get_session_info_ta(ta_netid):
     """ Method that checks for a TA's session information. If they are
     matched to a session, returns relevant info. If they are not matched,
@@ -621,61 +639,6 @@ def refresh_clockin_status(ta_netid):
                 connection.commit()
     except Exception as ex:
         print(f'refresh_clockin_status: {ex}', file=sys.stderr)
-    
-def start_session(ta_netid):
-    """Starts the session for the TA and matches them to the student."""
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                # Finds the next available student in the table
-                cursor.execute("""
-                    SELECT student_netid, course
-                    FROM session
-                    WHERE ta_netid IS NULL 
-                    ORDER BY session_id ASC
-                    LIMIT 1
-                """)
-                row = cursor.fetchone()
-
-                #if there are no students waiting, do nothing
-                if row is None:
-                    return None
-
-                student_netid = row[0]
-                course = row[1]
-
-                # use match() to assign the ta
-                assigned_ta = match(course, student_netid, ta_netid)
-
-                if assigned_ta is None:
-                    return None
-                
-                # add the session start time to the database
-                statement_str = """UPDATE session 
-                SET time_session_began = CURRENT_TIMESTAMP
-                WHERE ta_netid = %s"""
-                cursor.execute(statement_str, (assigned_ta,))
-                connection.commit()
-
-                # return the session id after assignment
-                with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-                    with contextlib.closing(connection.cursor()) as cursor:
-                        cursor.execute("""
-                            SELECT session_id
-                            FROM session
-                            WHERE student_netid = %s
-                            AND ta_netid = %s
-                            ORDER BY session_id DESC
-                            LIMIT 1
-                        """, (student_netid, ta_netid))
-                        row = cursor.fetchone()
-                        return row[0] if row else None
-
-                
-
-    except Exception as ex:
-        print(f'start_session: {ex}', file=sys.stderr)
-        return None
 
 def get_time_session_began(session_id):
     """Return the time the session began."""

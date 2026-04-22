@@ -73,7 +73,7 @@ def workhub():
         if action == 'start_session':
             #ta clicks the button to take the next queued student
             database.set_available(ta_netid)
-            session_id = database.start_session(ta_netid)
+            session_id = database.match(ta_netid)
             if session_id is not None:
                 # Update number of students TA helped
                 database.update_num_students_helped(ta_netid)
