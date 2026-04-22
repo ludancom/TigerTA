@@ -282,7 +282,7 @@ def match(ta_netid):
                     SELECT course
                     FROM ta_courses
                     WHERE ta_netid = %s
-                """, (ta_netid))
+                """, (ta_netid,))
                 ta_course = cursor.fetchone()
                 
 
@@ -398,7 +398,7 @@ def detect_overflow():
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-        
+
 def get_session_info_ta(ta_netid):
     """ Method that checks for a TA's session information. If they are
     matched to a session, returns relevant info. If they are not matched,
