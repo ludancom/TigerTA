@@ -64,39 +64,30 @@ h2 {
     background-color: #d3bdd9;
 }
 
-.navigation-button {
-    display: inline-block;
-    padding: 14px 20px;
-    background-color:  #2f2373;;
-    color:  #ffffff;
-    border: 0px;
-    border-radius: 0px;
-    font-weight: 600;
-    font-size: 18px;
-    font-family: 'League Spartan', sans-serif;
-    text-decoration: none;
-    line-height: 1;
-    cursor: pointer;
-    min-width: auto;
-}
-
-.navigation-bar{
+.navigation-bar {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 0;
+    justify-content: space-between;
     background-color: #2f2373;
-    height: 50px;
+    min-height: 64px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.navigation-left,
+.navigation-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
 }
 
 .navigation-left {
-    flex: 1;
+    justify-content: flex-start;
     padding-left: 20px;
 }
 
 .navigation-right {
-    flex: 1;
-    display: flex;
     justify-content: flex-end;
     gap: 15px;
     padding-right: 20px;
@@ -106,13 +97,20 @@ h2 {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    color: white;
     font-weight: 700;
+    font-size: 2rem;
+    margin: 0;
 }
 
-.logo{
-    font-size: 24px;
-    font-weight: 700; 
-    color: #ffffff;
+.navigation-button {
+    color: white;
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
 }
 
 form {
