@@ -36,6 +36,7 @@ def main():
                     CREATE TABLE IF NOT EXISTS ta (
                     ta_netid TEXT NOT NULL,
                     ta_name TEXT NOT NULL,
+                    ta_email TEXT NOT NULL,
                     available BOOLEAN NOT NULL,
                     clocked_in BOOLEAN NOT NULL,
                     PRIMARY KEY (ta_netid)
@@ -770,23 +771,27 @@ def get_active_sessions():
 # Admin functions
 #-----------------------------------------------------------------------
 
-def add_ta(ta_netid, ta_name, course):
-    """ Method that adds a TA to the database. """
-    try:
+def add_ta(ta_netid, ta_name, ta_email, course):
+   """ Method that adds a TA to the database. """ 
+   try: 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    INSERT INTO ta (ta_netid, ta_name, available, clocked_in)
-                    VALUES (%s, %s, FALSE, FALSE, NULL)
-                    ON CONFLICT (ta_netid) DO NOTHING
-                """, (ta_netid, ta_name))
+                    INSERT INTO ta (ta_netid, ta_name, ta_email, available, clockin, clockin_expire)
+                    VALUES (%s, %s, %s, FALSE, FALSE, NULL)
+                    ON CONFLICT (ta_netid)
+                    DO UPDATE SET
+                        ta_name = EXCLUDED.ta_name,
+                        ta_email = EXCLUDED.ta_email
+                """, (ta_netid, ta_name, ta_email))
+
                 cursor.execute("""
                     INSERT INTO ta_courses (ta_netid, course)
                     VALUES (%s, %s)
                     ON CONFLICT DO NOTHING
                 """, (ta_netid, course))
                 connection.commit()
-    except Exception as ex:
+   except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def remove_ta(ta_netid):
@@ -810,11 +815,15 @@ def get_all_tas():
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT ta.ta_netid, ta.ta_name, ta.available,
-                    STRING_AGG(ta_courses.course, ', ') AS courses
+                    SELECT ta.ta_netid,
+                           ta.ta_name,
+                           ta.ta_email,
+                           ta.available,
+                           STRING_AGG(ta_courses.course, ', ' ORDER BY ta_courses.course) AS courses
                     FROM ta
                     LEFT JOIN ta_courses ON ta.ta_netid = ta_courses.ta_netid
-                    GROUP BY ta.ta_netid, ta.ta_name, ta.available
+                    GROUP BY ta.ta_netid, ta.ta_name, ta.ta_email, ta.available
+                    ORDER BY ta.ta_name ASC
                 """)
                 rows = cursor.fetchall()
                 tas = []
@@ -822,8 +831,9 @@ def get_all_tas():
                     tas.append({
                         'ta_netid': row[0],
                         'ta_name': row[1],
-                        'available': row[2],
-                        'courses': row[3]
+                        'ta_email': row[2],
+                        'available': row[3],
+                        'courses': row[4] or ''
                     })
                 return tas
     except Exception as ex:
@@ -845,21 +855,32 @@ def validate_admin(admin_netid):
         return False
         
 
-def edit_ta(ta_netid, name, email, course):
-    """Update ta information to paramaters, or the values given to the admin"""
+def edit_ta(ta_netid, name, email, courses):
+    """ Method that edits a TA in the database. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    UPDATE ta, ta_courses
-                    SET ta.name = %s, ta.email = %s, ta_courses.course = %s
-                    WHERE .a,ta_netid = %s 
-                    AND ta_courses.ta_netid = %s 
-                """, (name, email, course, ta_netid, ta_netid))
+                    UPDATE ta
+                    SET ta_name = %s,
+                        ta_email = %s
+                    WHERE ta_netid = %s
+                """, (name, email, ta_netid))
+
+                cursor.execute("""
+                    DELETE FROM ta_courses
+                    WHERE ta_netid = %s
+                """, (ta_netid,))
+
+                for course in [c.strip() for c in courses.split(',') if c.strip()]:
+                    cursor.execute("""
+                        INSERT INTO ta_courses (ta_netid, course)
+                        VALUES (%s, %s)
+                    """, (ta_netid, course))
+
                 connection.commit()
     except Exception as ex:
-        print(f'refresh_clockin_status: {ex}', file=sys.stderr)
-
+        print(f'edit_ta: {ex}', file=sys.stderr)
     
 if __name__ == '__main__':
     main()

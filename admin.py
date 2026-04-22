@@ -40,15 +40,13 @@ def adminpage():
 
 @admin_routes.route('/add_ta', methods=['GET', 'POST'])
 def add_ta():
-    """ Method that adds a TA to the database. """
-
     if flask.request.method == 'POST':
         ta_net_id = flask.request.form.get('ta_net_id')
         ta_name = flask.request.form.get('ta_name')
+        ta_email = flask.request.form.get('email')
         course = flask.request.form.get('course')
-        database.add_ta(ta_net_id, ta_name, course)
+        database.add_ta(ta_net_id, ta_name, ta_email, course)
         return flask.redirect('/adminpage')
-
     return flask.render_template('add_ta.html')
 
 #-----------------------------------------------------------------------
@@ -74,10 +72,11 @@ def remove_ta():
 def edit_ta():
     """ Method that edits a TA in the database. """
 
-    ta_net_id = flask.request.form.get('ta_net_id').strip()
-    ta_name = flask.request.form.get('ta_name').strip()
-    ta_email = flask.request.form.get('email').strip()
-    courses = flask.request.form.get('courses').strip()
+    ta_net_id = flask.request.form.get('ta_netid', '').strip()
+    ta_name = flask.request.form.get('ta_name', '').strip()
+    ta_email = flask.request.form.get('email', '').strip()
+    courses = flask.request.form.get('courses', '').strip()
+
     database.edit_ta(ta_net_id, ta_name, ta_email, courses)
 
     return flask.redirect(flask.url_for('admin_routes.view_tas'))
