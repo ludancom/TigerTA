@@ -273,7 +273,7 @@ def detect_overflow():
                 # Extract the queue entries
                 statement_str = """SELECT course
                 FROM session
-                WHERE ta_netid = NULL"""
+                WHERE ta_netid IS NULL"""
                 cursor.execute(statement_str)
                 table = cursor.fetchall()
                 num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
