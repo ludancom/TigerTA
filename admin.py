@@ -76,9 +76,9 @@ def edit_ta():
     ta_net_id = flask.request.form.get('ta_netid', '').strip()
     ta_name = flask.request.form.get('ta_name', '').strip()
     ta_email = f'{ta_net_id}@princeton.edu'
-    courses = flask.request.form.get('courses', '').strip()
+    course = flask.request.form.get('course', '').strip()
 
-    database.edit_ta(ta_net_id, ta_name, ta_email, courses)
+    database.edit_ta(ta_net_id, ta_name, ta_email, course)
 
     return flask.redirect(flask.url_for('admin_routes.adminpage'))
 
