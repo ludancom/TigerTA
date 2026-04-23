@@ -145,21 +145,42 @@ def find_student_place(course, student_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 
-                #Find place of student
-                statement_str = """SELECT row_num FROM 
-                (
-                SELECT student_netid,
-                ROW_NUMBER() OVER (ORDER BY session.session_id ASC) AS row_num
-                FROM session
-                WHERE course = %s
-                AND ta_netid IS NULL
-                ) AS iguessbro
-                WHERE student_netid = %s
-                """
-                cursor.execute(statement_str, (course, student_netid))
-                table = cursor.fetchone()
+                #Find place of student if they are a 126 student
+                # (queue consists of only 126 students)
+                if course == 'COS 126':
+                    statement_str = """SELECT row_num FROM 
+                    (
+                    SELECT student_netid,
+                    ROW_NUMBER() OVER (ORDER BY session.session_id ASC) AS row_num
+                    FROM session
+                    WHERE course = 'COS 126'
+                    AND ta_netid IS NULL
+                    ) AS iguessbro
+                    WHERE student_netid = %s
+                    """
+                    cursor.execute(statement_str, (course, student_netid))
+                    table = cursor.fetchone()
+                    
+                    return table[0] if table else None
                 
-                return table[0] if table else None
+                # Otherwise find the place of students who are in the 2XX
+                # queue, who could be either COS 217 or 226
+                else:
+                    statement_str = """SELECT row_num FROM 
+                    (
+                    SELECT student_netid,
+                    ROW_NUMBER() OVER (ORDER BY session.session_id ASC) AS row_num
+                    FROM session
+                    WHERE (course = 'COS 226' OR course = 'COS 217')
+                    AND ta_netid IS NULL
+                    ) AS iguessbro
+                    WHERE student_netid = %s
+                    """
+                    cursor.execute(statement_str, (course, student_netid))
+                    table = cursor.fetchone()
+                    
+                    return table[0] if table else None
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
