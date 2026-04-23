@@ -334,5 +334,8 @@ def submit_feedback():
         rating=rating,
         feedback_text=feedback_text
     )
+    return flask.redirect(flask.url_for('student_routes.queueentry'))
+
+    
 
 
