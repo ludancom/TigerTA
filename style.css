@@ -501,6 +501,124 @@ hr {
     margin-top: 18px;
 }
 
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.28);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.feedback-modal {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    background: white;
+    border-radius: 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    padding: 32px 30px 28px 30px;
+    text-align: center;
+    font-family: "League Spartan", sans-serif;
+}
+
+.feedback-modal h2 {
+    margin-top: 0;
+    margin-bottom: 22px;
+    color: #2f2373;
+    font-size: 2.1rem;
+    font-weight: 700;
+}
+
+.close-modal {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    background: transparent;
+    border: none;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #2f2373;
+    font-weight: 700;
+    padding: 0;
+}
+
+.close-modal:hover {
+    opacity: 0.75;
+}
+
+.feedback-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.feedback-label {
+    width: 100%;
+    text-align: left;
+    color: #222;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.star-rating {
+    direction: rtl;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.star-rating input {
+    display: none;
+}
+
+.star-rating label {
+    font-size: 2.4rem;
+    color: #d3d3d3;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+    color: #f4c542;
+}
+
+.star-rating input:checked ~ label {
+    color: #f4c542;
+}
+
+.feedback-form textarea {
+    width: 100%;
+    min-height: 130px;
+    border: 1.5px solid #d6d3e8;
+    border-radius: 18px;
+    padding: 16px;
+    font-size: 1.05rem;
+    font-family: "League Spartan", sans-serif;
+    resize: vertical;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.feedback-form textarea:focus {
+    border-color: #2f2373;
+    box-shadow: 0 0 0 3px rgba(47, 35, 115, 0.12);
+}
+
+.feedback-submit {
+    width: 100%;
+    max-width: 220px;
+    margin-top: 8px;
+    text-align: center;
+}
+
 .edit-ta-btn{
     min-width: 100px;
     padding: 10px 14px;
