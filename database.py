@@ -5,6 +5,7 @@
 
 import os
 import sys
+import notifications
 import psycopg
 import dotenv
 import contextlib
@@ -358,23 +359,33 @@ def match(ta_netid):
                 cursor.execute(statement_str, (ta_netid, student_netid))
                 connection.commit()
 
-                # add the session start time to the database
+                # add the session start time + mark notified_matched
                 statement_str = """UPDATE session 
-                SET time_session_began = CURRENT_TIMESTAMP
+                SET time_session_began = CURRENT_TIMESTAMP,
+                    notified_matched = TRUE
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
                 connection.commit()
 
-                # return the session id after assignment
+                # gather info needed for the email + return session id
                 cursor.execute("""
-                    SELECT session_id
-                    FROM session
-                    WHERE student_netid = %s
-                    AND ta_netid = %s
+                    SELECT s.session_id, st.student_name, t.ta_name, s.course
+                    FROM session s
+                    JOIN student st ON s.student_netid = st.student_netid
+                    JOIN ta t ON s.ta_netid = t.ta_netid
+                    WHERE s.student_netid = %s
+                    AND s.ta_netid = %s
                     LIMIT 1
                 """, (student_netid, ta_netid))
                 row = cursor.fetchone()
-                return row[0] if row else None
+                if row is None:
+                    return None
+                session_id, student_name, ta_name, course = row
+
+        # send the matched email outside the connection block
+        notifications.send_matched(student_netid, student_name, ta_name, course)
+
+        return session_id
                 
 
     except Exception as ex:
