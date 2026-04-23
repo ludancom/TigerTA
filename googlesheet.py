@@ -18,8 +18,12 @@ def log_shift(netid, name, date, clock_in, clock_out, students):
         students
     ])
 
-def log_feedback(netid, feedback):
+def log_feedback(timestamp, student_netid, ta_name, course, rating, feedback_text):
     feedbackWorksheet.append_row([
-        netid,
-        feedback
+        timestamp,
+        student_netid,
+        ta_name,
+        course,
+        rating,
+        feedback_text
     ])
