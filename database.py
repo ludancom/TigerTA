@@ -842,6 +842,9 @@ def remove_ta(ta_netid):
                 cursor.execute("""
                     DELETE FROM ta WHERE ta_netid = %s
                 """, (ta_netid,))
+                cursor.execute("""
+                    DELETE FROM shifts WHERE ta_netid = %s
+                """, (ta_netid,))
                 connection.commit()
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
