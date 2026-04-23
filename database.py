@@ -67,6 +67,8 @@ def main():
                     bug_description TEXT NOT NULL,
                     time_joined TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     time_session_began TIMESTAMP,
+                    notified_next BOOLEAN NOT NULL DEFAULT FALSE,
+                    notified_matched BOOLEAN NOT NULL DEFAULT FALSE,
                     PRIMARY KEY (session_id),
                     UNIQUE (student_netid),
                     FOREIGN KEY (student_netid) REFERENCES student(student_netid),
