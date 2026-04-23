@@ -182,6 +182,45 @@ def get_num_on_shift_tas(course):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
+def notify_next_in_line(course):
+    """ Check if the student now at position 1 in the queue for `course` 
+    should receive a 'you're next in line' email, and send it if so. 
+    Only sends if a TA is on shift for the course and the student
+    hasn't already been notified. """
+    try:
+        # First check: is there a TA on shift for this course?
+        if get_num_on_shift_tas(course) == 0:
+            return
+
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT s.student_netid, st.student_name, s.session_id
+                    FROM session s
+                    JOIN student st ON s.student_netid = st.student_netid
+                    WHERE s.course = %s
+                    AND s.ta_netid IS NULL
+                    AND s.notified_next = FALSE
+                    ORDER BY s.session_id ASC
+                    LIMIT 1
+                """, (course,))
+                row = cursor.fetchone()
+                if row is None:
+                    return
+                student_netid, student_name, session_id = row
+
+                # Mark notified BEFORE sending email, prevents double-send
+                cursor.execute("""
+                    UPDATE session
+                    SET notified_next = TRUE
+                    WHERE session_id = %s
+                """, (session_id,))
+                connection.commit()
+
+        notifications.send_next_in_line(student_netid, student_name, course)
+
+    except Exception as ex:
+        print(f'notify_next_in_line: {ex}', file=sys.stderr)
 
 # Ensure that the student is not rejoining the queue
 def student_already_in_queue(student_netid):
@@ -385,6 +424,9 @@ def match(ta_netid):
         # send the matched email outside the connection block
         notifications.send_matched(student_netid, student_name, ta_name, course)
 
+        # the queue just shifted, so let the new front student know
+        notify_next_in_line(course)
+
         return session_id
                 
 
@@ -473,11 +515,20 @@ def set_available(ta_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def remove_session(student_netid):
-    """ Method that reomves a session from the session list after it has
-    ended. """
+    """ Method that removes a session from the session list after it has
+    ended. Also triggers a notification check for the next student
+    in that course's queue. """
     try:
+        course = None
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor: 
+            with contextlib.closing(connection.cursor()) as cursor:
+                cursor.execute("""
+                    SELECT course FROM session WHERE student_netid = %s
+                """, (student_netid,))
+                row = cursor.fetchone()
+                if row is not None:
+                    course = row[0]
+
                 statement_str = """DELETE FROM session
                 WHERE student_netid = %s
                 """
@@ -488,6 +539,9 @@ def remove_session(student_netid):
                 """
                 cursor.execute(statement_str, (student_netid,))
                 connection.commit()
+
+        if course is not None:
+            notify_next_in_line(course)
                 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
