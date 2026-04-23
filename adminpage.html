@@ -74,17 +74,8 @@
                 <label for="edit_email">Email</label>
                 <input type="email" id="edit_email" name="email" readonly>
 
-                <h2>Course</h2>
-                <div class="edit_course">
-                    <label>
-                        <input type="radio" name="course" value="COS 126" required>
-                        COS 126
-                    </label>
-                    <label>
-                        <input type="radio" name="course" value="COS 2XX">
-                        COS 2XX
-                    </label>
-                </div>
+                <label for="edit_courses">Courses</label>
+                <input type="text" id="edit_courses" name="courses" placeholder="COS 126, COS 226" required>
 
                 <button type="submit" class="button-link primary">Save Changes</button>
                 <button type="button" class="button-link" id="cancelModal">Back</button>
@@ -134,15 +125,6 @@
         });
 
     </script>
-
-    <div class="feedback-link-container">
-        <a 
-            href="https://docs.google.com/spreadsheets/d/1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4/edit?gid=1084720156#gid=1084720156"
-            target="_blank"
-            class="button-link secondary">
-            View Session Feedback
-        </a>
-    </div>
     {% include 'footer.html' %}
 </body>
 </html>
