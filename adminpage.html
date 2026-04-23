@@ -75,7 +75,16 @@
                 <input type="email" id="edit_email" name="email" readonly>
 
                 <label for="edit_courses">Courses</label>
-                <input type="text" id="edit_courses" name="courses" placeholder="COS 126, COS 226" required>
+                <div class="course-options">
+                    <label>
+                        <input type="radio" name="course" value="COS 126" required>
+                        COS 126
+                    </label>
+                    <label>
+                        <input type="radio" name="course" value="COS 2XX">
+                        COS 2XX
+                    </label>
+                </div>
 
                 <button type="submit" class="button-link primary">Save Changes</button>
                 <button type="button" class="button-link" id="cancelModal">Back</button>
