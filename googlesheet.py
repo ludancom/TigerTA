@@ -1,16 +1,15 @@
 import gspread
 
 client = gspread.service_account(filename='tigerta-d62e8c569ae9.json')
-# Worksheet for shifts
-shiftSheet = client.open_by_key(key='1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4')
-shiftworksheet = shiftSheet.get_worksheet_by_id(id=0)
+# Tab for shifts
+sheet = client.open_by_key(key='1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4')
+shiftWorksheet = sheet.get_worksheet_by_id(id=0)
 
-# Worksheet for feedback
-#shiftSheet = client.open_by_key(key='1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4')
-#shiftworksheet = shiftSheet.get_worksheet_by_id(id=1)
+# Tab for feedback
+feedbackWorksheet = sheet.get_worksheet_by_id(id=1084720156)
 
 def log_shift(netid, name, date, clock_in, clock_out, students):
-    worksheet.append_row([
+    shiftWorksheet.append_row([
         netid,
         name, 
         date,
@@ -19,8 +18,8 @@ def log_shift(netid, name, date, clock_in, clock_out, students):
         students
     ])
 
-#def log_feedback(netid, feedback):
-    #worksheet.append_row([
-     #   netid,
-     #   feedback
-   # ])
+def log_feedback(netid, feedback):
+    feedbackWorksheet.append_row([
+        netid,
+        feedback
+    ])
