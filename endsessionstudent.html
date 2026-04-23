@@ -31,7 +31,7 @@
             <button id="closeModal" class="close-modal">&times;</button>
             <h2>LabTA Feedback</h2>
 
-            <form method="post" action="/submit_feedback">
+            <form method="post" action="{{ url_for('student_routes.submit_feedback') }}">
                 <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
 
                 <label class="feedback-label">Rate your experience:</label>
