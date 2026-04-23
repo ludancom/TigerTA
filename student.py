@@ -308,32 +308,22 @@ def submit_feedback():
     """ Method that displays the feedback modal, the TA's name, and
     a button to submit feedback. """
     import datetime
-    import flask
-    import auth
     import googlesheet
-    import database
 
     rating = flask.request.form.get('rating', '').strip()
     feedback_text = flask.request.form.get('feedback_text', '').strip()
+    ta_name = flask.request.form.get('ta_name', '').strip()
 
-    student_netid = auth.get_username()
-    ta_name = flask.request.cookies.get('ta_name', '')
-    session_info = database.get_session_info_student(student_netid)
-
-    course = ''
-    if session_info is not None:
-        course = session_info.get('course', '')
 
     timestamp = datetime.datetime.now().strftime("%m-%d-%Y %H:%M:%S")
 
     googlesheet.log_feedback(
-        timestamp=timestamp,
-        student_netid=student_netid,
-        ta_name=ta_name,
-        course=course,
-        rating=rating,
-        feedback_text=feedback_text
+        timestamp,
+        ta_name,
+        rating,
+        feedback_text
     )
+
     return flask.redirect(flask.url_for('student_routes.queueentry'))
 
     
