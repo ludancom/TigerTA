@@ -837,6 +837,9 @@ def remove_ta(ta_netid):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
+                    DELETE FROM session WHERE ta_netid = %s
+                """, (ta_netid,))
+                cursor.execute("""
                     DELETE FROM shifts WHERE ta_netid = %s
                 """, (ta_netid,))
                 cursor.execute("""
