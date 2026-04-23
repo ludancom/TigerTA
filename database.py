@@ -158,7 +158,7 @@ def find_student_place(course, student_netid):
                     ) AS iguessbro
                     WHERE student_netid = %s
                     """
-                    cursor.execute(statement_str, (course, student_netid))
+                    cursor.execute(statement_str, (student_netid))
                     table = cursor.fetchone()
                     
                     return table[0] if table else None
@@ -176,7 +176,7 @@ def find_student_place(course, student_netid):
                     ) AS iguessbro
                     WHERE student_netid = %s
                     """
-                    cursor.execute(statement_str, (course, student_netid))
+                    cursor.execute(statement_str, (student_netid))
                     table = cursor.fetchone()
                     
                     return table[0] if table else None
