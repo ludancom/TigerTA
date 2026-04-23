@@ -33,6 +33,7 @@
 
             <form method="post" action="{{ url_for('student_routes.submit_feedback') }}">
                 <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+                <input type="hidden" name="ta_name" value="{{ ta_name }}">
 
                 <label class="feedback-label">Rate your experience:</label>
 
