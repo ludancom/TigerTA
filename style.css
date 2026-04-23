@@ -557,6 +557,13 @@ hr {
     gap: 21px;
 }
 
+.feedback-link-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+    margin-bottom: 6px;
+}
+
 .feedback-label {
     width: 100%;
     text-align: left;
