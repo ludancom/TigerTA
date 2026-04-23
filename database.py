@@ -116,22 +116,27 @@ def queue_entry(session):
                 assignment = session['assignment']
                 bug_description = session['bug_description']
 
-                # Add this student to student table
+                # Add this student to student table (upsert so a stale row
+                # left over from a bad session end doesn't block queue entry)
                 cursor.execute('''
                     INSERT INTO student (student_netid, student_name)
                     VALUES (%s, %s)
+                    ON CONFLICT (student_netid) DO UPDATE
+                    SET student_name = EXCLUDED.student_name
                 ''', [student_netid, student_name])
 
                 # Add this session to session table (TA will be added later once matched)
-                # Add TA back
                 cursor.execute('''
                 INSERT INTO session (student_netid, course, assignment, bug_description) 
                 VALUES (%s, %s, %s, %s)
                 ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
+        # If she joined as position 1 with a TA on shift, notify her
+        notify_next_in_line(course)
+
     except Exception as ex:
-        print("ERROR:", ex)
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 
 def find_student_place(course, student_netid):
@@ -183,41 +188,43 @@ def get_num_on_shift_tas(course):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def notify_next_in_line(course):
-    """ Check if the student now at position 1 in the queue for `course` 
-    should receive a 'you're next in line' email, and send it if so. 
-    Only sends if a TA is on shift for the course and the student
-    hasn't already been notified. """
+    """ Check if the student now at position 1 in the queue for `course`
+    should receive a 'you're next in line' email, and send it if so.
+    Fires as soon as someone is at position 1, regardless of whether a
+    TA is on shift. Only skipped if that student was already notified. """
     try:
-        # First check: is there a TA on shift for this course?
-        if get_num_on_shift_tas(course) == 0:
-            return
-
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
-                    SELECT s.student_netid, st.student_name, s.session_id
+                    SELECT s.student_netid, st.student_name,
+                           s.session_id, s.notified_next
                     FROM session s
                     JOIN student st ON s.student_netid = st.student_netid
                     WHERE s.course = %s
                     AND s.ta_netid IS NULL
-                    AND s.notified_next = FALSE
                     ORDER BY s.session_id ASC
                     LIMIT 1
                 """, (course,))
                 row = cursor.fetchone()
+
                 if row is None:
                     return
-                student_netid, student_name, session_id = row
 
-                # Mark notified BEFORE sending email, prevents double-send
+                student_netid, student_name, session_id, already_notified = row
+
+                if already_notified:
+                    return
+
+        notifications.send_next_in_line(student_netid, student_name, course)
+
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
+            with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
                     UPDATE session
                     SET notified_next = TRUE
                     WHERE session_id = %s
                 """, (session_id,))
                 connection.commit()
-
-        notifications.send_next_in_line(student_netid, student_name, course)
 
     except Exception as ex:
         print(f'notify_next_in_line: {ex}', file=sys.stderr)
@@ -550,6 +557,7 @@ def clock_in(ta_netid):
     """ Method that collects the date and netid of the ta after 
     they clock in. """
     try:
+        courses = []
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 # Set TA to clocked in
@@ -558,18 +566,24 @@ def clock_in(ta_netid):
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
 
-                # INSERT INTO ta (ta_netid, ta_name, available, clockin, clockin_expire)
-                # VALUES (%s, %s, TRUE, TRUE, NULL)
-                # ON CONFLICT (ta_netid)
-                # DO UPDATE SET
-                    #clockin = TRUE
-
                 # Adds their shift to table in database
                 cursor.execute("""
                     INSERT INTO shifts (ta_netid, clock_in, clock_out, students_helped)
                     VALUES (%s, %s, NULL, 0)
                 """, (ta_netid, datetime.now()))
                 connection.commit()
+
+                # Grab the courses this TA covers so we know which queues
+                # might now have a newly-notifiable front-of-line student.
+                cursor.execute(
+                    "SELECT course FROM ta_courses WHERE ta_netid = %s",
+                    (ta_netid,)
+                )
+                courses = [r[0] for r in cursor.fetchall()]
+
+        for course in courses:
+            notify_next_in_line(course)
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
