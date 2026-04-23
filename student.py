@@ -314,20 +314,12 @@ def submit_feedback():
     feedback_text = flask.request.form.get('feedback_text', '').strip()
     ta_name = flask.request.form.get('ta_name', '').strip()
 
-    student_netid = auth.get_username()
-    session_info = database.get_session_info_student(student_netid)
-
-    course = ''
-    if session_info is not None:
-        course = session_info.get('course', '')
 
     timestamp = datetime.datetime.now().strftime("%m-%d-%Y %H:%M:%S")
 
     googlesheet.log_feedback(
         timestamp,
-        student_netid,
         ta_name,
-        course,
         rating,
         feedback_text
     )
