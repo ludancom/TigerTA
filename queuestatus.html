@@ -18,11 +18,7 @@
         </p>
 
         <div class="status-box">
-        {% if num_on_shift_tas == 1 %}
-            <strong> 1 TA is currently on shift for your course.</strong> 
-        {% else %}
-            <strong>{{ num_on_shift_tas }} TAs are currently on shift for your course.</strong> 
-        {% endif %}
+        <strong id="numTAs"></strong> 
         </div>
 
         <div class="problem-box">
@@ -42,12 +38,20 @@
     let place = "{{ student_place }}";
     document.getElementById("placeText").innerText = "You're " + getOrdinal(place) + " in line!";
 
+    let num_on_shift_tas = "{{ num_on_shift_tas }}"
+    if(num_on_shift_tas == 1){
+        document.getElementById("numTAs").innerText = "1 TA is currently on shift for your course.";
+    }
+    else{
+        document.getElementById("numTAs").innerText = num_on_shift_tas + " TAs are currently on shift for your course.";
+    }
+    
     function getOrdinal(n) {
         var s=["th","st","nd","rd"],
         v=n%100;
         return n+(s[(v-20)%10]||s[v]||s[0]);
     }
-    
+
     setInterval (async function(){
         try {
         const response = await fetch('/trymatch');
@@ -58,14 +62,20 @@
             window.location.href = "/insessionstudent";
             return;
         }
-
         // otherwise show their place in line and update it
-        if (data.student_place !== null) {
+        if (data.student_place != null) {
             document.getElementById("placeText").innerText =
                 "You're " + getOrdinal(data.student_place) + " in line!";
         }
+
+        if(data.num_on_shift_tas == 1){
+            document.getElementById("numTAs").innerText = "1 TA is currently on shift for your course.";
+        }
+        else{
+            document.getElementById("numTAs").innerText = data.num_on_shift_tas + " TAs are currently on shift for your course.";
+        }
         } catch (error) {
-        console.log("matching error:", error);
+        console.log("error matching or retrieving number:", error);
         }
     }, 5000);
 

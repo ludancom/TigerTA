@@ -220,7 +220,7 @@ def queuestatus():
         num_on_shift_tas=num_on_shift_tas
     )
 #-----------------------------------------------------------------------
-# Match Attempt (For Queue Status Page):
+# Match Attempt & Updating Number of TAs on Shift (For Queue Status Page):
 #-----------------------------------------------------------------------
 @student_routes.route('/trymatch', methods={'GET'})
 def trymatch():
@@ -244,9 +244,13 @@ def trymatch():
     # check whether a TA has already been assigned
     ta_name = database.get_session_ta_name(student_netid)
 
+    # Retrieve number of TAs on shift for specific course
+    num_on_shift_tas = database.get_num_on_shift_tas(course)
+
     return {
         "matched": ta_name is not None,
-        "student_place": student_place
+        "student_place": student_place,
+        "num_on_shift_tas": num_on_shift_tas
     }
 
 #-----------------------------------------------------------------------

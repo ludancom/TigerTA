@@ -189,6 +189,9 @@ def get_num_on_shift_tas(course):
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
+                if course == 'COS 226' or course == 'COS 217':
+                    course = 'COS 2XX'
+                
                 # Get the number of TAs teaching a specific course
                 statement_str = """
                 SELECT COUNT(*)
