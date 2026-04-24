@@ -95,7 +95,6 @@
     <script>
         const modal = document.getElementById("editModal");
         const closeModal = document.getElementById("closeModal");
-        // const cancelModal = document.getElementById("cancelModal");
         const editButtons = document.querySelectorAll(".edit-ta-btn");
 
         const editName = document.getElementById("edit_name");
@@ -124,10 +123,6 @@
         closeModal.addEventListener("click", () => {
             modal.style.display = "none";
         });
-
-        // cancelModal.addEventListener("click", () => {
-        //     modal.style.display = "none";
-        // });
 
         window.addEventListener("click", (event) => {
             if (event.target == modal) {
