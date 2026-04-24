@@ -38,6 +38,7 @@
                                     type="button"
                                     class="button-link edit-ta-btn"
                                     data-netid="{{ ta['ta_netid'] }}"
+                                    data-original-netid="{{ ta['ta_netid'] }}"
                                     data-name="{{ ta['ta_name'] }}"
                                     data-email="{{ ta['ta_email'] }}"
                                     data-courses="{{ ta['courses'] }}">
@@ -85,6 +86,7 @@
             <form method="post" action="{{ url_for('admin_routes.edit_ta') }}">
                 <!-- CSRF token to protect against attacks -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="original_netid" name="original_netid">
 
                 <label for="edit_name">Name</label>
                 <input type="text" id="edit_name" name="ta_name" required>
@@ -121,6 +123,7 @@
         const editName = document.getElementById("edit_name");
         const editNetid = document.getElementById("edit_netid");
         const editEmail = document.getElementById("edit_email");
+        const originalNetid = document.getElementById("original_netid");
 
         editButtons.forEach(button => {
             button.addEventListener("click", () => {
@@ -130,6 +133,7 @@
                 const courses = button.getAttribute("data-courses");
 
                 editName.value = name;
+                originalNetid.value = netid;
                 editNetid.value = netid;
                 editEmail.value = email;
                 document.querySelectorAll("input[name='ta_courses']").forEach(radio => {

@@ -83,7 +83,7 @@ def edit_ta():
     return flask.redirect(flask.url_for('admin_routes.adminpage'))
 
 #-----------------------------------------------------------------------
-# View TAs Page: i dont think we need this?
+# View TAs Page: 
 #-----------------------------------------------------------------------
 
 @admin_routes.route('/view_tas', methods=['GET'])
