@@ -936,30 +936,33 @@ def validate_admin(admin_netid):
         return False
         
 
-def edit_ta(ta_netid, name, email, courses):
+def edit_ta(original_netid, new_netid, name, email, courses):
     """ Method that edits a TA in the database. """
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
+
                 cursor.execute("""
                     UPDATE ta
-                    SET ta_name = %s,
+                    SET ta_netid = %s,
+                        ta_name = %s,
                         ta_email = %s
                     WHERE ta_netid = %s
-                """, (name, email, ta_netid))
+                """, (new_netid, name, email, original_netid))
 
                 cursor.execute("""
                     DELETE FROM ta_courses
                     WHERE ta_netid = %s
-                """, (ta_netid,))
+                """, (new_netid,))
 
                 for course in [c.strip() for c in courses.split(',') if c.strip()]:
                     cursor.execute("""
                         INSERT INTO ta_courses (ta_netid, course)
                         VALUES (%s, %s)
-                    """, (ta_netid, course))
+                    """, (new_netid, course))
 
                 connection.commit()
+
     except Exception as ex:
         print(f'edit_ta: {ex}', file=sys.stderr)
     
