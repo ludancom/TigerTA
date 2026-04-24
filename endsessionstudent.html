@@ -29,7 +29,7 @@
     <div id="feedbackModal" class="modal-overlay">
         <div class="feedback-modal">
             <button id="closeModal" class="close-modal">&times;</button>
-            <h2>LabTA Feedback</h2>
+            <h2>Session Feedback</h2>
 
             <form method="post" action="{{ url_for('student_routes.submit_feedback') }}">
                 <input type="hidden" name="csrf_token" value="{{csrf_token()}}">

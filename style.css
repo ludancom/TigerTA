@@ -554,7 +554,14 @@ hr {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 21px;
+}
+
+.feedback-link-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+    margin-bottom: 6px;
 }
 
 .feedback-label {
