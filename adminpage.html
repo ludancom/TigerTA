@@ -132,7 +132,13 @@
 
                 editName.value = name;
                 editNetid.value = netid;
-                editEmail.value = email;
+                
+                if (!email || email.trim() === "") {
+                    editEmail.value = netid + "@princeton.edu";
+                } else {
+                    editEmail.value = email;
+                }
+                
                 document.querySelectorAll("input[name='ta_courses']").forEach(radio => {
                     radio.checked = radio.value === courses.trim();
                 });
