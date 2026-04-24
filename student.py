@@ -51,9 +51,9 @@ def logout():
     netid = auth.get_username()
 
     # Remove session from database if student is in the queue
-    status = database.student_already_in_queue(netid)
-    if(status == "InQueue" or status == "InSession"):
-        database.remove_session(netid)
+    # status = database.student_already_in_queue(netid)
+    # if(status == "InQueue" or status == "InSession"):
+        # database.remove_session(netid)
 
     # Remove session from database if TA is helping student 
     ta_session_info = database.get_session_info_ta(netid)

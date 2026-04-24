@@ -22,7 +22,7 @@
                         <th>Email</th> <!-- still need to add email -->
                         <th>Courses</th> <!-- do i need to change how this is displayed?-->
                         <!-- because we're getting from the courses tables?-->
-                        <th>Edit</th>
+                        <th></th>
                     </tr>
                 </thead>
 
@@ -59,7 +59,7 @@
     <div id="editModal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="closeModal">&times;</span>
-            <h2>Edit TA</h2>
+            <center><h2>Edit TA</h2></center>
             <!-- Triggers this modal when the button is clicked-->
             <form method="post" action="{{ url_for('admin_routes.edit_ta') }}">
                 <!-- CSRF token to protect against attacks -->
@@ -77,8 +77,7 @@
                 <label for="edit_courses">Courses</label>
                 <input type="text" id="edit_courses" name="courses" placeholder="COS 126, COS 226" required>
 
-                <button type="submit" class="button-link primary">Save Changes</button>
-                <button type="button" class="button-link" id="cancelModal">Back</button>
+                <center><button type="submit" class="button-link">Save Changes</button></center>
             </form>
         </div>
     </div>

@@ -578,7 +578,7 @@ hr {
     display: flex;
     justify-content: center;
     gap: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 15px;
 }
 
 .star-rating input {

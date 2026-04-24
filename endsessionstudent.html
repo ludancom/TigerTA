@@ -35,8 +35,6 @@
                 <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
                 <input type="hidden" name="ta_name" value="{{ ta_name }}">
 
-                <label class="feedback-label">Rate your experience:</label>
-
                 <div class="star-rating">
                     <input type="radio" id="star5" name="rating" value="5" required>
                     <label for="star5" title="5 stars">&#9733;</label>
@@ -54,14 +52,13 @@
                     <label for="star1" title="1 star">&#9733;</label>
                 </div>
 
-                <label for="feedbackText" class="feedback-label">Additional Comments:</label>
                 <textarea
                     id="feedbackText"
                     name="feedback_text"
                     rows="5"
                     maxlength="500"
                     placeholder="Share any thoughts about your session here..."></textarea>
-                    <p id="charCount">500 characters remaining</p>
+                    <p id="charCount"></p>
 
                 <button type="submit" class="button-link feedback-submit">Submit</button>
             </form>
