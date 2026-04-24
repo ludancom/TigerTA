@@ -52,23 +52,27 @@
 
         <hr>
 
-        <a href="{{ url_for('admin_routes.add_ta') }}" class="button-link">Add TA</a>
-        <a href="{{ url_for('admin_routes.remove_ta') }}" class="button-link">Remove TA</a>
+        <div class="admin-actions">
+            <div class="admin-row">
+                <a href="{{ url_for('admin_routes.add_ta') }}" class="button-link">Add TA</a>
+                <a href="{{ url_for('admin_routes.remove_ta') }}" class="button-link">Remove TA</a>
+            </div>
 
-        <div class="sheet-buttons">
-            <a 
-                href="https://docs.google.com/spreadsheets/d/1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4/edit?gid=0#gid=0"
-                target="_blank"
-                class="button-link secondary">
-            View Shift Tracker
-            </a>
+            <div class="admin-row secondary-row">
+                <a 
+                    href="https://docs.google.com/spreadsheets/d/1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4/edit?gid=0#gid=0"
+                    target="_blank"
+                    class="button-link secondary">
+                    View Shift Tracker
+                </a>
 
-            <a 
-                href="https://docs.google.com/spreadsheets/d/1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4/edit?gid=1084720156#gid=1084720156"
-                target="_blank"
-                class="button-link secondary">
-            View Session Feedback
-            </a>
+                <a 
+                    href="https://docs.google.com/spreadsheets/d/1yT4kDQ-0aeV7Rac9R7TxEHTyS-BIPbrgayMMFtSCAt4/edit?gid=1084720156#gid=1084720156"
+                    target="_blank"
+                    class="button-link secondary">
+                    View Session Feedback
+                </a>
+            </div>
         </div>
     </div>
 
