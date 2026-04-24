@@ -671,6 +671,25 @@ hr {
     color: #f4c542;
 }
 
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+form .button-link:not(.admin-btn) {
+    display: inline-flex;
+}
+
+form {
+    gap: 18px;
+}
+
+.role-row {
+    display: flex;
+    gap: 28px;
+}
+
 
 .admin-actions {
     display: flex;
