@@ -671,6 +671,19 @@ hr {
     color: #f4c542;
 }
 
+.admin-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.feedback-button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
 .feedback-form textarea {
     width: 100%;
     min-height: 130px;
