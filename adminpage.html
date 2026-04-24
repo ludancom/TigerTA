@@ -38,7 +38,6 @@
                                     type="button"
                                     class="button-link edit-ta-btn"
                                     data-netid="{{ ta['ta_netid'] }}"
-                                    data-original-netid="{{ ta['ta_netid'] }}"
                                     data-name="{{ ta['ta_name'] }}"
                                     data-email="{{ ta['ta_email'] }}"
                                     data-courses="{{ ta['courses'] }}">
@@ -92,7 +91,7 @@
                 <input type="text" id="edit_name" name="ta_name" required>
 
                 <label for="edit_netid">NetID</label>
-                <input type="text" id="edit_netid" name="ta_netid" required>
+                <input type="text" id="edit_netid" name="ta_netid" readonly>
 
                 <label for="edit_email">Email</label>
                 <input type="email" id="edit_email" name="ta_email" required>
@@ -123,7 +122,6 @@
         const editName = document.getElementById("edit_name");
         const editNetid = document.getElementById("edit_netid");
         const editEmail = document.getElementById("edit_email");
-        const originalNetid = document.getElementById("original_netid");
 
         editButtons.forEach(button => {
             button.addEventListener("click", () => {
@@ -133,7 +131,6 @@
                 const courses = button.getAttribute("data-courses");
 
                 editName.value = name;
-                originalNetid.value = netid;
                 editNetid.value = netid;
                 editEmail.value = email;
                 document.querySelectorAll("input[name='ta_courses']").forEach(radio => {
