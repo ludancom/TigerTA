@@ -11,7 +11,7 @@
     {% include 'navbar.html' %}
     <div class="container">
         <h1>Select Your Role</h1>
-         <form method="post" action="{{ url_for('student_routes.roleselection') }}">
+         <form class="role-form" method="post" action="{{ url_for('student_routes.roleselection') }}">
             <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
             <div class="role-row">
                 <button type="submit" name="role" value="TA" class="button-link">TA</button>
