@@ -550,6 +550,76 @@ hr {
     opacity: 0.75;
 }
 
+.edit-ta-modal {
+    position: relative;
+    max-width: 620px;
+    padding: 38px 46px;
+}
+
+.edit-ta-modal h2 {
+    text-align: center;
+    color: #2f2373;
+    font-size: 34px;
+    margin: 0 0 24px;
+}
+
+.edit-ta-modal form {
+    max-width: 440px;
+    margin: 0 auto;
+}
+
+.edit-ta-modal label {
+    display: block;
+    text-align: left;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 20px 0 8px;
+}
+
+.edit-ta-modal input[type="text"],
+.edit-ta-modal input[type="email"] {
+    max-width: 100%;
+    margin: 0;
+}
+
+.edit-course-options {
+    display: flex;
+    justify-content: center;
+    gap: 34px;
+    margin: 12px 0 22px;
+}
+
+.edit-course-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.edit-course-options input[type="radio"] {
+    accent-color: #2f2373;
+    transform: scale(1.1);
+}
+
+.edit-ta-modal .button-link {
+    display: flex;
+    margin: 24px auto 0;
+}
+
+.edit-ta-modal .close-modal {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    color: #2f2373;
+    font-size: 34px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .feedback-form {
     display: flex;
     flex-direction: column;
