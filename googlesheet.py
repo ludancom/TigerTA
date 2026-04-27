@@ -15,19 +15,32 @@ shiftWorksheet = sheet.get_worksheet_by_id(id=0)
 feedbackWorksheet = sheet.get_worksheet_by_id(id=1084720156)
 
 def log_shift(netid, name, date, clock_in, clock_out, students):
-    shiftWorksheet.append_row([
-        netid,
-        name, 
-        date,
-        clock_in,
-        clock_out,
-        students
-    ])
+    try: 
+        shiftWorksheet.append_row([
+            netid,
+            name, 
+            date,
+            clock_in,
+            clock_out,
+            students
+        ])
+        return True
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return False
+
 
 def log_feedback(timestamp, ta_name, rating, feedback_text):
-    feedbackWorksheet.append_row([
-        timestamp,
-        ta_name,
-        rating,
-        feedback_text
-    ])
+    try: 
+        feedbackWorksheet.append_row([
+            timestamp,
+            ta_name,
+            rating,
+            feedback_text
+        ])
+        return True 
+    except Exception as ex:
+        print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return False
+
+    

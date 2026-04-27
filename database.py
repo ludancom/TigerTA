@@ -654,13 +654,14 @@ def clock_out(ta_netid):
 
                 # Save shift information into the Google Sheet
                 if row is not None:
-                    googlesheet.log_shift(ta_netid, ta_name, row[0].strftime("%m-%d-%Y"), row[0].strftime("%H:%M"), row[1].strftime("%H:%M"), str(row[2]))
+                    logSuccessful = googlesheet.log_shift(ta_netid, ta_name, row[0].strftime("%m-%d-%Y"), row[0].strftime("%H:%M"), row[1].strftime("%H:%M"), str(row[2]))
 
-                # If shift is successfully added to sheet, delete shift from database (maybe check later first if was successfully added to sheet before deleting)
-                cursor.execute("""
-                    DELETE FROM shifts WHERE ta_netid = %s
-                """, (ta_netid,))
-                connection.commit()
+                # If shift is successfully added to sheet, delete shift from database
+                if logSuccessful: 
+                    cursor.execute("""
+                        DELETE FROM shifts WHERE ta_netid = %s
+                    """, (ta_netid,))
+                    connection.commit()
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
