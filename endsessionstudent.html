@@ -13,12 +13,15 @@
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
 </head>
    
-<body>
+<body data-feedback-submitted="{{ '1' if feedback_submitted else '0' }}">
     {% include 'navbar.html' %}
     <div class="container">
         <h1>Session Complete!</h1>
 
         <p>Thanks for using TigerTA! Your TA was <span class="name"> {{ ta_name }}</span>.</p>
+        {% if feedback_submitted %}
+        <p>Thanks for your feedback.</p>
+        {% endif %}
 
         <!-- Return to previous queue entry page-->
         <a href="{{ url_for('student_routes.queueentry') }}" class="button-link">
@@ -68,9 +71,12 @@
     <script>
         const feedbackModal = document.getElementById("feedbackModal");
         const closeModal = document.getElementById("closeModal");
+        const feedbackSubmitted = document.body.dataset.feedbackSubmitted === "1";
 
         window.addEventListener("load", () => {
-            feedbackModal.style.display = "flex";
+            if (!feedbackSubmitted) {
+                feedbackModal.style.display = "flex";
+            }
         });
 
         closeModal.addEventListener("click", () => {
