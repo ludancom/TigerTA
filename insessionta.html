@@ -10,7 +10,15 @@
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap" rel="stylesheet">
 </head>
 <body>
-    {% include 'navbar.html' %}
+    <div class="navigation-bar">
+        <div class="logo">
+            <a href="/home" class="navigation-button">TigerTA</a></div>
+
+        <div class="navigation-right">
+            <a href="/roleselection" class="navigation-button">Switch Role</a>
+            <a href="/logout" class="navigation-button">Log Out</a>
+        </div>
+    </div>
     <div class="container">
         <h1>You've been matched with a student! </h1>
         <div class="studentinfo-box">

@@ -14,7 +14,15 @@
 </head>
    
 <body data-feedback-submitted="{{ '1' if feedback_submitted else '0' }}">
-    {% include 'navbar.html' %}
+    <div class="navigation-bar">
+        <div class="logo">
+            <a href="/home" class="navigation-button">TigerTA</a></div>
+
+        <div class="navigation-right">
+            <a href="/roleselection" class="navigation-button">Switch Role</a>
+            <a href="/logout" class="navigation-button">Log Out</a>
+        </div>
+    </div>
     <div class="container">
         <h1>Session Complete!</h1>
 
