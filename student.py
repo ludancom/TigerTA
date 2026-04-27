@@ -290,6 +290,7 @@ def endsessionstudent():
 
     # Get TA's name from the cookie
     ta_name = flask.request.cookies.get('ta_name')
+    feedback_submitted = flask.request.args.get('feedback_submitted') == '1'
 
     # If student clicks the home button...
     if flask.request.method == 'POST':
@@ -297,7 +298,11 @@ def endsessionstudent():
             # Take student back to queue entry page
             return flask.redirect('/queueentry')
 
-    return flask.render_template('endsessionstudent.html', ta_name=ta_name)
+    return flask.render_template(
+        'endsessionstudent.html',
+        ta_name=ta_name,
+        feedback_submitted=feedback_submitted
+    )
 
 
 #-----------------------------------------------------------------------
@@ -325,7 +330,9 @@ def submit_feedback():
         feedback_text
     )
 
-    return flask.redirect(flask.url_for('student_routes.queueentry'))
+    return flask.redirect(
+        flask.url_for('student_routes.endsessionstudent', feedback_submitted='1')
+    )
 
     
 
