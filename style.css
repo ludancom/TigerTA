@@ -795,6 +795,33 @@ hr {
     flex-wrap: wrap;
 }
 
+.ta-action-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.remove-ta-btn {
+    background-color: white;
+    color: #4b2e83;
+    border: 2px solid #4b2e83;
+}
+
+.remove-ta-btn:hover {
+    background-color: #f4f0ff;
+    color: #4b2e83;
+}
+
+.remove-ta-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.centered-row {
+    justify-content: center;
+}
+
 .footer {
     text-align: center;
     font-size: 15px;

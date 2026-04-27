@@ -22,7 +22,7 @@
                         <th>Email</th> <!-- still need to add email -->
                         <th>Courses</th> <!-- do i need to change how this is displayed?-->
                         <!-- because we're getting from the courses tables?-->
-                        <th></th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
 
@@ -34,15 +34,25 @@
                             <td>{{ ta["ta_email"] }}</td>
                             <td>{{ ta["courses"] }}</td>
                             <td>
-                                <button 
-                                    type="button"
-                                    class="button-link edit-ta-btn"
-                                    data-netid="{{ ta['ta_netid'] }}"
-                                    data-name="{{ ta['ta_name'] }}"
-                                    data-email="{{ ta['ta_email'] }}"
-                                    data-courses="{{ ta['courses'] }}">
-                                    Edit
-                                </button>
+                                <div class="ta-action-buttons">
+                                    <button 
+                                        type="button"
+                                        class="button-link edit-ta-btn"
+                                        data-netid="{{ ta['ta_netid'] }}"
+                                        data-name="{{ ta['ta_name'] }}"
+                                        data-email="{{ ta['ta_email'] }}"
+                                        data-courses="{{ ta['courses'] }}">
+                                        Edit
+                                    </button>
+
+                                    <button 
+                                        type="button"
+                                        class="button-link remove-ta-btn remove-ta-open-btn"
+                                        data-netid="{{ ta['ta_netid'] }}"
+                                        data-name="{{ ta['ta_name'] }}">
+                                        Remove
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}
@@ -73,6 +83,40 @@
                     View Session Feedback
                 </a>
             </div>
+        </div>
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content edit-ta-modal">
+            <button type="button" class="close-modal" id="closeAddModal">&times;</button>
+            <h2>Add New TA</h2>
+
+            <form action="{{ url_for('admin_routes.add_ta') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <label for="add_name">Full Name</label>
+                <input type="text" id="add_name" name="ta_name" placeholder="Enter the TA's first and last name" required maxlength="50">
+
+                <label for="add_netid">NetID</label>
+                <input type="text" id="add_netid" name="ta_net_id" placeholder="Enter the TA's netID" required maxlength="8">
+
+                <label>Course</label>
+                <div class="edit-course-options">
+                    <label>
+                        <input type="radio" name="course" value="COS 126" required>
+                        COS 126
+                    </label>
+
+                    <label>
+                        <input type="radio" name="course" value="COS 2XX" required>
+                        COS 2XX
+                    </label>
+                </div>
+
+                <center>
+                    <button type="submit" class="button-link">Add TA</button>
+                </center>
+            </form>
         </div>
     </div>
 
@@ -114,14 +158,67 @@
         </div>
     </div>
 
+    <div id="removeModal" class="modal">
+        <div class="modal-content edit-ta-modal">
+            <button type="button" class="close-modal" id="closeRemoveModal">&times;</button>
+            <h2>Remove TA</h2>
+
+            <p>
+                To remove <strong id="removeTaName"></strong>, type their NetID below:
+                <strong id="removeTaNetid"></strong>
+            </p>
+
+            <form method="post" action="{{ url_for('admin_routes.remove_ta') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="remove_hidden_netid" name="ta_net_id">
+
+                <label for="remove_confirm_netid">Confirm NetID</label>
+                <input 
+                    type="text" 
+                    id="remove_confirm_netid" 
+                    placeholder="Type TA NetID to confirm" 
+                    required 
+                    maxlength="8">
+
+                <center>
+                    <button type="submit" class="button-link remove-ta-btn" id="confirmRemoveBtn" disabled>
+                        Remove TA
+                    </button>
+                </center>
+            </form>
+        </div>
+    </div>
+
     <script>
-        const modal = document.getElementById("editModal");
-        const closeModal = document.getElementById("closeModal");
+        const addModal = document.getElementById("addModal");
+        const openAddModal = document.getElementById("openAddModal");
+        const closeAddModal = document.getElementById("closeAddModal");
+
+        const editModal = document.getElementById("editModal");
+        const closeEditModal = document.getElementById("closeModal");
         const editButtons = document.querySelectorAll(".edit-ta-btn");
+
+        const removeModal = document.getElementById("removeModal");
+        const closeRemoveModal = document.getElementById("closeRemoveModal");
+        const removeButtons = document.querySelectorAll(".remove-ta-open-btn");
 
         const editName = document.getElementById("edit_name");
         const editNetid = document.getElementById("edit_netid");
         const editEmail = document.getElementById("edit_email");
+
+        const removeTaName = document.getElementById("removeTaName");
+        const removeTaNetid = document.getElementById("removeTaNetid");
+        const removeHiddenNetid = document.getElementById("remove_hidden_netid");
+        const removeConfirmNetid = document.getElementById("remove_confirm_netid");
+        const confirmRemoveBtn = document.getElementById("confirmRemoveBtn");
+
+        openAddModal.addEventListener("click", () => {
+            addModal.style.display = "block";
+        });
+
+        closeAddModal.addEventListener("click", () => {
+            addModal.style.display = "none";
+        });
 
         editButtons.forEach(button => {
             button.addEventListener("click", () => {
@@ -132,31 +229,56 @@
 
                 editName.value = name;
                 editNetid.value = netid;
-                
-                if (!email || email.trim() === "") {
-                    editEmail.value = netid + "@princeton.edu";
-                } else {
-                    editEmail.value = email;
-                }
-                
+                editEmail.value = email && email.trim() !== "" ? email : netid + "@princeton.edu";
+
                 document.querySelectorAll("input[name='ta_courses']").forEach(radio => {
                     radio.checked = radio.value === courses.trim();
                 });
 
-                modal.style.display = "block";
+                editModal.style.display = "block";
             });
         });
 
-        closeModal.addEventListener("click", () => {
-            modal.style.display = "none";
+        closeEditModal.addEventListener("click", () => {
+            editModal.style.display = "none";
+        });
+
+        removeButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                const netid = button.getAttribute("data-netid");
+                const name = button.getAttribute("data-name");
+
+                removeTaName.textContent = name;
+                removeTaNetid.textContent = netid;
+                removeHiddenNetid.value = netid;
+                removeConfirmNetid.value = "";
+                confirmRemoveBtn.disabled = true;
+
+                removeModal.style.display = "block";
+            });
+        });
+
+        removeConfirmNetid.addEventListener("input", () => {
+            confirmRemoveBtn.disabled = removeConfirmNetid.value.trim() !== removeHiddenNetid.value.trim();
+        });
+
+        closeRemoveModal.addEventListener("click", () => {
+            removeModal.style.display = "none";
         });
 
         window.addEventListener("click", (event) => {
-            if (event.target == modal) {
-                modal.style.display = "none";
+            if (event.target === addModal) {
+                addModal.style.display = "none";
+            }
+
+            if (event.target === editModal) {
+                editModal.style.display = "none";
+            }
+
+            if (event.target === removeModal) {
+                removeModal.style.display = "none";
             }
         });
-
     </script>
     {% include 'footer.html' %}
 </body>
