@@ -818,14 +818,6 @@ hr {
     color: #222;
 }
 
-#removeModal .edit-ta-modal form {
-    text-align: center;
-}
-
-#removeModal .edit-ta-modal label {
-    text-align: center;
-}
-
 .edit-ta-btn,
 .remove-ta-open-btn {
     width: 105px;
