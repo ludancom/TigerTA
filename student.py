@@ -183,7 +183,7 @@ def queuestatus():
     if not session_info:
         return flask.redirect('/queueentry')
 
-    # If student has been matched, go to in session page...
+    # If student has been matched, go to in session page
     ta_name = database.get_session_ta_name(student_netid)
     if ta_name is not None:
         return flask.redirect('/insessionstudent')
