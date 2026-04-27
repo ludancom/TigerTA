@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #-----------------------------------------------------------------------
-#database.py
+# database.py
 #-----------------------------------------------------------------------
 
 import os
@@ -21,6 +21,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
 
 def main():
     """ Method that creates the tables for the database. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -99,12 +100,13 @@ def main():
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 #-----------------------------------------------------------------------
-# Student functions
+# Student Functions
 #-----------------------------------------------------------------------
 
 def queue_entry(session):
     """ Method that enters a student's information into the 
     database after entering the queue. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -116,7 +118,7 @@ def queue_entry(session):
                 assignment = session['assignment']
                 bug_description = session['bug_description']
 
-                # Add this student to student table (upsert so a stale row
+                # Add student to student table (upsert so a stale row
                 # left over from a bad session end doesn't block queue entry)
                 cursor.execute('''
                     INSERT INTO student (student_netid, student_name)
@@ -125,14 +127,14 @@ def queue_entry(session):
                     SET student_name = EXCLUDED.student_name
                 ''', [student_netid, student_name])
 
-                # Add this session to session table (TA will be added later once matched)
+                # Add session to session table (TA will be added later once matched)
                 cursor.execute('''
                 INSERT INTO session (student_netid, course, assignment, bug_description) 
                 VALUES (%s, %s, %s, %s)
                 ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
-        # If she joined as position 1 with a TA on shift, notify her
+        # If student joined as position 1 with a TA on shift, notify student
         notify_next_in_line(course)
 
     except Exception as ex:
@@ -141,11 +143,12 @@ def queue_entry(session):
 
 def find_student_place(course, student_netid):
     """ Method that finds and returns a student's place in the queue. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 
-                #Find place of student if they are a 126 student
+                # Find place of student if they are a 126 student
                 # (queue consists of only 126 students)
                 if course == 'COS 126':
                     statement_str = """SELECT row_num FROM 
@@ -186,13 +189,14 @@ def find_student_place(course, student_netid):
 
 def get_num_on_shift_tas(course):
     """ Method that finds and returns the number of TAs that are on shift for a specific course. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor: 
                 if course == 'COS 226' or course == 'COS 217':
                     course = 'COS 2XX'
                 
-                # Get the number of TAs teaching a specific course
+                # Get number of TAs teaching a specific course
                 statement_str = """
                 SELECT COUNT(*)
                 FROM ta, ta_courses
@@ -200,22 +204,21 @@ def get_num_on_shift_tas(course):
                 AND ta_courses.course = %s
                 AND ta.clocked_in = TRUE
                 """
-                # AND ta.clockin_expire IS NOT NULL
-                # AND ta.clockin_expire > NOW()
                 cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
                 num_on_shift_tas = row[0]
 
-                # Return TA name to display to users
+                # Return TA's name to display to students
                 return num_on_shift_tas
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def notify_next_in_line(course):
-    """ Check if the student now at position 1 in the queue for `course`
-    should receive a 'you're next in line' email, and send it if so.
+    """ Method that checks if the student now at position 1 in the queue for 'course'
+    should receive a 'you're next in line' email, and sends it if so.
     Fires as soon as someone is at position 1, regardless of whether a
     TA is on shift. Only skipped if that student was already notified. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -253,8 +256,10 @@ def notify_next_in_line(course):
     except Exception as ex:
         print(f'notify_next_in_line: {ex}', file=sys.stderr)
 
-# Ensure that the student is not rejoining the queue
 def student_already_in_queue(student_netid):
+    """ Method that determines if a student is already in the queue or in a session 
+    (being helped by a TA). """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -264,13 +269,14 @@ def student_already_in_queue(student_netid):
                 """
                 cursor.execute(statement_str, (student_netid,))
                 row = cursor.fetchone()
+                # Student is neither in queue or in a session
                 if row is None: 
                     return "DoesNotExist"
                 db_ta_netid = row[0]
                 # Student is in queue
                 if(db_ta_netid is None):
                     status = "InQueue"
-                # Student is being helped
+                # Student is in a session (student is being helped)
                 if(db_ta_netid is not None):
                     status = "InSession"
                 return status
@@ -280,11 +286,11 @@ def student_already_in_queue(student_netid):
 def get_session_info_student(student_netid):
     """ Method that checks for a student's session information and
     returns relevant info. """
-
-    # Select session information for the student's session
+    
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
+                # Select session information for student's session
                 cursor.execute("""
                     SELECT course, bug_description, session_id
                     FROM session
@@ -293,7 +299,7 @@ def get_session_info_student(student_netid):
                 """, (student_netid,))
                 table = cursor.fetchall()
 
-                # In case the session does not exist
+                # In the case that session does not exist
                 if not table:
                     return None
                 
@@ -313,7 +319,7 @@ def get_session_ta_name(student_netid):
     """ Method that checks for a student's session and gets
     their already matched TA. """
 
-    # Select TA name
+    # Select TA's name
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -326,7 +332,7 @@ def get_session_ta_name(student_netid):
                 """, (student_netid,))
                 table = cursor.fetchall()
 
-                # In case the session does not exist
+                # In the case that session does not exist
                 if not table:
                     return None
 
@@ -339,18 +345,18 @@ def get_session_ta_name(student_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 #-----------------------------------------------------------------------
-# TA functions
+# TA Functions
 #-----------------------------------------------------------------------
 
 def match(ta_netid):
-    """ Method that matches a TA to a student by finding their netid,
+    """ Method that matches a TA to a student by finding their netID,
     changing their availability, and adding their information to the
-    session table. Handles overflow. Returns their net id. """
+    session table. Handles overflow. Returns their netID. """
 
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Find the ta course
+                # Find TA's course
                 cursor.execute("""
                     SELECT course
                     FROM ta_courses
@@ -358,14 +364,12 @@ def match(ta_netid):
                 """, (ta_netid,))
                 ta_course = cursor.fetchone()[0]
                 
-
                 # Check if overflow handling is necessary
-                # AKA if there are no 200 level students in the queue,
-                # 200 level TAs can help with 100 level classes
+                # (if there are no 200 level students in the queue,
+                # 200 level TAs can help with 100 level classes)
                 overflow = detect_overflow()
 
-
-                # If the TA is a 2xx level TA:
+                # If TA is a 2xx level TA...
                 if ta_course == 'COS 2XX':
 
                     # If there is overflow, 2xx level TAs can match to
@@ -400,7 +404,7 @@ def match(ta_netid):
 
                         student_netid = row[0]
 
-                # If the TA is 126 TA, match with 126 student
+                # If TA is a 126 TA, only match with 126 student
                 else:               
                     statement_str = """SELECT student_netid
                     FROM session
@@ -415,21 +419,20 @@ def match(ta_netid):
 
                     student_netid = row[0]
                 
-
                 # Set TA to unavailable
                 statement_str = """UPDATE ta 
                 SET available = FALSE
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
                 
-                # Add TA's netid to session table
+                # Add TA's netID to session table
                 statement_str = """UPDATE session 
                 SET ta_netid = %s
                 WHERE student_netid = %s"""
                 cursor.execute(statement_str, (ta_netid, student_netid))
                 connection.commit()
 
-                # add the session start time + mark notified_matched
+                # Add session start time and mark notified_matched
                 statement_str = """UPDATE session 
                 SET time_session_began = CURRENT_TIMESTAMP,
                     notified_matched = TRUE
@@ -437,7 +440,7 @@ def match(ta_netid):
                 cursor.execute(statement_str, (ta_netid,))
                 connection.commit()
 
-                # gather info needed for the email + return session id
+                # Gather info needed for the email and return session ID
                 cursor.execute("""
                     SELECT s.session_id, st.student_name, t.ta_name, s.course
                     FROM session s
@@ -452,22 +455,22 @@ def match(ta_netid):
                     return None
                 session_id, student_name, ta_name, course = row
 
-        # send the matched email outside the connection block
+        # Send matched email outside the connection block
         notifications.send_matched(student_netid, student_name, ta_name, course)
 
-        # the queue just shifted, so let the new front student know
+        # Queue just shifted, so notify student that is now 1st in line
         notify_next_in_line(course)
 
         return session_id
                 
-
     except Exception as ex:
         print(f'match: {ex}', file=sys.stderr)
         return None
 
 def detect_overflow():
-    """ Method that detects if there are no 200 level students in the queue.
+    """ Method that detects if there are no 2xx level students in the queue.
     If there are none, return true. Otherwise, return false. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -480,7 +483,7 @@ def detect_overflow():
                 table = cursor.fetchall()
                 num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
 
-                # If there are no 200 level students in the queue, return true
+                # If there are no 2xx level students in the queue, return true
                 if num_200_students == 0:
                     return True
                 
@@ -495,7 +498,8 @@ def get_session_info_ta(ta_netid):
     """ Method that checks for a TA's session information. If they are
     matched to a session, returns relevant info. If they are not matched,
     return None. """
-    # Select session information for the TA's session
+
+    # Get session information for TA's session
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -509,7 +513,7 @@ def get_session_info_ta(ta_netid):
                 """, (ta_netid,))
                 table = cursor.fetchall()
 
-                # If the table doesn't exist, then the TA is not matched
+                # If the table doesn't exist, then TA was not matched with a student
                 if not table:
                     return None
 
@@ -530,6 +534,7 @@ def get_session_info_ta(ta_netid):
 
 def set_available(ta_netid):
     """ Method that updates a TA's availability to true. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -547,8 +552,9 @@ def set_available(ta_netid):
 
 def remove_session(student_netid):
     """ Method that removes a session from the session list after it has
-    ended. Also triggers a notification check for the next student
+    ended and triggers a notification check for the next student
     in that course's queue. """
+
     try:
         course = None
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
@@ -578,8 +584,9 @@ def remove_session(student_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def clock_in(ta_netid):
-    """ Method that collects the date and netid of the ta after 
+    """ Method that collects the date and netID of a TA after 
     they clock in. """
+
     try:
         courses = []
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
@@ -590,15 +597,15 @@ def clock_in(ta_netid):
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
 
-                # Adds their shift to table in database
+                # Add shift to database
                 cursor.execute("""
                     INSERT INTO shifts (ta_netid, clock_in, clock_out, students_helped)
                     VALUES (%s, %s, NULL, 0)
                 """, (ta_netid, datetime.now()))
                 connection.commit()
 
-                # Grab the courses this TA covers so we know which queues
-                # might now have a newly-notifiable front-of-line student.
+                # Grab the courses TA covers so we know which queues
+                # might now have a newly-notifiable front-of-line student
                 cursor.execute(
                     "SELECT course FROM ta_courses WHERE ta_netid = %s",
                     (ta_netid,)
@@ -613,6 +620,7 @@ def clock_in(ta_netid):
 
 def clock_out(ta_netid):
     """ Method that clocks the TA out and saves their shift information into the Google Sheet. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -658,7 +666,8 @@ def clock_out(ta_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
 def check_if_clocked_in(ta_netid):
-    """ Method that updates the number of students a TA helped during their shift."""
+    """ Method that checks if a TA is clocked in."""
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -675,10 +684,11 @@ def check_if_clocked_in(ta_netid):
 
 def update_num_students_helped(ta_netid):
     """ Method that updates the number of students a TA helped during their shift."""
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
-                # Add 1 to the number of students helped
+                # Add 1 to the number of students helped (in database)
                 statement_str = """UPDATE shifts 
                 SET students_helped = students_helped + 1
                 WHERE ta_netid = %s"""
@@ -690,6 +700,7 @@ def update_num_students_helped(ta_netid):
                 
 def validate_ta(netid):
     """ Method that validates if a user with ta_netid is truly a TA."""
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -703,56 +714,9 @@ def validate_ta(netid):
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
-def set_clockin_expire(ta_netid, expires_epoch):
-    """ Method that sets the time that clock in expires for the TA. """
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""
-                    UPDATE ta
-                    SET clockin = TRUE,
-                        clockin_expire = TO_TIMESTAMP(%s)
-                    WHERE ta_netid = %s
-                """, (int(expires_epoch), ta_netid))
-                connection.commit()
-    except Exception as ex:
-        print(f'set_clockin_expire: {ex}', file=sys.stderr)
-
-def get_clockin_expire(ta_netid):
-    """ Method that gets the updated remaining time for the TAs shift. """
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""
-                    SELECT EXTRACT(EPOCH FROM clockin_expire)::BIGINT
-                    FROM ta
-                    WHERE ta_netid = %s
-                """, (ta_netid,))
-                row = cursor.fetchone()
-                return int(row[0]) if row and row[0] is not None else 0
-    except Exception as ex:
-        print(f'get_clockin_expire: {ex}', file=sys.stderr)
-        return 0
-    
-def refresh_clockin_status(ta_netid):
-    """Mark a TA as no longer clocked in if their shift expired."""
-    try:
-        with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
-            with contextlib.closing(connection.cursor()) as cursor:
-                cursor.execute("""
-                    UPDATE ta
-                    SET clockin = FALSE,
-                        available = FALSE
-                    WHERE ta_netid = %s
-                      AND clockin_expire IS NOT NULL
-                      AND clockin_expire <= NOW()
-                """, (ta_netid,))
-                connection.commit()
-    except Exception as ex:
-        print(f'refresh_clockin_status: {ex}', file=sys.stderr)
-
 def get_time_session_began(session_id):
-    """Return the time the session began."""
+    """Method that returns the time the session began."""
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -763,11 +727,11 @@ def get_time_session_began(session_id):
                 """, (session_id,))
                 table = cursor.fetchall()
 
-                # In case the session does not exist
+                # In the case that session does not exist
                 if not table:
                     return None
 
-                # Otherwise, return the time the session began
+                # Otherwise, return time session began
                 time_session_began = table[0][0]
 
                 return time_session_began
@@ -777,7 +741,8 @@ def get_time_session_began(session_id):
         return []
 
 def get_queue_students():
-    """Return all students currently waiting in queue."""
+    """Method that returns all students currently waiting in queue."""
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -811,7 +776,8 @@ def get_queue_students():
         return []
     
 def get_active_sessions():
-    """Return all active sessions."""
+    """Method that returns all active sessions."""
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -843,11 +809,12 @@ def get_active_sessions():
         return []
     
 #-----------------------------------------------------------------------
-# Admin functions
+# Admin Functions
 #-----------------------------------------------------------------------
 
 def add_ta(ta_netid, ta_name, ta_email, course):
-   """ Method that adds a TA to the database. """ 
+   """ Method that adds a TA to the database. """
+
    try: 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -871,6 +838,7 @@ def add_ta(ta_netid, ta_name, ta_email, course):
 
 def remove_ta(ta_netid):
     """ Method that removes a TA from the database. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -892,6 +860,7 @@ def remove_ta(ta_netid):
 
 def get_all_tas():
     """ Method that returns all TAs in the database. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -923,6 +892,7 @@ def get_all_tas():
 
 def validate_admin(admin_netid):
     """ Method that validates if a user is truly an admin. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -938,6 +908,7 @@ def validate_admin(admin_netid):
 
 def edit_ta(ta_netid, name, email, courses):
     """ Method that edits a TA in the database. """
+
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:

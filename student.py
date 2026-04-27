@@ -3,19 +3,18 @@
 #-----------------------------------------------------------------------
 """ Flask program that communicates with the Neon database to modify
 queue entries. """
+
 import flask
 import os
 import database
 import auth
 
 #-----------------------------------------------------------------------
-# New workflow needs this
 student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
 
 #-----------------------------------------------------------------------
 # Secure Https Use:
 #-----------------------------------------------------------------------
-
 @student_routes.before_request
 def before_request():
     is_running_locally = '//localhost:' in flask.request.url_root
@@ -28,7 +27,6 @@ def before_request():
 #-----------------------------------------------------------------------
 # Home Page:
 #-----------------------------------------------------------------------
-
 @student_routes.route('/', methods={'GET'})
 @student_routes.route('/home', methods={'GET'})
 def homepage():
@@ -50,11 +48,6 @@ def logout():
     # Get the user's net id from CAS   
     netid = auth.get_username()
 
-    # Remove session from database if student is in the queue
-    # status = database.student_already_in_queue(netid)
-    # if(status == "InQueue" or status == "InSession"):
-        # database.remove_session(netid)
-
     # Remove session from database if TA is helping student 
     ta_session_info = database.get_session_info_ta(netid)
     if ta_session_info is not None:
@@ -63,61 +56,61 @@ def logout():
     
     # Log out
     auth.logoutapp()
-    # Go to Home Page
+
+    # Go to home page
     return flask.redirect('/home')
 
 #-----------------------------------------------------------------------
 # Role Selection Page:
 #-----------------------------------------------------------------------
-
 @student_routes.route('/roleselection', methods={'GET', 'POST'})
 def roleselection():
     """ Method that displays the option to either be a TA or
-    a student for their session. """
+    a student for the user's session. """
 
     # Authenticate CAS
     auth.authenticate()
 
-    # Get the user's net id from CAS
+    # Get user's netID from CAS
     net_id = auth.get_username()
 
     if flask.request.method == 'POST':
 
-        # Get the user's role
+        # Get user's role
         role = flask.request.form.get('role')
 
-        # If the TA role is selected, validate that the user is actually a TA
+        # If TA role is selected, validate that user is truly a TA
         if role == 'TA':
 
-            # Returns true if they are truly a TA
+            # Return true if they are truly a TA
             is_ta = database.validate_ta(net_id)
 
-            # If the user is a TA, send them to the TA work hub
+            # If user is a TA, send them to TA work hub
             if is_ta:
                 response = flask.redirect(flask.url_for('ta_routes.workhub'))
 
-            # If the user is not a TA, send them an error alert 
+            # If user is not a TA, send them an error alert 
             else:
                 response = flask.redirect('/roleselection?error=not_ta')
 
-        # If the Admin role is selected, validate that the user is actually an admin
+        # If Admin role is selected, validate that user is truly an admin
         elif role == 'Admin':
             
-             # Returns true if they are truly an admin
+             # Return true if they are truly an admin
             is_admin = database.validate_admin(net_id)
 
-            # If the user is an admin, send them to the admin page
+            # If user is an admin, send them to admin page
             if is_admin:
                 response = flask.redirect(flask.url_for('admin_routes.adminpage'))
             
             else:
                 response = flask.redirect('/roleselection?error=not_admin')
 
-        # If the student role is selected, send them to the student
-        # queue entry
+        # If Student role is selected, send them to relevant page
         else:
             status = database.student_already_in_queue(net_id)
-            # Check if student is already in queue or being helped. If so, redirect them to the correct page. 
+            # Check if student is already in queue or being helped 
+            # (if so, redirect them to relevant page) 
             if(status == "InQueue"):
                 response = flask.redirect('/queuestatus')
             elif(status == "InSession"):
@@ -137,30 +130,30 @@ def queueentry():
     """ Method that displays the queue entry page for students to
     enter their issue and select their course and assignment. """
 
-    # Get student net id
+    # Get student's netID
     student_netid = auth.get_username()
 
     if flask.request.method == 'POST':
-        # check before inserting student into queue
+        # Check if student is already in queue before inserting them into queue
         status = database.student_already_in_queue(student_netid)
         if status == "InQueue":
             return flask.redirect('/queuestatus?error=already_in_queue')
         elif status == "InSession":
             return flask.redirect('/insessionstudent?error=already_in_session')
 
-        # get student name
+        # Get student's name
         student_name = flask.request.form.get('student_name')
 
-        # get course
+        # Get course
         course = flask.request.form.get('course')
 
-        # get assignment
+        # Get assignment
         assignment = flask.request.form.get('assignment')
 
-        # get bug description
+        # Get bug description
         bug_description = flask.request.form.get('bug_description') or ''
 
-        # get session info
+        # Get session info
         session = {
             'student_netid': student_netid,
             'student_name': student_name,
@@ -169,7 +162,7 @@ def queueentry():
             'bug_description': bug_description
         }
 
-        # insert the session into the database
+        # Insert session into the database
         database.queue_entry(session)
         return flask.redirect('/queuestatus')
 
@@ -182,7 +175,7 @@ def queueentry():
 def queuestatus():
     """ Method that displays the queue status page for students to
     view their position in the queue and their bug description. """
-    #Get student ent id
+    # Get student's netID
     student_netid = auth.get_username()
 
     # Get relevant session info
@@ -190,7 +183,7 @@ def queuestatus():
     if not session_info:
         return flask.redirect('/queueentry')
 
-    # if TA has already been assigned, go to the in session page
+    # If student has been matched, go to in session page...
     ta_name = database.get_session_ta_name(student_netid)
     if ta_name is not None:
         return flask.redirect('/insessionstudent')
@@ -198,13 +191,13 @@ def queuestatus():
     # Get bug description
     bug_description = session_info['bug_description']
 
-    #Get course
+    # Get course
     course = session_info['course']
 
-    # get student place
+    # Get student's place
     student_place = database.find_student_place(course, student_netid)
 
-    #get number of available tas
+    # Get number of available TAs
     num_on_shift_tas = database.get_num_on_shift_tas(course)
 
     if flask.request.method == 'POST':
@@ -219,15 +212,19 @@ def queuestatus():
         student_place=student_place,
         num_on_shift_tas=num_on_shift_tas
     )
+
 #-----------------------------------------------------------------------
 # Match Attempt & Updating Number of TAs on Shift (For Queue Status Page):
 #-----------------------------------------------------------------------
 @student_routes.route('/trymatch', methods={'GET'})
 def trymatch():
-    # Get student net id
+    """ Method that checks if student was matched and updates 
+    the number of TAs on shift for the student's course. """
+
+    # Get student's netID
     student_netid = auth.get_username()
 
-    # if the session no longer exists
+    # If session no longer exists...
     session_info = database.get_session_info_student(student_netid)
     if not session_info:
         return {
@@ -235,16 +232,16 @@ def trymatch():
             "student_place": None
         }
 
-    #Get course
+    #G et course
     course = session_info['course']
 
-    #Get student place
+    # Get student's place
     student_place = database.find_student_place(course, student_netid)
 
-    # check whether a TA has already been assigned
+    # Check whether student has been matched with a TA
     ta_name = database.get_session_ta_name(student_netid)
 
-    # Retrieve number of TAs on shift for specific course
+    # Get number of TAs on shift for specific course
     num_on_shift_tas = database.get_num_on_shift_tas(course)
 
     return {
@@ -258,10 +255,10 @@ def trymatch():
 #-----------------------------------------------------------------------
 @student_routes.route('/insessionstudent', methods={'GET'})
 def insessionstudent():
-    """ Method that displays the TA the student was matched with and
-    their bug description. """
+    """ Method that displays the TA that the student was matched with and
+    the student's bug description. """
 
-    # Get student net id
+    # Get student's netID
     student_netid = auth.get_username()
 
     # Get session info
@@ -269,7 +266,7 @@ def insessionstudent():
     if not session_info:
         return flask.redirect('/queueentry')
 
-    # Get ta name
+    # Get TA's name
     ta_name = database.get_session_ta_name(student_netid)
     if ta_name is None:
         return flask.redirect('/queuestatus')
@@ -283,7 +280,6 @@ def insessionstudent():
         ta_name=ta_name
     )
 
-
 #-----------------------------------------------------------------------
 # End Session Student Page:
 #-----------------------------------------------------------------------
@@ -292,13 +288,13 @@ def endsessionstudent():
     """ Method that displays the end page, the TA's name, and
     a button to return back to home. """
 
-    # Get the ta name from the cookie
+    # Get TA's name from the cookie
     ta_name = flask.request.cookies.get('ta_name')
 
-    # If the student clicks the home button
+    # If student clicks the home button...
     if flask.request.method == 'POST':
         if flask.request.form.get('action') == 'home':
-            # take them back to the queue entry page
+            # Take student back to queue entry page
             return flask.redirect('/queueentry')
 
     return flask.render_template('endsessionstudent.html', ta_name=ta_name)
@@ -311,6 +307,7 @@ def endsessionstudent():
 def submit_feedback():
     """ Method that displays the feedback modal, the TA's name, and
     a button to submit feedback. """
+
     import datetime
     import googlesheet
 

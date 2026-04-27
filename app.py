@@ -1,7 +1,8 @@
 #-----------------------------------------------------------------------
 # app.py
 #-----------------------------------------------------------------------
-"""explain what the file is"""
+""" Program that initializes the web server and begins our app. """
+
 import flask
 import os
 import dotenv
@@ -43,14 +44,13 @@ auth.init(app)
 # Security Measures
 flask_wtf.csrf.CSRFProtect(app)
 #-----------------------------------------------------------------------
-# register routes
+# Register routes
 app.register_blueprint(student_routes)
 app.register_blueprint(ta_routes)
 app.register_blueprint(admin_routes)
 
 #-----------------------------------------------------------------------
-# running
-
+# Run Server
 def main():
     parser = argparse.ArgumentParser(description=
     "COS Lab TA Queue Application")

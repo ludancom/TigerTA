@@ -3,6 +3,7 @@
 #-----------------------------------------------------------------------
 """ Flask program that communicates with the Neon database to modify
 queue entries. """
+
 import flask
 import os
 import database
@@ -15,7 +16,6 @@ ta_routes = flask.Blueprint('ta_routes', __name__, template_folder='.')
 #-----------------------------------------------------------------------
 # Secure Https Use:
 #-----------------------------------------------------------------------
-
 @ta_routes.before_request
 def before_request():
     is_running_locally = '//localhost:' in flask.request.url_root
@@ -33,49 +33,36 @@ def workhub():
     """ Method that displays the work hub page for TAs and allows
     them to clock in and start a session. """
 
-    # Get TA netid
+    # Get TA's netID
     ta_netid = auth.get_username()
 
     if not ta_netid:
         return flask.redirect('/')
     
-    # database.refresh_clockin_status(ta_netid)
-    
     if flask.request.method == 'POST':
-        # Get the user's button request
+        # Get TA's button request
         action = flask.request.form.get('action')
 
-        # Update the TA's attendance when they clock in or out
-        ### Implement this function later ###
+        # If TA wants to update their clocked in status...
         if action == 'clock_in':
+            # Update TA's attendance when they clock in
             database.clock_in(ta_netid)
-            # print("CLOCK IN CLICKED")
-            # print("ta_netid:", ta_netid)
-            # creating the 2 hour shift for the TA when clocked in
-            # current_time = int(time.time()) 
-            # expires = database.get_clockin_expire(ta_netid) or 0
-            # print("current_time:", current_time)
-            # print("expires:", expires)
-            # if expires <= current_time:
-                # add the shift to the clock in table, and expire in 2 hours
-                # print("calling database.clock_in()")
-                # database.clock_in(ta_netid)
-                # print("calling set_clockin_expire()")
-                # database.set_clockin_expire(ta_netid, current_time + 60*60*2)
-            # redirect so they cant submit twice
+            # Redirect so TA can't submit twice
             return flask.redirect('/workhub')
 
         if action == 'clock_out':
+            # Update TA's attendance and add to google sheet when 
+            # they clock out
             database.clock_out(ta_netid)
             return flask.redirect('/workhub')
 
-        # If the TA wants to start a session...
+        # If TA wants to start a session...
         if action == 'start_session':
-            #ta clicks the button to take the next queued student
+            # TA clicks button to match with next queued student
             database.set_available(ta_netid)
             session_id = database.match(ta_netid)
             if session_id is not None:
-                # Update number of students TA helped
+                # Update number of students TA helps during shift
                 database.update_num_students_helped(ta_netid)
                 return flask.redirect('/insessionta')
             return flask.redirect('/workhub')
@@ -83,14 +70,9 @@ def workhub():
     # Check if TA was matched by seeing if session_info is able
     # to be extracted
     session_info = database.get_session_info_ta(ta_netid)
-     # If they are matched, send them to the in session page
+     # If TA is matched, send them to the in session page
     if session_info:
         return flask.redirect('/insessionta')
-
-    # button is disabled if clocked in
-    #current_time = int(time.time())
-    #expires = database.get_clockin_expire(ta_netid) or 0
-    # clock_disabled = expires > current_time
 
     # Button says "Clock In" if not clocked in and "Clock Out" otherwise
     clocked_in = database.check_if_clocked_in(ta_netid)
@@ -107,11 +89,13 @@ def workhub():
 #-----------------------------------------------------------------------
 @ta_routes.route('/workhub_status', methods=['GET'])
 def workhub_status():
-    """JSON checker for determining whether TA has been matched."""
+    """ Method with JSON checker for determining 
+    whether TA has been matched."""
+
     queue_students = database.get_queue_students()
     active_sessions = database.get_active_sessions()
 
-    # determine whether this TA was matched
+    # Determine whether TA was matched
     ta_netid = auth.get_username()
     session_info = database.get_session_info_ta(ta_netid)
     matched = session_info is not None
@@ -127,10 +111,10 @@ def workhub_status():
 #-----------------------------------------------------------------------
 @ta_routes.route('/insessionta', methods=['GET', 'POST'])
 def insessionta():
-    """ Method that displays the student the TA was matched with and
-    their session details. """
+    """ Method that displays the student that the TA was matched with 
+    and their session details. """
 
-    # Get the TA net id
+    # Get TA's netID
     ta_netid = auth.get_username()
 
     # Get session info
@@ -138,13 +122,13 @@ def insessionta():
     if not session_info:
         return flask.redirect('/workhub')
 
-    # Get student name
+    # Get student's name
     student_name = session_info['student_name']
 
-    # Get student net id
+    # Get student's netID
     student_netid = session_info['student_netid']
 
-    # Get session id
+    # Get session ID
     session_id = session_info['session_id']
 
     # Get course
@@ -159,16 +143,16 @@ def insessionta():
     # Get session start time 
     time_session_began = database.get_time_session_began(session_id)
 
-    # End session button takes them to next page
+    # End session button takes TA to next page
     if flask.request.method == 'POST':
-        # Get the user's button request
+        # Get TA's button request
         action = flask.request.form.get('action')
 
         if action == 'end_session':
-            # Remove the session from the queue after session ends
+            # Remove session from queue after session ends
             database.remove_session(student_netid)
 
-            # Redirect to the end session page
+            # Redirect TA to end session page
             response = flask.redirect('/endsessionta')
 
             response.set_cookie('student_name', student_name)
@@ -189,16 +173,17 @@ def endsessionta():
     """ Method that displays the end page, the student's name, and
     a button to return back to home. """
     
-    # Get the TA net id
+    # Get TA's netID
     ta_netid = auth.get_username()
 
-    # Getting student name because when the session ends, we need to know who the student was
+    # Get student's name because when session ends, 
+    # we need to show student's name to TA
     student_name = flask.request.cookies.get('student_name')
 
     if flask.request.method == 'POST':
         action = flask.request.form.get('action')
         if action == 'home':
-            # Redirect to the work hub  page
+            # Redirect to work hub page
             return flask.redirect('/workhub')
 
     return flask.render_template('endsessionta.html', student_name=student_name)

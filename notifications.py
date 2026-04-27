@@ -2,6 +2,7 @@
 # notifications.py
 #-----------------------------------------------------------------------
 """ Handles email notifications for students waiting in the queue. """
+
 import sys
 from flask_mail import Mail, Message
 
@@ -12,6 +13,7 @@ def _princeton_email(netid):
 
 def send_next_in_line(student_netid, student_name, course):
     """Email a student to let them know they're next in the queue."""
+
     try:
         msg = Message(
             subject=f"You're next in line for {course} help!",
@@ -30,6 +32,7 @@ def send_next_in_line(student_netid, student_name, course):
 
 def send_matched(student_netid, student_name, ta_name, course):
     """Email a student to let them know they've been matched with a TA."""
+    
     try:
         msg = Message(
             subject=f"You've been matched with a TA!",
