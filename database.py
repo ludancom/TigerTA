@@ -874,7 +874,7 @@ def get_all_tas():
                     FROM ta
                     LEFT JOIN ta_courses ON ta.ta_netid = ta_courses.ta_netid
                     GROUP BY ta.ta_netid, ta.ta_name, ta.ta_email, ta.available
-                    ORDER BY ta.ta_name ASC
+                    ORDER BY LOWER(TRIM(ta.ta_name)) ASC, ta.ta_name ASC
                 """)
                 rows = cursor.fetchall()
                 tas = []
