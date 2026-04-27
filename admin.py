@@ -37,32 +37,28 @@ def adminpage():
 #-----------------------------------------------------------------------
 # Add TA Page:
 #-----------------------------------------------------------------------
-@admin_routes.route('/add_ta', methods=['GET', 'POST'])
+@admin_routes.route('/add_ta', methods=['POST'])
 def add_ta():
     """ Method that adds a TA to the database. """
 
-    if flask.request.method == 'POST':
-        ta_net_id = flask.request.form.get('ta_net_id')
-        ta_name = flask.request.form.get('ta_name')
-        ta_email = f'{ta_net_id}@princeton.edu'
-        course = flask.request.form.get('course')
-        database.add_ta(ta_net_id, ta_name, ta_email, course)
-        return flask.redirect('/adminpage')
-    return flask.render_template('add_ta.html')
+    ta_net_id = flask.request.form.get('ta_net_id')
+    ta_name = flask.request.form.get('ta_name')
+    ta_email = f'{ta_net_id}@princeton.edu'
+    course = flask.request.form.get('course')
+
+    database.add_ta(ta_net_id, ta_name, ta_email, course)
+    return flask.redirect('/adminpage')
 
 #-----------------------------------------------------------------------
 # Remove TA Page:
 #-----------------------------------------------------------------------
-@admin_routes.route('/remove_ta', methods=['GET', 'POST'])
+@admin_routes.route('/remove_ta', methods=['POST'])
 def remove_ta():
     """ Method that removes a TA from the database. """
+    ta_net_id = flask.request.form.get('ta_net_id')
 
-    if flask.request.method == 'POST':
-        ta_net_id = flask.request.form.get('ta_net_id')
-        database.remove_ta(ta_net_id)
-        return flask.redirect('/adminpage')
-
-    return flask.render_template('remove_ta.html')
+    database.remove_ta(ta_net_id)
+    return flask.redirect('/adminpage')
 
 #-----------------------------------------------------------------------
 # Edit TA Modal:

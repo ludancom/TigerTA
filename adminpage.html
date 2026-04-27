@@ -63,9 +63,10 @@
         <hr>
 
         <div class="admin-actions">
-            <div class="admin-row">
-                <a href="{{ url_for('admin_routes.add_ta') }}" class="button-link">Add TA</a>
-                <a href="{{ url_for('admin_routes.remove_ta') }}" class="button-link">Remove TA</a>
+            <div class="admin-row centered-row">
+                <button type="button" class="button-link" id="openAddModal">
+                    Add TA
+                </button>
             </div>
 
             <div class="admin-row secondary-row">
