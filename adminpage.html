@@ -165,24 +165,22 @@
             <h2>Remove TA</h2>
 
             <p class="remove-confirm-text">
-                To remove <strong id="removeTaName"></strong>, type their NetID below:
-                <strong id="removeTaNetid"></strong>
+                To remove <span id="removeTaName" class = "name"></span>, enter their netID below:
+                <span id="removeTaNetid" class = "name"></span>
             </p>
 
             <form method="post" action="{{ url_for('admin_routes.remove_ta') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" id="remove_hidden_netid" name="ta_net_id">
-
-                <label for="remove_confirm_netid">Confirm NetID</label>
                 <input 
                     type="text" 
                     id="remove_confirm_netid" 
-                    placeholder="Type TA NetID to confirm" 
+                    placeholder="Enter the TA's netID to confirm" 
                     required 
                     maxlength="8">
 
                 <center>
-                    <button type="submit" class="button-link remove-ta-btn" id="confirmRemoveBtn" disabled>
+                    <button type="submit" class="button-link" id="confirmRemoveBtn" disabled>
                         Remove TA
                     </button>
                 </center>

@@ -26,10 +26,7 @@
     <div class="container">
         <h1>Session Complete!</h1>
 
-        <p>Thanks for using TigerTA! Your TA was <span class="name"> {{ ta_name }}</span>.</p>
-        {% if feedback_submitted %}
-        <p>Thanks for your feedback.</p>
-        {% endif %}
+        <p>Thanks for using TigerTA{% if feedback_submitted %} and providing feedback{% endif %}! Your TA was <span class="name"> {{ ta_name }}</span>.</p>
 
         <!-- Return to previous queue entry page-->
         <a href="{{ url_for('student_routes.queueentry') }}" class="button-link">
@@ -68,7 +65,7 @@
                     name="feedback_text"
                     rows="5"
                     maxlength="500"
-                    placeholder="Share any thoughts about your session here..."></textarea>
+                    placeholder="Share any thoughts about your session"></textarea>
 
                 <button type="submit" class="button-link feedback-submit">Submit</button>
             </form>
