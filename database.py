@@ -135,7 +135,7 @@ def queue_entry(session):
                 connection.commit()
 
         # If student joined as position 1 with a TA on shift, notify student
-        notify_next_in_line(course)
+        # notify_next_in_line(course)
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -459,7 +459,7 @@ def match(ta_netid):
         notifications.send_matched(student_netid, student_name, ta_name, course)
 
         # Queue just shifted, so notify student that is now 1st in line
-        notify_next_in_line(course)
+        # notify_next_in_line(course)
 
         return session_id
                 
@@ -577,8 +577,8 @@ def remove_session(student_netid):
                 cursor.execute(statement_str, (student_netid,))
                 connection.commit()
 
-        if course is not None:
-            notify_next_in_line(course)
+        # if course is not None:
+            # notify_next_in_line(course)
                 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -612,8 +612,8 @@ def clock_in(ta_netid):
                 )
                 courses = [r[0] for r in cursor.fetchall()]
 
-        for course in courses:
-            notify_next_in_line(course)
+        # for course in courses:
+            # notify_next_in_line(course)
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
