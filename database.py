@@ -242,7 +242,7 @@ def notify_next_in_line(course):
                 if already_notified:
                     return
 
-        notifications.send_next_in_line(student_netid, student_name, course)
+        # notifications.send_next_in_line(student_netid, student_name, course)
 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -456,7 +456,7 @@ def match(ta_netid):
                 session_id, student_name, ta_name, course = row
 
         # Send matched email outside the connection block
-        notifications.send_matched(student_netid, student_name, ta_name, course)
+        # notifications.send_matched(student_netid, student_name, ta_name, course)
 
         # Queue just shifted, so notify student that is now 1st in line
         # notify_next_in_line(course)
