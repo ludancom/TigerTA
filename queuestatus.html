@@ -54,41 +54,42 @@
 
     setInterval (async function(){
         try {
-        const response = await fetch('/trymatch');
-        const data = await response.json();
+            const response = await fetch('/trymatch');
+            const data = await response.json();
 
-        // If student matched, go to session page
-        if (data.matched) {
-            window.location.href = "/insessionstudent";
-            return;
-        }
+            // If student is matched, go to in session page
+            if (data.matched) {
+                window.location.href = "/insessionstudent";
+                return;
+            }
 
-        // If student was matched, but TA ends session (deleting student from database) before student 
-        // is redirected to in session page...
-        if(!data.in_database){
-            window.location.href = "/endsessionstudent";
-            return;
-        }
+            // If student was matched, but TA ends session (deleting student from database) before student 
+            // is redirected to in session page, student is immediately redirected to end session page
+            if(!data.in_database){
+                window.location.href = "/endsessionstudent";
+                return;
+            }
 
-        // Otherwise, show their place in line and update it
-        if (data.student_place != null) {
-            document.getElementById("placeText").innerText =
-                "You're " + getOrdinal(data.student_place) + " in line!";
-        }
+            // Otherwise, update and display student's place in line
+            if (data.student_place != null) {
+                document.getElementById("placeText").innerText =
+                    "You're " + getOrdinal(data.student_place) + " in line!";
+            }
 
-        if(data.num_on_shift_tas == 1){
-            document.getElementById("numTAs").innerText = "1 TA is currently on shift for your course.";
-        }
-        else{
-            document.getElementById("numTAs").innerText = data.num_on_shift_tas + " TAs are currently on shift for your course.";
-        }
+            if(data.num_on_shift_tas == 1){
+                document.getElementById("numTAs").innerText = "1 TA is currently on shift for your course.";
+            }
+            else{
+                document.getElementById("numTAs").innerText = data.num_on_shift_tas + " TAs are currently on shift for your course.";
+            }
         } catch (error) {
-        console.log("error matching or retrieving number:", error);
+            console.log("error matching or retrieving number:", error);
         }
-    }, 10000);
+    }, 3000);
 
     </script>
-        <script>
+    
+    <script>
         const params = new URLSearchParams(window.location.search);
         const error = params.get("error");
 

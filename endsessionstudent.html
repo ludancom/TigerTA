@@ -24,16 +24,16 @@
         </div>
     </div>
     <div class="container">
-        <h1>Session Complete!</h1>
+        <h1>Your Session Ended!</h1>
 
-        <p>Thanks for using TigerTA{% if feedback_submitted %} and providing feedback{% endif %}! Your TA was <span class="name"> {{ ta_name }}</span>.</p>
+        <p>Thanks for using TigerTA{% if feedback_submitted %} and providing feedback{% endif %}! {% if ta_name %}Your TA was <span class="name"> {{ ta_name }}</span>.{% endif %}</p>
 
         <!-- Return to previous queue entry page-->
         <a href="{{ url_for('student_routes.queueentry') }}" class="button-link">
             Return Home
         </a>
     </div>
-
+    {% if ta_name %}
     <div id="feedbackModal" class="modal-overlay">
         <div class="feedback-modal">
             <button id="closeModal" class="close-modal">&times;</button>
@@ -71,6 +71,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
     {% include 'footer.html' %}
 
     <script>

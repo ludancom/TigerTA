@@ -164,7 +164,16 @@ def queueentry():
 
         # Insert session into the database
         database.queue_entry(session)
-        return flask.redirect('/queuestatus')
+        # If insert is unsuccessful, alert user and stay on the page
+        status = database.student_already_in_queue(student_netid)
+        if(status == "DoesNotExist"):
+            return flask.redirect('/queueentry?error=not_added_to_queue')
+        else:
+            html_code = flask.redirect('/queuestatus')
+            response = flask.make_response(html_code)
+            # Delete previous cookie with TA's name 
+            response.set_cookie('ta_name', '', expires=0)
+            return response
 
     return flask.render_template('queueentry.html')
 
@@ -206,12 +215,21 @@ def queuestatus():
             database.remove_session(student_netid)
             return flask.redirect('/queueentry')
 
-    return flask.render_template(
+    html_code = flask.render_template(
         'queuestatus.html',
         bug_description=bug_description,
         student_place=student_place,
         num_on_shift_tas=num_on_shift_tas
     )
+
+    response = flask.make_response(html_code)
+
+    # Disable cache for correct back button redirecting
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers["Expires"] = "0"
+
+    return response
 
 #-----------------------------------------------------------------------
 # Match Attempt & Updating Number of TAs on Shift (For Queue Status Page):
@@ -274,7 +292,7 @@ def insessionstudent():
     # Get session info
     session_info = database.get_session_info_student(student_netid)
     if not session_info:
-        return flask.redirect('/queueentry')
+        return flask.redirect('/endsessionstudent')
 
     # Get TA's name
     ta_name = database.get_session_ta_name(student_netid)
@@ -284,11 +302,20 @@ def insessionstudent():
     # Get bug description
     bug_description = session_info['bug_description']
 
-    return flask.render_template(
+    html_code = flask.render_template(
         'insessionstudent.html',
         bug_description=bug_description,
         ta_name=ta_name
     )
+
+    response = flask.make_response(html_code)
+
+    # Disable cache for correct back button redirecting
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers["Expires"] = "0"
+
+    return response
 
 #-----------------------------------------------------------------------
 # End Session Student Page:
@@ -313,7 +340,6 @@ def endsessionstudent():
         ta_name=ta_name,
         feedback_submitted=feedback_submitted
     )
-
 
 #-----------------------------------------------------------------------
 # Submit Feedback Modal:

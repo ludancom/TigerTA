@@ -121,6 +121,13 @@
             }
             return true;
         }
+
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get("error");
+
+        if(error === "not_added_to_queue"){
+            alert("We couldn’t add you to the queue. Please try again.");
+        }
     </script>
     {% include 'footer.html' %}
 </body>

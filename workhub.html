@@ -166,13 +166,15 @@
                 const response = await fetch('/workhub_status');
                 const data = await response.json();
 
+                if (data.matched) {
+                    window.location.href = "/insessionta";
+                    return;
+                }
+
                 renderQueue(data.queue_students);
                 renderSessions(data.active_sessions);
 
-                if (data.matched) {
-                    window.location.href = "/insessionta";
-                }
-
+                // Disable 'Start Session' button if there are no students in queue
                 const startButton = document.querySelector('button[name="action"][value="start_session"]');
 
                 if (data.queue_students && data.queue_students.length > 0) {

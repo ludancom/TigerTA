@@ -19,9 +19,8 @@
                     <tr>
                         <th>Name</th>
                         <th>NetID</th>
-                        <th>Email</th> <!-- still need to add email -->
-                        <th>Courses</th> <!-- do i need to change how this is displayed?-->
-                        <!-- because we're getting from the courses tables?-->
+                        <th>Email</th> 
+                        <th>Courses</th> 
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -126,7 +125,7 @@
         <div class="modal-content edit-ta-modal">
             <button type="button" class="close-modal" id="closeModal">&times;</button>
             <h2>Edit TA</h2>
-            <!-- Triggers this modal when the button is clicked-->
+            <!-- Trigger this modal when the button is clicked-->
             <form method="post" action="{{ url_for('admin_routes.edit_ta') }}">
                 <!-- CSRF token to protect against attacks -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
