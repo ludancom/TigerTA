@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "tigerta",
+  "private_key_id": "d62e8c569ae9d909a69c853f6b8a0b76e097e51c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/2pPBSOWt4vbF\nIJV7/fH+e7MavqwWWQARWN3ridRbePo++ZHoeokYNYaYEixMKKwO5844wl3Ia2bq\n1QDB8cbC02wO0JNQhpQqLLj2a1bFcCeBRdSSBw5cVzdjq8SXUBe6g+dvXbuvjbOY\nsey/TODL9K57cLUXFgk171qmc5/ls/u11yoJZt8YFJJOOmg59ab9NtypG/g3JasX\nzf3jJcM3uSN/LKUECom4P/1tOm44/vpvVblDpaC4bYpIjyrrRwnyHK/djeyUlHET\nEAK1l1TKG3J8BGLNdt+VWyE15GqbtqG1EaFRfVmVx3zNDJq95/nbBjOd1CtyJYaS\ncPTc7/l7AgMBAAECggEAGjSJNr8gnYDBLinbi+Ui7HIJrnSEMu/ogiC+UebbT7yV\nieEy8dXoQJtHDXcl/9JqYLApoI0ZRuqMqIom9qwcobiZK5OHxlmrhps3OcltlRL9\nrRBUZGHRr1aRD+yCshxUMWYaSEGTBPv49Q67L2IZLnf3FpCi26AR6qu37mvKrRLh\ny2sHQr+CT0UjJ1AseByuu8yg1aN2H6wgE4pwEdcsmmryC5YWHM6d/vK3h6cLInh0\nfOEM/1fVAv8jqninzrSxM3sMUcrMj2nM6wx13F+PLHImMKnSpxTjrFm6EBFheOcS\nu+24G+s7C0eKXQLU81zGKw44EG9Hwo0g1lLtY3jkCQKBgQD7P8+Mx3HkKOmy6FSw\nVSfT6UoRBNHu98m5PdxJBpuHgMFrF5eVVSvzaOv6WlH3dnmcgh3zQD3mgiYJK1bb\nAvM0vJLb3nuk1dBXqzm0qeQdM1Ko9e0D+4RZeDnR3ovz1mVPPtrajD4AfO+8qtxZ\nskoguO1xyGaFbFirE4wdUcJ5vQKBgQDDe0I6+P2sH9j8AJMfuZtrjuosyBhSC3JV\nqwJ3bzs5KX8g1sSDlZsonFnSoyZO9x1sfhbv3Cn+QGrya87EljBuYA54smzg1XjZ\nLcNFTKmrOF99ejt2Kxm6sG1XG049L3BaEZy6Mp2bsmDehHltkSOdVH6SfqvON5yV\nFX0CwN4HlwKBgQDx7fXqtzoB2yt9bJ3v1W+ubBs33A5SLyN9TgXKA6TLi72zY1pB\nH2xczBE+Vq5KvThI7jnsu1Vfmr8JYUQXS/XoOBSpxsgEZyZg5K2CO30+aOcVbwk1\nJoHArTXv0n2s5CtVbU7L1vL1AVjPsS7Q6A7dB3UMdU3S+AtBYGcw7EN5eQKBgQCG\nRawAhfb4vAd3UY29ROiUwN3pVKgf8uzeG1DeaPDtGqvQCrWBDMo+4uZv4ND3fJYh\nZ5qptzjBA85yJcspDWDG8AQAs85FwVv5EY4Hk9kXWul8bvFZAdHygi0YoBDlxigO\nNfrJiurnf2c6cRRXRlKIRvmJ9qhcRaawYMo1kfTwkQKBgCGllFhZ+DobXw5xP9TW\nNDKexrCHEpDLwAp2trM3tPY5caKmdB/cz/njhafVbdYcz8yN+B+JDqedZq/doaM2\naJcGB9NqyzQ8WEwP9e+mKG9w/NyeOnXO/OdzsxKIZNui/bd4I5Oy3HT0GTJSUeV5\n94axVzZEaeMGHhd7655H1O4g\n-----END PRIVATE KEY-----\n",
+  "client_email": "tigerta-google-service@tigerta.iam.gserviceaccount.com",
+  "client_id": "113038947203467081568",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/tigerta-google-service%40tigerta.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

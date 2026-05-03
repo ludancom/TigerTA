@@ -229,10 +229,12 @@ def trymatch():
     if not session_info:
         return {
             "matched": False,
-            "student_place": None
+            "student_place": None,
+            "num_on_shift_tas": 0,
+            "in_database": False
         }
 
-    #G et course
+    # Get course
     course = session_info['course']
 
     # Get student's place
@@ -244,10 +246,18 @@ def trymatch():
     # Get number of TAs on shift for specific course
     num_on_shift_tas = database.get_num_on_shift_tas(course)
 
+    # Check whether the student is in the database
+    status = database.student_already_in_queue(student_netid)
+    if (status == "DoesNotExist"):
+        in_database = False
+    else:
+        in_database = True
+
     return {
         "matched": ta_name is not None,
         "student_place": student_place,
-        "num_on_shift_tas": num_on_shift_tas
+        "num_on_shift_tas": num_on_shift_tas,
+        "in_database": in_database
     }
 
 #-----------------------------------------------------------------------

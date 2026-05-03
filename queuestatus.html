@@ -57,12 +57,20 @@
         const response = await fetch('/trymatch');
         const data = await response.json();
 
-        // if student matched, go to session page
+        // If student matched, go to session page
         if (data.matched) {
             window.location.href = "/insessionstudent";
             return;
         }
-        // otherwise show their place in line and update it
+
+        // If student was matched, but TA ends session (deleting student from database) before student 
+        // is redirected to in session page...
+        if(!data.in_database){
+            window.location.href = "/endsessionstudent";
+            return;
+        }
+
+        // Otherwise, show their place in line and update it
         if (data.student_place != null) {
             document.getElementById("placeText").innerText =
                 "You're " + getOrdinal(data.student_place) + " in line!";
@@ -77,7 +85,7 @@
         } catch (error) {
         console.log("error matching or retrieving number:", error);
         }
-    }, 5000);
+    }, 10000);
 
     </script>
         <script>
