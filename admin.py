@@ -46,8 +46,11 @@ def add_ta():
     ta_email = f'{ta_net_id}@princeton.edu'
     course = flask.request.form.get('course')
 
-    database.add_ta(ta_net_id, ta_name, ta_email, course)
-    return flask.redirect('/adminpage')
+    additionSuccessful = database.add_ta(ta_net_id, ta_name, ta_email, course)
+    if additionSuccessful:
+        return flask.redirect('/adminpage')
+    else:
+        return flask.redirect('/adminpage?error=ta_not_added')
 
 #-----------------------------------------------------------------------
 # Remove TA Page:
@@ -57,8 +60,11 @@ def remove_ta():
     """ Method that removes a TA from the database. """
     ta_net_id = flask.request.form.get('ta_net_id')
 
-    database.remove_ta(ta_net_id)
-    return flask.redirect('/adminpage')
+    removeSuccessful = database.remove_ta(ta_net_id)
+    if removeSuccessful:
+        return flask.redirect('/adminpage')
+    else: 
+        return flask.redirect('/adminpage?error=ta_not_removed')
 
 #-----------------------------------------------------------------------
 # Edit TA Modal:

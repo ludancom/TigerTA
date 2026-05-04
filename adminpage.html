@@ -277,6 +277,18 @@
             }
         });
     </script>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get("error");
+
+        if(error === "ta_not_added"){
+            alert("We couldn't add the TA. Please try again.");
+        }
+        if(error === "ta_not_removed"){
+            alert("We couldn't remove the TA. Please try again.");
+        }
+    </script>
     {% include 'footer.html' %}
 </body>
 </html>
