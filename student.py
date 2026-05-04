@@ -163,17 +163,16 @@ def queueentry():
         }
 
         # Insert session into the database
-        database.queue_entry(session)
+        insertSuccessful = database.queue_entry(session)
         # If insert is unsuccessful, alert user and stay on the page
-        status = database.student_already_in_queue(student_netid)
-        if(status == "DoesNotExist"):
-            return flask.redirect('/queueentry?error=not_added_to_queue')
-        else:
+        if insertSuccessful:
             html_code = flask.redirect('/queuestatus')
             response = flask.make_response(html_code)
             # Delete previous cookie with TA's name 
             response.set_cookie('ta_name', '', expires=0)
             return response
+        else:
+            return flask.redirect('/queueentry?error=not_added_to_queue')
 
     return flask.render_template('queueentry.html')
 
@@ -212,8 +211,11 @@ def queuestatus():
     if flask.request.method == 'POST':
         action = flask.request.form.get('action')
         if action == 'leave_queue':
-            database.remove_session(student_netid)
-            return flask.redirect('/queueentry')
+            removeSuccessful = database.remove_session(student_netid)
+            if removeSuccessful:
+                return flask.redirect('/queueentry')
+            else:
+                return flask.redirect('/queuestatus?error=not_removed_from_queue')
 
     html_code = flask.render_template(
         'queuestatus.html',

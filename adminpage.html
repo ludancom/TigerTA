@@ -95,8 +95,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <label for="add_name">Full Name</label>
-                <input type="text" id="add_name" name="ta_name" placeholder="Enter the TA's first and last name" required maxlength="50">
-
+                <input type="text" id="add_name" name="ta_name" placeholder="Enter the TA's first and last name" required maxlength="100">
                 <label for="add_netid">NetID</label>
                 <input type="text" id="add_netid" name="ta_net_id" placeholder="Enter the TA's netID" required maxlength="8">
 
@@ -132,13 +131,13 @@
                 <input type="hidden" id="original_netid" name="original_netid">
 
                 <label for="edit_name">Name</label>
-                <input type="text" id="edit_name" name="ta_name" required>
+                <input type="text" id="edit_name" name="ta_name" required maxlength="100">
 
                 <label for="edit_netid">NetID</label>
                 <input type="text" id="edit_netid" name="ta_netid" readonly>
 
                 <label for="edit_email">Email</label>
-                <input type="email" id="edit_email" name="ta_email" required>
+                <input type="email" id="edit_email" name="ta_email" required maxlength="254">
 
                 <label>Courses</label>
                 <div class="edit-course-options">

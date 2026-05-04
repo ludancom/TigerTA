@@ -24,7 +24,10 @@ def log_shift(netid, name, date, clock_in, clock_out, students):
             clock_out,
             students
         ])
+
+        # If shift is successfully logged...
         return True
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         return False
@@ -38,7 +41,10 @@ def log_feedback(timestamp, ta_name, rating, feedback_text):
             rating,
             feedback_text
         ])
+
+        # If feedback is successfully logged...
         return True 
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         return False

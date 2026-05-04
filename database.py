@@ -96,6 +96,7 @@ def main():
                 ''')
 
                 connection.commit()
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -137,9 +138,12 @@ def queue_entry(session):
         # If student joined as position 1 with a TA on shift, notify student
         # notify_next_in_line(course)
 
+        # If student is successfully added to queue...
+        return True
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
-
+        return False
 
 def find_student_place(course, student_netid):
     """ Method that finds and returns a student's place in the queue. """
@@ -162,9 +166,9 @@ def find_student_place(course, student_netid):
                     WHERE student_netid = %s
                     """
                     cursor.execute(statement_str, (student_netid,))
-                    table = cursor.fetchone()
+                    row = cursor.fetchone()
                     
-                    return table[0] if table else None
+                    return row[0] if row else None
                 
                 # Otherwise find the place of students who are in the 2XX
                 # queue, who could be either COS 217 or 226
@@ -180,9 +184,9 @@ def find_student_place(course, student_netid):
                     WHERE student_netid = %s
                     """
                     cursor.execute(statement_str, (student_netid,))
-                    table = cursor.fetchone()
+                    row = cursor.fetchone()
                     
-                    return table[0] if table else None
+                    return row[0] if row else None
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -206,10 +210,15 @@ def get_num_on_shift_tas(course):
                 """
                 cursor.execute(statement_str, (course,))
                 row = cursor.fetchone()
+
+                if row is None:
+                    return None
+
                 num_on_shift_tas = row[0]
 
                 # Return TA's name to display to students
                 return num_on_shift_tas
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -235,12 +244,12 @@ def notify_next_in_line(course):
                 row = cursor.fetchone()
 
                 if row is None:
-                    return
+                    return None
 
                 student_netid, student_name, session_id, already_notified = row
 
                 if already_notified:
-                    return
+                    return None
 
         # notifications.send_next_in_line(student_netid, student_name, course)
 
@@ -299,7 +308,7 @@ def get_session_info_student(student_netid):
                 """, (student_netid,))
                 table = cursor.fetchall()
 
-                # In the case that session does not exist
+                # If session does not exist...
                 if not table:
                     return None
                 
@@ -330,14 +339,14 @@ def get_session_ta_name(student_netid):
                     AND ta.ta_netid = session.ta_netid
                     ORDER BY session_id DESC
                 """, (student_netid,))
-                table = cursor.fetchall()
+                row = cursor.fetchone()
 
-                # In the case that session does not exist
-                if not table:
+                # If session does not exist...
+                if not row:
                     return None
 
                 # Otherwise, return TA name
-                ta_name = table[0][0]
+                ta_name = row[0]
 
                 return ta_name
     
@@ -362,7 +371,13 @@ def match(ta_netid):
                     FROM ta_courses
                     WHERE ta_netid = %s
                 """, (ta_netid,))
-                ta_course = cursor.fetchone()[0]
+                
+                row = cursor.fetchone()
+
+                if row is None:
+                    return None
+
+                ta_course = row[0]
                 
                 # Check if overflow handling is necessary
                 # (if there are no 200 level students in the queue,
@@ -383,6 +398,7 @@ def match(ta_netid):
                         """
                         cursor.execute(statement_str)
                         row = cursor.fetchone()
+
                         if row is None:
                             return None
 
@@ -399,6 +415,7 @@ def match(ta_netid):
                         LIMIT 1"""
                         cursor.execute(statement_str)
                         row = cursor.fetchone()
+                        
                         if row is None:
                             return None
 
@@ -414,6 +431,7 @@ def match(ta_netid):
                     LIMIT 1"""
                     cursor.execute(statement_str)
                     row = cursor.fetchone()
+                    
                     if row is None:
                         return None
 
@@ -440,7 +458,7 @@ def match(ta_netid):
                 cursor.execute(statement_str, (ta_netid,))
                 connection.commit()
 
-                # Gather info needed for the email and return session ID
+                # Gather info needed for email notification and return session ID
                 cursor.execute("""
                     SELECT s.session_id, st.student_name, t.ta_name, s.course
                     FROM session s
@@ -451,8 +469,10 @@ def match(ta_netid):
                     LIMIT 1
                 """, (student_netid, ta_netid))
                 row = cursor.fetchone()
+
                 if row is None:
                     return None
+
                 session_id, student_name, ta_name, course = row
 
         # Send matched email outside the connection block
@@ -484,11 +504,7 @@ def detect_overflow():
                 num_200_students = sum([i.count('COS 226') for i in table]) + sum([i.count('COS 217') for i in table])
 
                 # If there are no 2xx level students in the queue, return true
-                if num_200_students == 0:
-                    return True
-                
-                else:
-                    return False
+                return num_200_students == 0
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -513,7 +529,7 @@ def get_session_info_ta(ta_netid):
                 """, (ta_netid,))
                 table = cursor.fetchall()
 
-                # If the table doesn't exist, then TA was not matched with a student
+                # If the query returned no rows, then TA was not matched with a student
                 if not table:
                     return None
 
@@ -563,6 +579,7 @@ def remove_session(student_netid):
                     SELECT course FROM session WHERE student_netid = %s
                 """, (student_netid,))
                 row = cursor.fetchone()
+                
                 if row is not None:
                     course = row[0]
 
@@ -570,18 +587,24 @@ def remove_session(student_netid):
                 WHERE student_netid = %s
                 """
                 cursor.execute(statement_str, (student_netid,))
+                numRowsDeleted = cursor.rowcount
 
                 statement_str = """DELETE FROM student
                 WHERE student_netid = %s
                 """
                 cursor.execute(statement_str, (student_netid,))
+                numRowsDeleted += cursor.rowcount
                 connection.commit()
 
         # if course is not None:
             # notify_next_in_line(course)
+
+        # If session is successfully removed...
+            return numRowsDeleted > 0
                 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return False
 
 def clock_in(ta_netid):
     """ Method that collects the date and netID of a TA after 
@@ -596,6 +619,10 @@ def clock_in(ta_netid):
                 SET clocked_in = TRUE
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
+
+                # If TA is not successfully marked as clocked in...
+                if cursor.rowcount == 0:
+                    return False
 
                 # Add shift to database
                 cursor.execute("""
@@ -615,8 +642,12 @@ def clock_in(ta_netid):
         # for course in courses:
             # notify_next_in_line(course)
 
+        # If TA is successfully clocked in...
+            return True
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return False
 
 def clock_out(ta_netid):
     """ Method that clocks the TA out and saves their shift information into the Google Sheet. """
@@ -629,6 +660,10 @@ def clock_out(ta_netid):
                 SET clocked_in = FALSE
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
+                
+                # If TA is not successfully marked as clocked out...
+                if cursor.rowcount == 0:
+                    return False
 
                 # Note time shift ends
                 statement_str = """UPDATE shifts
@@ -643,7 +678,11 @@ def clock_out(ta_netid):
                 WHERE ta_netid = %s"""
                 cursor.execute(statement_str, (ta_netid,))
                 row = cursor.fetchone()
-                ta_name = row[0]
+
+                if row is not None: 
+                    ta_name = row[0]
+                else:
+                    ta_name = "N/A"
 
                 # Get shift information from database
                 statement_str = """SELECT clock_in, clock_out, students_helped
@@ -653,8 +692,21 @@ def clock_out(ta_netid):
                 row = cursor.fetchone()
 
                 # Save shift information into the Google Sheet
+                logSuccessful = False
                 if row is not None:
-                    logSuccessful = googlesheet.log_shift(ta_netid, ta_name, row[0].strftime("%m-%d-%Y"), row[0].strftime("%H:%M"), row[1].strftime("%H:%M"), str(row[2]))
+                    clock_in, clock_out, num_students_helped = row
+                    # Check if clock_out time is NULL before inserting
+                    if clock_out:
+                        clock_out_str = clock_out.strftime("%H:%M")
+                    else: 
+                        clock_out_str = "N/A"
+
+                    logSuccessful = googlesheet.log_shift(ta_netid, 
+                    ta_name, 
+                    clock_in.strftime("%m-%d-%Y"), 
+                    clock_in.strftime("%H:%M"), 
+                    clock_out_str, 
+                    str(num_students_helped))
 
                 # If shift is successfully added to sheet, delete shift from database
                 if logSuccessful: 
@@ -663,8 +715,12 @@ def clock_out(ta_netid):
                     """, (ta_netid,))
                     connection.commit()
 
+                # If TA is successfully clocked out... 
+                return logSuccessful
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
+        return False
 
 def check_if_clocked_in(ta_netid):
     """ Method that checks if a TA is clocked in."""
@@ -712,6 +768,7 @@ def validate_ta(netid):
                 """, (netid,))
                 row = cursor.fetchone()
                 return row is not None
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -726,14 +783,14 @@ def get_time_session_began(session_id):
                     FROM session
                     WHERE session_id = %s
                 """, (session_id,))
-                table = cursor.fetchall()
+                row = cursor.fetchone()
 
                 # In the case that session does not exist
-                if not table:
+                if row is None:
                     return None
 
                 # Otherwise, return time session began
-                time_session_began = table[0][0]
+                time_session_began = row[0]
 
                 return time_session_began
 
@@ -755,11 +812,11 @@ def get_queue_students():
                     WHERE s.ta_netid IS NULL
                     ORDER BY s.session_id ASC
                 """)
-                rows = cursor.fetchall()
+                table = cursor.fetchall()
 
                 result = []
                 i = 1
-                for r in rows:
+                for r in table:
                     result.append({
                         'session_id': r[0],
                         'student_netid': r[1],
@@ -790,10 +847,10 @@ def get_active_sessions():
                     WHERE s.ta_netid IS NOT NULL
                     ORDER BY s.session_id ASC
                 """)
-                rows = cursor.fetchall()
+                table = cursor.fetchall()
 
                 result = []
-                for r in rows:
+                for r in table:
                     result.append({
                         'session_id': r[0],
                         'student_netid': r[1],
@@ -834,6 +891,7 @@ def add_ta(ta_netid, ta_name, ta_email, course):
                     ON CONFLICT DO NOTHING
                 """, (ta_netid, course))
                 connection.commit()
+    
    except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -856,6 +914,7 @@ def remove_ta(ta_netid):
                     DELETE FROM ta WHERE ta_netid = %s
                 """, (ta_netid,))
                 connection.commit()
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
@@ -876,17 +935,18 @@ def get_all_tas():
                     GROUP BY ta.ta_netid, ta.ta_name, ta.ta_email, ta.available
                     ORDER BY LOWER(TRIM(ta.ta_name)) ASC, ta.ta_name ASC
                 """)
-                rows = cursor.fetchall()
+                table = cursor.fetchall()
                 tas = []
-                for row in rows:
+                for r in table:
                     tas.append({
-                        'ta_netid': row[0],
-                        'ta_name': row[1],
-                        'ta_email': row[2],
-                        'available': row[3],
-                        'courses': row[4] or ''
+                        'ta_netid': r[0],
+                        'ta_name': r[1],
+                        'ta_email': r[2],
+                        'available': r[3],
+                        'courses': r[4] or ''
                     })
                 return tas
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         return []
@@ -902,11 +962,11 @@ def validate_admin(admin_netid):
                     WHERE admin_netid = %s
                 """, (admin_netid,))
                 return cursor.fetchone() is not None
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         return False
         
-
 def edit_ta(ta_netid, name, email, courses):
     """ Method that edits a TA in the database. """
 
@@ -932,6 +992,7 @@ def edit_ta(ta_netid, name, email, courses):
                     """, (ta_netid, course))
 
                 connection.commit()
+
     except Exception as ex:
         print(f'edit_ta: {ex}', file=sys.stderr)
     

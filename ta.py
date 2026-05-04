@@ -46,15 +46,21 @@ def workhub():
         # If TA wants to update their clocked in status...
         if action == 'clock_in':
             # Update TA's attendance when they clock in
-            database.clock_in(ta_netid)
-            # Redirect so TA can't submit twice
-            return flask.redirect('/workhub')
+            clockInSuccessful = database.clock_in(ta_netid)
+            if clockInSuccessful:
+                # Redirect so TA can't submit twice
+                return flask.redirect('/workhub')
+            else:
+                return flask.redirect('/workhub?error=not_clocked_in')
 
         if action == 'clock_out':
             # Update TA's attendance and add to google sheet when 
             # they clock out
-            database.clock_out(ta_netid)
-            return flask.redirect('/workhub')
+            clockOutSuccessful = database.clock_out(ta_netid)
+            if clockOutSuccessful:
+                return flask.redirect('/workhub')
+            else: 
+                return flask.redirect('/workhub?error=not_clocked_out')
 
         # If TA wants to start a session...
         if action == 'start_session':

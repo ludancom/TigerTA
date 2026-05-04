@@ -192,6 +192,17 @@
         }
         updateWorkhub();
         setInterval(updateWorkhub, 3000);
+
+        // Errors
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get("error");
+
+        if(error === "not_clocked_in"){
+            alert("We couldn’t clock you in. Please try again, or contact the Head Lab TAs if the issue continues.");
+        }
+        if(error === "not_clocked_out"){
+            alert("We couldn’t clock you out. Please try again, or contact the Head Lab TAs if the issue continues.");
+        }
     </script>
 </body>
 </html>
