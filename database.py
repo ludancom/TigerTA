@@ -269,6 +269,7 @@ def notify_next_in_line(course):
                     UPDATE session
                     SET notified_next = TRUE
                     WHERE session_id = %s
+                    AND notified_next = FALSE
                 """, (session_id,))
                 connection.commit()
 
