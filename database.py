@@ -647,11 +647,11 @@ def remove_session(student_netid):
                 numRowsDeleted += cursor.rowcount
                 connection.commit()
 
-        # if course is not None:
+        if course is not None:
             notify_next_in_line(course)
 
         # If session is successfully removed...
-            return numRowsDeleted > 0
+        return numRowsDeleted > 0
                 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -694,11 +694,11 @@ def clock_in(ta_netid):
                 )
                 courses = [r[0] for r in cursor.fetchall()]
 
-        # for course in courses:
+        for course in courses:
             notify_next_in_line(course)
 
         # If TA is successfully clocked in...
-            return True
+        return True
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
