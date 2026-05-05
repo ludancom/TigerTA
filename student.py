@@ -162,14 +162,13 @@ def queueentry():
             'bug_description': bug_description
         }
 
-        # Insert session into the database
+        # Insert session into the database. queue_entry itself fires the
+        # "you're next in line" notification path; notify_next_in_line
+        # decides whether to actually send (no-op if the position-1
+        # student was already notified for this session).
         insertSuccessful = database.queue_entry(session)
         # If insert is unsuccessful, alert user and stay on the page
         if insertSuccessful:
-            # If student joined as position 1 with a TA on shift, notify student
-            student_place = database.find_student_place(course, student_netid)
-            if student_place == 1:
-                database.notify_next_in_line(course)
             html_code = flask.redirect('/queuestatus')
             response = flask.make_response(html_code)
             # Delete previous cookie with TA's name 

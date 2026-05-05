@@ -30,13 +30,19 @@ dotenv.load_dotenv()
 _APP_SECRET_KEY = os.getenv('APP_SECRET_KEY')
 app.secret_key = _APP_SECRET_KEY
 
-# Mail config
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+# Mail config. .strip() guards against trailing whitespace in either
+# the local .env file or Render's environment panel, which silently
+# breaks DNS / SMTP AUTH.
+def _envstr(name, default=None):
+    raw = os.getenv(name, default)
+    return raw.strip() if isinstance(raw, str) else raw
+
+app.config['MAIL_SERVER'] = _envstr('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(_envstr('MAIL_PORT', '587'))
+app.config['MAIL_USE_TLS'] = (_envstr('MAIL_USE_TLS', 'True') or '').lower() == 'true'
+app.config['MAIL_USERNAME'] = _envstr('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = _envstr('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = _envstr('MAIL_DEFAULT_SENDER')
 
 notifications.mail.init_app(app)
 auth.init(app)
