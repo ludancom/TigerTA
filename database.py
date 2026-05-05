@@ -122,9 +122,13 @@ def queue_entry(session):
                 bug_description = session['bug_description']
 
                 # Paramater testing
+                assert(student_netid is not None)
                 if (course != 'COS 126' and course != 'COS 226' and course != 'COS 217'):
                     return False
-
+                if(not bug_description or not student_name
+                or len(bug_description) > 200 or len(student_name) > 100):
+                    return False
+                
                 # Add student to student table (upsert so a stale row
                 # left over from a bad session end doesn't block queue entry)
                 cursor.execute('''
@@ -653,7 +657,8 @@ def clock_in(ta_netid):
                 # Set TA to clocked in
                 statement_str = """UPDATE ta
                 SET clocked_in = TRUE
-                WHERE ta_netid = %s"""
+                WHERE ta_netid = %s
+                AND clocked_in = FALSE"""
                 cursor.execute(statement_str, (ta_netid,))
 
                 # If TA is not successfully marked as clocked in...
@@ -698,7 +703,8 @@ def clock_out(ta_netid):
                 # Set TA to clocked out
                 statement_str = """UPDATE ta 
                 SET clocked_in = FALSE
-                WHERE ta_netid = %s"""
+                WHERE ta_netid = %s
+                AND clocked_in = TRUE"""
                 cursor.execute(statement_str, (ta_netid,))
                 
                 # If TA is not successfully marked as clocked out...
@@ -708,7 +714,8 @@ def clock_out(ta_netid):
                 # Note time shift ends
                 statement_str = """UPDATE shifts
                 SET clock_out = %s
-                WHERE ta_netid = %s"""
+                WHERE ta_netid = %s
+                AND clock_out IS NULL"""
                 cursor.execute(statement_str, (datetime.now(), ta_netid))
                 connection.commit()
 
@@ -724,10 +731,12 @@ def clock_out(ta_netid):
                 else:
                     ta_name = "N/A"
 
-                # Get shift information from database
+                # Get shift information (of most recent shift) from database
                 statement_str = """SELECT clock_in, clock_out, students_helped
                 FROM shifts
-                WHERE ta_netid = %s"""
+                WHERE ta_netid = %s
+                ORDER BY clock_out DESC
+                LIMIT 1"""
                 cursor.execute(statement_str, (ta_netid,))
                 row = cursor.fetchone()
 
@@ -796,7 +805,8 @@ def update_num_students_helped(ta_netid):
                 # Add 1 to the number of students helped (in database)
                 statement_str = """UPDATE shifts 
                 SET students_helped = students_helped + 1
-                WHERE ta_netid = %s"""
+                WHERE ta_netid = %s
+                AND clock_out IS NULL"""
                 cursor.execute(statement_str, (ta_netid,))
                 connection.commit()
 
@@ -933,9 +943,12 @@ def add_ta(ta_netid, ta_name, ta_email, course):
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 # Paramater testing
-                if (course != 'COS 126' and course != 'COS 2XX') or (ta_netid is None):
+                if (course != 'COS 126' and course != 'COS 2XX'):
                     return False
-            
+                if(not ta_netid or not ta_name or not ta_email or
+                len(ta_netid) > 8 or len(ta_name) > 100 or len(ta_email) > 254):
+                    return False
+                
                 cursor.execute("""
                     INSERT INTO ta (ta_netid, ta_name, ta_email, available, clocked_in)
                     VALUES (%s, %s, %s, FALSE, FALSE)
@@ -1043,18 +1056,24 @@ def validate_admin(admin_netid):
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
         return False
         
-def edit_ta(ta_netid, name, email, courses):
+def edit_ta(ta_netid, ta_name, ta_email, courses):
     """ Method that edits a TA in the database. """
 
     try:
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
+
+                # Parameter testing
+                if(not ta_netid or not ta_name or not ta_email or
+                len(ta_netid) > 8 or len(ta_name) > 100 or len(ta_email) > 254):
+                    return False
+
                 cursor.execute("""
                     UPDATE ta
                     SET ta_name = %s,
                         ta_email = %s
                     WHERE ta_netid = %s
-                """, (name, email, ta_netid))
+                """, (ta_name, ta_email, ta_netid))
 
                 cursor.execute("""
                     DELETE FROM ta_courses
