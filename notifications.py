@@ -12,7 +12,7 @@ def _princeton_email(netid):
     return f"{netid}@princeton.edu"
 
 def send_next_in_line(student_netid, student_name, course):
-    """Email a student to let them know they're next in the queue."""
+    """ Email a student to let them know they're next in the queue. """
 
     try:
         msg = Message(
@@ -27,11 +27,12 @@ def send_next_in_line(student_netid, student_name, course):
             f"— TigerTA"
         )
         mail.send(msg)
+
     except Exception as ex:
         print(f'send_next_in_line: {ex}', file=sys.stderr)
 
 def send_matched(student_netid, student_name, ta_name, course):
-    """Email a student to let them know they've been matched with a TA."""
+    """ Email a student to let them know they've been matched with a TA. """
     
     try:
         msg = Message(
@@ -45,5 +46,6 @@ def send_matched(student_netid, student_name, ta_name, course):
             f"— TigerTA"
         )
         mail.send(msg)
+
     except Exception as ex:
         print(f'send_matched: {ex}', file=sys.stderr)

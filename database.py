@@ -145,9 +145,6 @@ def queue_entry(session):
                 ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
-        # If student joined as position 1 with a TA on shift, notify student
-        notify_next_in_line(course)
-
         # If student is successfully added to queue...
         return True
 
