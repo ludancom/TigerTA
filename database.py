@@ -13,7 +13,6 @@ import time
 from datetime import datetime
 import random
 import googlesheet
-from notifications import send_async
 
 dotenv.load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -278,12 +277,7 @@ def notify_next_in_line(course):
                 updated = cursor.fetchone()
                 connection.commit()
                 if updated:
-                    send_async(
-                        notifications.send_next_in_line,
-                        student_netid,
-                        student_name,
-                        course
-                    )
+                    notifications.send_next_in_line(student_netid, student_name, course)
 
     except Exception as ex:
         print(f'notify_next_in_line: {ex}', file=sys.stderr)
