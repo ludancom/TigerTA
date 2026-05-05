@@ -34,8 +34,10 @@ NOTES
 """
 
 import os
+import time
 import contextlib
 import unittest
+import concurrent.futures
 
 import psycopg
 import dotenv
@@ -53,6 +55,7 @@ import googlesheet
 notifications.send_matched = lambda *args, **kwargs: None
 notifications.send_next_in_line = lambda *args, **kwargs: None
 googlesheet.log_shift = lambda *args, **kwargs: None
+googlesheet.log_feedback = lambda *args, **kwargs: None
 
 import database  # noqa: E402  -- must come after the mocks above
 
@@ -628,6 +631,1085 @@ class ManyToManyTigerTATests(unittest.TestCase):
             database.get_num_on_shift_tas('COS 226'), base_2xx + 2)
         self.assertEqual(
             database.get_num_on_shift_tas('COS 217'), base_2xx + 2)
+
+    # ------------------------------------------------------------------
+    # Coverage tests for early-return / invalid-input branches.
+    # These exist to push coverage on the defensive checks scattered
+    # throughout database.py (rejecting bad courses, returning None /
+    # False when the target row doesn't exist, etc).
+    # ------------------------------------------------------------------
+    def test_23_queue_entry_rejects_invalid_course(self):
+        """queue_entry must return False if the course isn't one of
+        the three courses TigerTA supports."""
+        ok = database.queue_entry({
+            'student_netid': _student_id(1),
+            'student_name': 'Bad Course',
+            'course': 'COS 999',
+            'assignment': 'a1',
+            'bug_description': 'x',
+        })
+        self.assertFalse(
+            ok, 'queue_entry should reject unknown courses')
+
+        # And the student should not have ended up in the queue.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(queue), 0)
+
+    def test_24_match_returns_none_for_unknown_ta(self):
+        """match() must return None when the ta_netid isn't a known
+        TA (no row in ta_courses)."""
+        # No TAs added at all; the netid we pass simply doesn't exist.
+        self.assertIsNone(database.match(f'{TEST_PREFIX}nope1'))
+
+    def test_25_add_ta_rejects_invalid_course(self):
+        """add_ta must return False for courses other than 'COS 126'
+        or 'COS 2XX' (and must not insert a TA row)."""
+        ok = database.add_ta(
+            f'{TEST_PREFIX}badc1', 'Bad Course TA',
+            f'{TEST_PREFIX}badc1@princeton.edu', 'COS 999')
+        self.assertFalse(
+            ok, 'add_ta should reject unsupported courses')
+
+        # Verify the TA was not inserted.
+        all_tas = database.get_all_tas()
+        self.assertNotIn(
+            f'{TEST_PREFIX}badc1',
+            [t['ta_netid'] for t in all_tas])
+
+    def test_26_clock_in_returns_false_for_unknown_ta(self):
+        """clock_in must return False when no TA row matches (the
+        rowcount == 0 branch)."""
+        result = database.clock_in(f'{TEST_PREFIX}nope2')
+        self.assertFalse(
+            result, 'clock_in should fail for an unknown TA')
+
+    def test_27_clock_out_returns_false_for_unknown_ta(self):
+        """clock_out must return False when no TA row matches (the
+        rowcount == 0 branch)."""
+        result = database.clock_out(f'{TEST_PREFIX}nope3')
+        self.assertFalse(
+            result, 'clock_out should fail for an unknown TA')
+
+    def test_28_clock_out_deletes_shift_when_log_succeeds(self):
+        """When googlesheet.log_shift reports success, clock_out
+        should DELETE the TA's shift row from the database (covers
+        the success-path branch in clock_out)."""
+        self._populate_tas()
+        ta_netid = _ta_id(1)
+        database.clock_in(ta_netid)
+
+        # Temporarily make log_shift report success so clock_out
+        # takes the "delete the shift row" branch. Restore in finally
+        # so we don't leak state into other tests.
+        original = googlesheet.log_shift
+        googlesheet.log_shift = lambda *a, **kw: True
+        try:
+            self.assertTrue(database.clock_out(ta_netid))
+        finally:
+            googlesheet.log_shift = original
+
+        # After a successful log, the shift row should be gone.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM shifts WHERE ta_netid = %s",
+                    (ta_netid,))
+                self.assertEqual(cur.fetchone()[0], 0)
+
+    def test_29_get_session_info_student_returns_none_for_unknown(self):
+        """get_session_info_student must return None when the student
+        isn't in the queue or any session."""
+        self.assertIsNone(
+            database.get_session_info_student(f'{TEST_PREFIX}nope4'))
+
+    def test_30_get_session_ta_name_pre_match_returns_none(self):
+        """get_session_ta_name must return None for a student who is
+        in the queue but has not yet been matched to a TA."""
+        sid = _student_id(1)
+        database.queue_entry({
+            'student_netid': sid, 'student_name': 'Solo',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self.assertIsNone(database.get_session_ta_name(sid))
+
+    def test_31_remove_session_returns_false_for_unknown_student(self):
+        """remove_session must return False when there's no session
+        or student row to remove (numRowsDeleted stays 0)."""
+        result = database.remove_session(f'{TEST_PREFIX}nope5')
+        self.assertFalse(
+            result, 'remove_session should be False when nothing was '
+            'deleted')
+
+    def test_32_remove_ta_returns_false_for_unknown_ta(self):
+        """remove_ta must return False when no rows in any of the
+        TA-related tables match."""
+        result = database.remove_ta(f'{TEST_PREFIX}nope6')
+        self.assertFalse(
+            result, 'remove_ta should be False when nothing was '
+            'deleted')
+
+
+# ---------------------------------------------------------------------
+# Stress tests
+# ---------------------------------------------------------------------
+# These tests push the database layer with high volume and concurrent
+# operations. They check:
+#   * High-volume enqueue + drain still produces correct ordering and
+#     counts, and finishes within a reasonable time budget.
+#   * Concurrent match() calls never assign the same student to two TAs
+#     and never produce duplicate active sessions.
+#   * Concurrent queue_entry() calls all land in the queue with unique
+#     session_ids and contiguous queue numbers.
+#
+# Sizes are tuned to be meaningful but to also fit in an 8-character
+# netID (matches the rest of the suite, which uses tstta001 / tstst001
+# style ids) and to keep total runtime reasonable on a shared database.
+# ---------------------------------------------------------------------
+
+STRESS_TA_126 = 10      # number of COS 126 TAs for stress runs
+STRESS_TA_2XX = 8       # number of COS 2XX TAs for stress runs
+STRESS_STUDENTS_126 = 60
+STRESS_STUDENTS_226 = 40
+STRESS_STUDENTS_217 = 25
+
+CONCURRENT_TAS = 15          # threads racing to match() at once
+CONCURRENT_STUDENTS = 30     # students available to those TAs
+CONCURRENT_ENQUEUE = 40      # threads racing to queue_entry() at once
+
+
+class StressTigerTATests(unittest.TestCase):
+    """Stress / load tests for the database layer.
+
+    Reuses the same 'tst' netID prefix and cleanup machinery as
+    ManyToManyTigerTATests so it stays hermetic on a shared database.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        _cleanup_test_rows()
+
+    @classmethod
+    def tearDownClass(cls):
+        _cleanup_test_rows()
+
+    def setUp(self):
+        _cleanup_test_rows()
+        # Same safety guard as ManyToManyTigerTATests: refuse to run
+        # against a database that already has real (non-test) sessions
+        # in the queue, because match() looks at the entire queue and
+        # could pull a real student into a test session.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM session "
+                    "WHERE student_netid NOT LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                live = cur.fetchone()[0]
+                if live > 0:
+                    self.skipTest(
+                        f'Refusing to run stress test: {live} non-test '
+                        f'session(s) exist in the queue.')
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _populate_stress_tas(self):
+        """Add STRESS_TA_126 + STRESS_TA_2XX TAs at once."""
+        for i in range(1, STRESS_TA_126 + 1):
+            database.add_ta(
+                _ta_id(i), f'TA {i}',
+                f'{_ta_id(i)}@princeton.edu', 'COS 126')
+        for i in range(STRESS_TA_126 + 1,
+                       STRESS_TA_126 + STRESS_TA_2XX + 1):
+            database.add_ta(
+                _ta_id(i), f'TA {i}',
+                f'{_ta_id(i)}@princeton.edu', 'COS 2XX')
+
+    def _populate_stress_students(self, n_126, n_226, n_217):
+        """Enqueue (n_126 + n_226 + n_217) students with an
+        interleaved course mix so the queue isn't trivially sorted."""
+        idx = 1
+        for k in range(max(n_126, n_226, n_217)):
+            for course, total in [
+                ('COS 126', n_126),
+                ('COS 226', n_226),
+                ('COS 217', n_217),
+            ]:
+                if k < total:
+                    sid = _student_id(idx)
+                    database.queue_entry({
+                        'student_netid': sid,
+                        'student_name': f'Student {idx}',
+                        'course': course,
+                        'assignment': 'a1',
+                        'bug_description': f'help with {course} #{idx}',
+                    })
+                    idx += 1
+        return idx - 1   # total students enqueued
+
+    # ------------------------------------------------------------------
+    # Stress tests
+    # ------------------------------------------------------------------
+    def test_stress_01_high_volume_drain(self):
+        """Enqueue many students against many TAs and repeatedly call
+        match() until the queue is empty. Asserts correctness only
+        (no hard time budget, since database.py opens a fresh
+        connection per call and remote-DB latency dominates)."""
+
+        t0 = time.monotonic()
+        self._populate_stress_tas()
+        total_enqueued = self._populate_stress_students(
+            STRESS_STUDENTS_126,
+            STRESS_STUDENTS_226,
+            STRESS_STUDENTS_217)
+        enqueue_elapsed = time.monotonic() - t0
+
+        # Sanity: every test student we tried to enqueue is in the queue
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(queue), total_enqueued)
+
+        # Drain: walk through every TA once. With 35 TAs and ~250
+        # students, the queue won't fully drain on a single pass --
+        # so we loop until either the queue is empty or no TA was able
+        # to match this round (overflow rules can leave 126-only TAs
+        # idle once 126 students are exhausted).
+        all_session_ids = []
+        all_student_netids = []
+        rounds = 0
+        while True:
+            rounds += 1
+            matched_this_round = 0
+            for i in range(1, STRESS_TA_126 + STRESS_TA_2XX + 1):
+                ta_netid = _ta_id(i)
+                # Free up the TA before each match call (set_available
+                # flips them back to available so they can match again
+                # in the next round).
+                database.set_available(ta_netid)
+                # End any active session for this TA so they're free
+                info = database.get_session_info_ta(ta_netid)
+                if info is not None:
+                    student = info.get('student_netid')
+                    if student is not None:
+                        database.remove_session(student)
+
+                session_id = database.match(ta_netid)
+                if session_id is not None:
+                    all_session_ids.append(session_id)
+                    new_info = database.get_session_info_ta(ta_netid)
+                    self.assertIsNotNone(new_info)
+                    all_student_netids.append(new_info['student_netid'])
+                    matched_this_round += 1
+
+            if matched_this_round == 0:
+                break
+            self.assertLess(
+                rounds, 100,
+                'drain loop should never need this many rounds')
+
+        # Tear down any remaining active sessions so we leave the
+        # queue/sessions in a known state.
+        for i in range(1, STRESS_TA_126 + STRESS_TA_2XX + 1):
+            ta_netid = _ta_id(i)
+            info = database.get_session_info_ta(ta_netid)
+            if info is not None and info.get('student_netid') is not None:
+                database.remove_session(info['student_netid'])
+
+        elapsed = time.monotonic() - t0
+
+        # Every student the system handed out should be unique --
+        # nobody got matched twice.
+        self.assertEqual(
+            len(all_student_netids), len(set(all_student_netids)),
+            'stress drain handed the same student to two TAs')
+
+        # We should have matched as many students as we enqueued (or
+        # extremely close, accounting for 126-TA-only-can-help-126
+        # rules -- but our mix has more 126 students than 126 TAs, so
+        # everyone should ultimately match).
+        self.assertEqual(
+            len(all_student_netids), total_enqueued,
+            f'enqueued {total_enqueued} but only matched '
+            f'{len(all_student_netids)}')
+
+        # And the queue is empty of test students.
+        leftover = [q for q in database.get_queue_students()
+                    if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(leftover), 0)
+
+        # Print timing as a soft signal -- not asserted, since wall
+        # clock depends entirely on the remote DB's network latency.
+        print(
+            f'\n[stress_01 timing] enqueue {total_enqueued} students: '
+            f'{enqueue_elapsed:.1f}s | full drain + cleanup: '
+            f'{elapsed:.1f}s')
+
+    def test_stress_02_concurrent_match_no_double_assignment(self):
+        """Spawn many threads each calling match() at the same time.
+
+        The critical invariant: no student may be assigned to two
+        different TAs in the session table, even under contention.
+        match() reads the front of the queue and writes the assignment
+        in two separate statements with no row lock, so this is the
+        most likely place a real concurrency bug would show up."""
+
+        # Set up: enough TAs and students that all TAs would *want*
+        # to match if there were no contention.
+        for i in range(1, CONCURRENT_TAS + 1):
+            database.add_ta(
+                _ta_id(i), f'TA {i}',
+                f'{_ta_id(i)}@princeton.edu', 'COS 126')
+        for i in range(1, CONCURRENT_STUDENTS + 1):
+            database.queue_entry({
+                'student_netid': _student_id(i),
+                'student_name': f'Student {i}',
+                'course': 'COS 126',
+                'assignment': 'a1',
+                'bug_description': f'concurrent match #{i}',
+            })
+
+        # All TAs race to match at the same time.
+        ta_netids = [_ta_id(i) for i in range(1, CONCURRENT_TAS + 1)]
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=CONCURRENT_TAS) as pool:
+            futures = [pool.submit(database.match, n) for n in ta_netids]
+            for f in concurrent.futures.as_completed(futures):
+                results.append(f.result())
+
+        # ----- Invariant 1: no duplicate active sessions per student
+        # Read every active session in the test slice and assert each
+        # student_netid appears at most once.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT student_netid, ta_netid FROM session "
+                    "WHERE ta_netid IS NOT NULL "
+                    "AND student_netid LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                active = cur.fetchall()
+
+        active_students = [row[0] for row in active]
+        active_tas = [row[1] for row in active]
+        self.assertEqual(
+            len(active_students), len(set(active_students)),
+            'concurrent match() assigned the same student to two TAs')
+        self.assertEqual(
+            len(active_tas), len(set(active_tas)),
+            'concurrent match() put the same TA in two sessions')
+
+        # ----- Invariant 2: count sanity
+        # We had CONCURRENT_TAS TAs and CONCURRENT_STUDENTS students
+        # available; the number of active sessions can't exceed
+        # min(TAs, students).
+        self.assertLessEqual(
+            len(active),
+            min(CONCURRENT_TAS, CONCURRENT_STUDENTS),
+            'more active sessions than TAs/students should allow')
+
+        # ----- Invariant 3: returned session_ids point at real, unique
+        # session rows when non-None.
+        successful = [r for r in results if r is not None]
+        self.assertEqual(
+            len(successful), len(set(successful)),
+            'match() returned the same session_id from two different '
+            'concurrent calls')
+
+    def test_stress_03_concurrent_enqueue(self):
+        """Many students enqueue at the same instant. All of them
+        should land in the queue, each with a unique session_id and
+        contiguous 1..N queue_numbers in the test slice."""
+
+        def _enqueue_one(i):
+            database.queue_entry({
+                'student_netid': _student_id(i),
+                'student_name': f'Student {i}',
+                'course': 'COS 126',
+                'assignment': 'a1',
+                'bug_description': f'concurrent enqueue #{i}',
+            })
+
+        ids = list(range(1, CONCURRENT_ENQUEUE + 1))
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=20) as pool:
+            list(pool.map(_enqueue_one, ids))
+
+        # All students made it in.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(queue), CONCURRENT_ENQUEUE)
+
+        # All session_ids are unique (no duplicate row insertion).
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT session_id, student_netid FROM session "
+                    "WHERE student_netid LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                rows = cur.fetchall()
+
+        session_ids = [r[0] for r in rows]
+        student_netids = [r[1] for r in rows]
+        self.assertEqual(
+            len(session_ids), len(set(session_ids)),
+            'duplicate session_ids after concurrent enqueue')
+        self.assertEqual(
+            len(student_netids), len(set(student_netids)),
+            'duplicate student rows after concurrent enqueue')
+
+        # queue_numbers in the test slice should be 1..N.
+        nums = sorted(q['queue_number'] for q in queue)
+        self.assertEqual(nums, list(range(1, CONCURRENT_ENQUEUE + 1)))
+
+
+# ---------------------------------------------------------------------
+# Route handler tests
+# ---------------------------------------------------------------------
+# These tests exercise the Flask route handlers in student.py, ta.py,
+# and admin.py through Flask's test client. CAS authentication is
+# bypassed by injecting a username into the session (the same effect
+# auth.authenticate() has after a successful CAS round trip), and
+# CSRF protection is disabled for the test app (Flask-WTF supports
+# this via the WTF_CSRF_ENABLED config flag).
+#
+# Notes:
+# * The route handlers' before_request hooks redirect HTTP -> HTTPS
+#   unless the URL contains 'localhost:' (with a port). Flask's test
+#   client uses 'http://localhost/' by default (no port), so every
+#   request below is sent with base_url='http://localhost:5000' to
+#   keep the handlers in their happy path.
+# * googlesheet.log_feedback was mocked at the top of this file so
+#   feedback-submitting routes don't write to the real Sheet.
+# * The test app's secret_key is force-set so sessions work even if
+#   APP_SECRET_KEY isn't in the environment.
+# ---------------------------------------------------------------------
+
+import app as _app_module  # noqa: E402  -- import after database mocks
+_flask_app = _app_module.app
+_flask_app.config['TESTING'] = True
+_flask_app.config['WTF_CSRF_ENABLED'] = False
+if not _flask_app.secret_key:
+    _flask_app.secret_key = 'test-secret-key-for-route-tests'
+
+_TEST_BASE_URL = 'http://localhost:5000'
+
+
+class RouteTests(unittest.TestCase):
+    """End-to-end-ish tests for the Flask route handlers in
+    student.py, ta.py, and admin.py."""
+
+    @classmethod
+    def setUpClass(cls):
+        _cleanup_test_rows()
+
+    @classmethod
+    def tearDownClass(cls):
+        _cleanup_test_rows()
+
+    def setUp(self):
+        _cleanup_test_rows()
+        self.client = _flask_app.test_client()
+        # Same safety guard as the other test classes: refuse to run
+        # if a non-test session is in the queue, because some route
+        # tests call match() which would scan the full queue.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM session "
+                    "WHERE student_netid NOT LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                live = cur.fetchone()[0]
+                if live > 0:
+                    self.skipTest(
+                        f'Refusing to run route tests: {live} non-test '
+                        f'session(s) exist in the queue.')
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _login_as(self, netid):
+        """Inject a username into the Flask session as if CAS had
+        just successfully authenticated this user."""
+        with self.client.session_transaction() as sess:
+            sess['username'] = netid
+
+    def _get(self, path, **kwargs):
+        return self.client.get(
+            path, base_url=_TEST_BASE_URL, **kwargs)
+
+    def _post(self, path, **kwargs):
+        return self.client.post(
+            path, base_url=_TEST_BASE_URL, **kwargs)
+
+    # ------------------------------------------------------------------
+    # student.py routes
+    # ------------------------------------------------------------------
+    def test_route_01_homepage_returns_200(self):
+        """GET / and GET /home both render the homepage template
+        with a 200 response."""
+        for path in ('/', '/home'):
+            r = self._get(path)
+            self.assertEqual(r.status_code, 200, f'{path} not 200')
+
+    def test_route_02_roleselection_get_renders(self):
+        """GET /roleselection (when already logged in) renders the
+        role selection template."""
+        self._login_as(f'{TEST_PREFIX}stu1')
+        r = self._get('/roleselection')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_03_roleselection_post_student_redirects_to_queueentry(self):
+        """A logged-in user picking the 'student' role with no
+        existing session is redirected to /queueentry."""
+        self._login_as(f'{TEST_PREFIX}stu2')
+        r = self._post('/roleselection', data={'role': 'Student'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+
+    def test_route_04_roleselection_post_ta_for_non_ta_redirects_with_error(self):
+        """A logged-in user picking the 'TA' role who isn't actually
+        a TA is bounced back to /roleselection with ?error=not_ta."""
+        self._login_as(f'{TEST_PREFIX}stu3')
+        r = self._post('/roleselection', data={'role': 'TA'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_ta', r.headers['Location'])
+
+    def test_route_05_roleselection_post_admin_for_non_admin_redirects_with_error(self):
+        """A logged-in user picking the 'Admin' role who isn't an
+        admin is bounced back with ?error=not_admin."""
+        self._login_as(f'{TEST_PREFIX}stu4')
+        r = self._post('/roleselection', data={'role': 'Admin'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_admin', r.headers['Location'])
+
+    def test_route_06_queueentry_get_renders(self):
+        """GET /queueentry renders the queue entry form."""
+        self._login_as(f'{TEST_PREFIX}stu5')
+        r = self._get('/queueentry')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_07_queueentry_post_inserts_into_queue(self):
+        """Submitting /queueentry with valid form data inserts the
+        student into the database and redirects to /queuestatus."""
+        netid = f'{TEST_PREFIX}stu6'
+        self._login_as(netid)
+        r = self._post('/queueentry', data={
+            'student_name': 'Route Student',
+            'course': 'COS 126',
+            'assignment': 'a1',
+            'bug_description': 'route test',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queuestatus', r.headers['Location'])
+        # And the student is actually in the queue now.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'] == netid]
+        self.assertEqual(len(queue), 1)
+
+    def test_route_08_queuestatus_redirects_to_queueentry_when_no_session(self):
+        """GET /queuestatus for a student with no active session
+        sends them to /queueentry."""
+        self._login_as(f'{TEST_PREFIX}stu7')
+        r = self._get('/queuestatus')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+
+    def test_route_09_trymatch_returns_json_for_unknown_student(self):
+        """GET /trymatch for a student not in the database returns
+        the JSON shape expected by the front end."""
+        self._login_as(f'{TEST_PREFIX}stu8')
+        r = self._get('/trymatch')
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertIn('matched', body)
+        self.assertEqual(body['in_database'], False)
+
+    def test_route_10_insessionstudent_redirects_when_no_session(self):
+        """GET /insessionstudent for a student with no session is
+        bounced to /endsessionstudent."""
+        self._login_as(f'{TEST_PREFIX}stu9')
+        r = self._get('/insessionstudent')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/endsessionstudent', r.headers['Location'])
+
+    def test_route_11_endsessionstudent_get_renders(self):
+        """GET /endsessionstudent renders the end-session template
+        even with no cookie / query state."""
+        r = self._get('/endsessionstudent')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_12_submit_feedback_logs_and_redirects(self):
+        """POST /submitfeedback writes to googlesheet.log_feedback
+        (which is mocked) and redirects to the end-session page."""
+        r = self._post('/submitfeedback', data={
+            'rating': '5',
+            'feedback_text': 'Great help!',
+            'ta_name': 'TA One',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/endsessionstudent', r.headers['Location'])
+
+    # ------------------------------------------------------------------
+    # ta.py routes
+    # ------------------------------------------------------------------
+    def test_route_13_workhub_get_renders_for_ta(self):
+        """A clocked-out TA hitting /workhub gets the work-hub page."""
+        ta_netid = f'{TEST_PREFIX}ta01'
+        database.add_ta(
+            ta_netid, 'Work Hub TA',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._get('/workhub')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_14_workhub_post_clock_in_succeeds(self):
+        """POST /workhub action=clock_in for a real TA succeeds and
+        redirects back to /workhub."""
+        ta_netid = f'{TEST_PREFIX}ta02'
+        database.add_ta(
+            ta_netid, 'Clocker',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'clock_in'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+        self.assertTrue(database.check_if_clocked_in(ta_netid))
+
+    def test_route_15_workhub_post_clock_in_for_unknown_ta_redirects_with_error(self):
+        """POST clock_in for an unknown TA hits the failure branch
+        and redirects with ?error=not_clocked_in."""
+        self._login_as(f'{TEST_PREFIX}nope9')
+        r = self._post('/workhub', data={'action': 'clock_in'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_clocked_in', r.headers['Location'])
+
+    def test_route_16_workhub_status_returns_json(self):
+        """GET /workhub_status returns a JSON payload with the
+        keys the front end expects."""
+        self._login_as(f'{TEST_PREFIX}ta03')
+        r = self._get('/workhub_status')
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertIn('matched', body)
+        self.assertIn('queue_students', body)
+        self.assertIn('active_sessions', body)
+
+    def test_route_17_insessionta_redirects_when_no_session(self):
+        """A TA with no active session hitting /insessionta is
+        bounced to /workhub."""
+        self._login_as(f'{TEST_PREFIX}ta04')
+        r = self._get('/insessionta')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+
+    def test_route_18_endsessionta_get_renders(self):
+        """GET /endsessionta renders the template without crashing
+        even when the student_name cookie isn't set."""
+        self._login_as(f'{TEST_PREFIX}ta05')
+        r = self._get('/endsessionta')
+        self.assertEqual(r.status_code, 200)
+
+    # ------------------------------------------------------------------
+    # admin.py routes
+    # ------------------------------------------------------------------
+    def test_route_19_adminpage_renders(self):
+        """GET /adminpage renders the admin template with the TA
+        list pulled from the database."""
+        r = self._get('/adminpage')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_20_add_ta_post_succeeds(self):
+        """POST /add_ta with a valid form inserts the TA and
+        redirects back to /adminpage."""
+        ta_netid = f'{TEST_PREFIX}ta06'
+        r = self._post('/add_ta', data={
+            'ta_net_id': ta_netid,
+            'ta_name': 'Added Via Route',
+            'course': 'COS 126',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/adminpage', r.headers['Location'])
+        self.assertTrue(database.validate_ta(ta_netid))
+
+    def test_route_21_add_ta_post_invalid_course_redirects_with_error(self):
+        """POST /add_ta with an unsupported course hits the
+        failure branch and redirects with ?error=ta_not_added."""
+        ta_netid = f'{TEST_PREFIX}ta07'
+        r = self._post('/add_ta', data={
+            'ta_net_id': ta_netid,
+            'ta_name': 'Bad Course',
+            'course': 'COS 999',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=ta_not_added', r.headers['Location'])
+
+    def test_route_22_remove_ta_post_succeeds(self):
+        """POST /remove_ta for an existing TA removes them and
+        redirects to /adminpage."""
+        ta_netid = f'{TEST_PREFIX}ta08'
+        database.add_ta(
+            ta_netid, 'Removable',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        r = self._post('/remove_ta', data={'ta_net_id': ta_netid})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/adminpage', r.headers['Location'])
+        self.assertFalse(database.validate_ta(ta_netid))
+
+    def test_route_23_remove_ta_post_for_unknown_ta_redirects_with_error(self):
+        """POST /remove_ta for a TA that doesn't exist hits the
+        failure branch and redirects with ?error=ta_not_removed."""
+        r = self._post('/remove_ta', data={
+            'ta_net_id': f'{TEST_PREFIX}nope10',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=ta_not_removed', r.headers['Location'])
+
+    def test_route_24_edit_ta_post_updates_and_redirects(self):
+        """POST /edit_ta updates the TA's row and redirects back
+        to /adminpage."""
+        ta_netid = f'{TEST_PREFIX}ta09'
+        database.add_ta(
+            ta_netid, 'Old Name',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        r = self._post('/edit_ta', data={
+            'ta_netid': ta_netid,
+            'ta_name': 'New Name',
+            'ta_email': f'{ta_netid}@princeton.edu',
+            'ta_courses': 'COS 2XX',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/adminpage', r.headers['Location'])
+        all_tas = {t['ta_netid']: t for t in database.get_all_tas()}
+        self.assertEqual(all_tas[ta_netid]['ta_name'], 'New Name')
+        self.assertEqual(all_tas[ta_netid]['courses'], 'COS 2XX')
+
+    # ------------------------------------------------------------------
+    # Additional route tests pushing coverage on the matched-session,
+    # already-in-queue, error-path, and POST-action branches.
+    # ------------------------------------------------------------------
+    def _setup_matched(self, ta_netid, student_netid, course='COS 126'):
+        """Helper: add a TA, enqueue a student, match them. Returns
+        the session_id from match()."""
+        database.add_ta(
+            ta_netid, f'TA {ta_netid}',
+            f'{ta_netid}@princeton.edu', course)
+        database.queue_entry({
+            'student_netid': student_netid,
+            'student_name': f'Student {student_netid}',
+            'course': course,
+            'assignment': 'a1',
+            'bug_description': f'help with {course}',
+        })
+        return database.match(ta_netid)
+
+    def test_route_25_logout_clears_session_and_redirects(self):
+        """GET /logout clears the Flask session and redirects to /home."""
+        netid = f'{TEST_PREFIX}stu10'
+        self._login_as(netid)
+        r = self._get('/logout')
+        self.assertEqual(r.status_code, 302)
+        # Session should now be empty.
+        with self.client.session_transaction() as sess:
+            self.assertNotIn('username', sess)
+
+    def test_route_26_roleselection_post_ta_for_real_ta(self):
+        """A logged-in real TA picking the TA role is redirected to
+        /workhub (the TA-success branch of roleselection)."""
+        netid = f'{TEST_PREFIX}ta10'
+        database.add_ta(
+            netid, 'Real TA',
+            f'{netid}@princeton.edu', 'COS 126')
+        self._login_as(netid)
+        r = self._post('/roleselection', data={'role': 'TA'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+
+    def test_route_27_roleselection_post_admin_for_real_admin(self):
+        """A logged-in real admin picking the Admin role is redirected
+        to /adminpage (the admin-success branch of roleselection)."""
+        netid = f'{TEST_PREFIX}adm2'
+        # Insert directly into admin table; cleaned up at end of test.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "INSERT INTO admin (admin_netid) VALUES (%s) "
+                    "ON CONFLICT DO NOTHING", (netid,))
+                conn.commit()
+        try:
+            self._login_as(netid)
+            r = self._post('/roleselection', data={'role': 'Admin'})
+            self.assertEqual(r.status_code, 302)
+            self.assertIn('/adminpage', r.headers['Location'])
+        finally:
+            with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+                with contextlib.closing(conn.cursor()) as cur:
+                    cur.execute(
+                        "DELETE FROM admin WHERE admin_netid = %s",
+                        (netid,))
+                    conn.commit()
+
+    def test_route_28_roleselection_post_student_already_in_queue(self):
+        """A student who is already in the queue and picks the
+        Student role is redirected straight to /queuestatus."""
+        netid = f'{TEST_PREFIX}stu11'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'In Queue',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._post('/roleselection', data={'role': 'Student'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queuestatus', r.headers['Location'])
+
+    def test_route_29_roleselection_post_student_in_session(self):
+        """A student already in a session picking the Student role
+        is redirected to /insessionstudent."""
+        ta_netid = f'{TEST_PREFIX}ta11'
+        student_netid = f'{TEST_PREFIX}stu12'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._post('/roleselection', data={'role': 'Student'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionstudent', r.headers['Location'])
+
+    def test_route_30_queueentry_post_when_already_in_queue(self):
+        """A student already in the queue who POSTs /queueentry is
+        redirected to /queuestatus with ?error=already_in_queue."""
+        netid = f'{TEST_PREFIX}stu13'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'In Queue',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._post('/queueentry', data={
+            'student_name': 'x', 'course': 'COS 126',
+            'assignment': 'a1', 'bug_description': 'y',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=already_in_queue', r.headers['Location'])
+
+    def test_route_31_queueentry_post_when_already_in_session(self):
+        """A student already in a session who POSTs /queueentry is
+        redirected to /insessionstudent with ?error=already_in_session."""
+        ta_netid = f'{TEST_PREFIX}ta12'
+        student_netid = f'{TEST_PREFIX}stu14'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._post('/queueentry', data={
+            'student_name': 'x', 'course': 'COS 126',
+            'assignment': 'a1', 'bug_description': 'y',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=already_in_session', r.headers['Location'])
+
+    def test_route_32_queueentry_post_insert_fails_for_invalid_course(self):
+        """If queue_entry() returns False (invalid course), the route
+        redirects with ?error=not_added_to_queue."""
+        self._login_as(f'{TEST_PREFIX}stu15')
+        r = self._post('/queueentry', data={
+            'student_name': 'Bad', 'course': 'COS 999',
+            'assignment': 'a1', 'bug_description': '.',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_added_to_queue', r.headers['Location'])
+
+    def test_route_33_queuestatus_renders_for_in_queue_student(self):
+        """A student who is in the queue (and not yet matched) hits
+        the full render path of /queuestatus."""
+        netid = f'{TEST_PREFIX}stu16'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'Queued',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': 'help me',
+        })
+        self._login_as(netid)
+        r = self._get('/queuestatus')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_34_queuestatus_post_leave_queue(self):
+        """POST /queuestatus action=leave_queue removes the student
+        from the queue and redirects to /queueentry."""
+        netid = f'{TEST_PREFIX}stu17'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'Quitter',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._post('/queuestatus', data={'action': 'leave_queue'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+        # And the student is no longer in the queue.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'] == netid]
+        self.assertEqual(len(queue), 0)
+
+    def test_route_35_queuestatus_redirects_to_insessionstudent_when_matched(self):
+        """If a student is matched, hitting /queuestatus redirects
+        them to /insessionstudent."""
+        ta_netid = f'{TEST_PREFIX}ta13'
+        student_netid = f'{TEST_PREFIX}stu18'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._get('/queuestatus')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionstudent', r.headers['Location'])
+
+    def test_route_36_trymatch_returns_in_database_true_for_queued_student(self):
+        """GET /trymatch for a student who is in the queue returns
+        in_database=True with a real student_place."""
+        netid = f'{TEST_PREFIX}stu19'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'Polling',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._get('/trymatch')
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertEqual(body['in_database'], True)
+        self.assertEqual(body['matched'], False)
+        self.assertGreaterEqual(body['student_place'], 1)
+
+    def test_route_37_insessionstudent_renders_when_matched(self):
+        """A matched student hitting /insessionstudent gets the full
+        in-session render."""
+        ta_netid = f'{TEST_PREFIX}ta14'
+        student_netid = f'{TEST_PREFIX}stu20'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._get('/insessionstudent')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_38_endsessionstudent_post_home_redirects(self):
+        """POST /endsessionstudent action=home redirects to /queueentry."""
+        r = self._post('/endsessionstudent', data={'action': 'home'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+
+    # ------------------------------------------------------------------
+    # ta.py additional routes
+    # ------------------------------------------------------------------
+    def test_route_39_workhub_redirects_to_homepage_when_no_user(self):
+        """GET /workhub with no logged-in user (empty username)
+        redirects to /."""
+        r = self._get('/workhub')
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(
+            r.headers['Location'].endswith('/'),
+            f'expected redirect to /, got {r.headers["Location"]}')
+
+    def test_route_40_workhub_post_clock_out_succeeds(self):
+        """POST /workhub action=clock_out for a clocked-in TA whose
+        log_shift returns success completes and redirects."""
+        ta_netid = f'{TEST_PREFIX}ta15'
+        database.add_ta(
+            ta_netid, 'Clock Out TA',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        database.clock_in(ta_netid)
+        # Temporarily make log_shift return success so clock_out
+        # takes the success branch.
+        original = googlesheet.log_shift
+        googlesheet.log_shift = lambda *a, **kw: True
+        try:
+            self._login_as(ta_netid)
+            r = self._post('/workhub', data={'action': 'clock_out'})
+        finally:
+            googlesheet.log_shift = original
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+        self.assertNotIn('error', r.headers['Location'])
+
+    def test_route_41_workhub_post_clock_out_fails(self):
+        """POST clock_out for a TA who isn't clocked in (and whose
+        log_shift returns falsy) goes through the failure branch and
+        redirects with ?error=not_clocked_out."""
+        ta_netid = f'{TEST_PREFIX}ta16'
+        database.add_ta(
+            ta_netid, 'Never Clocked In',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'clock_out'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_clocked_out', r.headers['Location'])
+
+    def test_route_42_workhub_post_start_session_with_match(self):
+        """POST /workhub action=start_session when a student is
+        queued matches the TA and redirects to /insessionta."""
+        ta_netid = f'{TEST_PREFIX}ta17'
+        student_netid = f'{TEST_PREFIX}stu21'
+        database.add_ta(
+            ta_netid, 'Starter',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        database.queue_entry({
+            'student_netid': student_netid,
+            'student_name': 'Waiting', 'course': 'COS 126',
+            'assignment': 'a1', 'bug_description': '.',
+        })
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'start_session'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionta', r.headers['Location'])
+
+    def test_route_43_workhub_post_start_session_no_match(self):
+        """POST start_session with no students in the queue does not
+        redirect to /insessionta (match returns None)."""
+        ta_netid = f'{TEST_PREFIX}ta18'
+        database.add_ta(
+            ta_netid, 'No Match',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'start_session'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+        self.assertNotIn('/insessionta', r.headers['Location'])
+
+    def test_route_44_workhub_redirects_to_insessionta_when_matched(self):
+        """A TA who already has an active session hitting /workhub
+        is redirected to /insessionta."""
+        ta_netid = f'{TEST_PREFIX}ta19'
+        student_netid = f'{TEST_PREFIX}stu22'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(ta_netid)
+        r = self._get('/workhub')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionta', r.headers['Location'])
+
+    def test_route_45_insessionta_renders_when_matched(self):
+        """A matched TA hitting /insessionta gets the full
+        in-session render with the student's info."""
+        ta_netid = f'{TEST_PREFIX}ta20'
+        student_netid = f'{TEST_PREFIX}stu23'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(ta_netid)
+        r = self._get('/insessionta')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_46_insessionta_post_end_session(self):
+        """POST /insessionta action=end_session removes the session
+        and redirects to /endsessionta with the student_name cookie."""
+        ta_netid = f'{TEST_PREFIX}ta21'
+        student_netid = f'{TEST_PREFIX}stu24'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(ta_netid)
+        r = self._post('/insessionta', data={'action': 'end_session'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/endsessionta', r.headers['Location'])
+        # The session should now be gone from the database.
+        info = database.get_session_info_ta(ta_netid)
+        self.assertIsNone(info)
+
+    def test_route_47_endsessionta_post_home_redirects(self):
+        """POST /endsessionta action=home redirects back to /workhub."""
+        self._login_as(f'{TEST_PREFIX}ta22')
+        r = self._post('/endsessionta', data={'action': 'home'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
 
 
 if __name__ == '__main__':

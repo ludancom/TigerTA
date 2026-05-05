@@ -81,13 +81,3 @@ def edit_ta():
     database.edit_ta(ta_net_id, ta_name, ta_email, courses)
 
     return flask.redirect(flask.url_for('admin_routes.adminpage'))
-
-#-----------------------------------------------------------------------
-# View TAs Page: 
-#-----------------------------------------------------------------------
-@admin_routes.route('/view_tas', methods=['GET'])
-def view_tas():
-    """ Method that displays the list of TAs to the user. """
-
-    tas = database.get_all_tas()
-    return flask.render_template('view_tas.html', tas=tas)
