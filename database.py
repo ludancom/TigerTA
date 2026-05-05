@@ -146,7 +146,7 @@ def queue_entry(session):
                 connection.commit()
 
         # If student joined as position 1 with a TA on shift, notify student
-        # notify_next_in_line(course)
+        notify_next_in_line(course)
 
         # If student is successfully added to queue...
         return True
@@ -264,7 +264,7 @@ def notify_next_in_line(course):
                 if already_notified:
                     return None
 
-        # notifications.send_next_in_line(student_netid, student_name, course)
+        notifications.send_next_in_line(student_netid, student_name, course)
 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -513,10 +513,10 @@ def match(ta_netid):
                 session_id, student_name, ta_name, course = row
 
         # Send matched email outside the connection block
-        # notifications.send_matched(student_netid, student_name, ta_name, course)
+        notifications.send_matched(student_netid, student_name, ta_name, course)
 
         # Queue just shifted, so notify student that is now 1st in line
-        # notify_next_in_line(course)
+        notify_next_in_line(course)
 
         return session_id
                 
@@ -644,7 +644,7 @@ def remove_session(student_netid):
                 connection.commit()
 
         # if course is not None:
-            # notify_next_in_line(course)
+            notify_next_in_line(course)
 
         # If session is successfully removed...
             return numRowsDeleted > 0
@@ -691,7 +691,7 @@ def clock_in(ta_netid):
                 courses = [r[0] for r in cursor.fetchall()]
 
         # for course in courses:
-            # notify_next_in_line(course)
+            notify_next_in_line(course)
 
         # If TA is successfully clocked in...
             return True
