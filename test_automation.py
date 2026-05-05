@@ -3,34 +3,19 @@
 # test_automation.py
 #-----------------------------------------------------------------------
 """
-Automated test script for the TigerTA database layer.
+Automated tests for TigerTA.
 
-Populates the database with many TAs and many students, exercises the
-matching / queueing logic, and verifies that data flows correctly
-through the system. Designed to satisfy the test automation +
-many-to-many requirements.
-
-USAGE
------
-Run the tests directly:
+Run all tests:
     python -m unittest test_automation.py -v
 
-Run with coverage and generate a screenshot-able HTML report:
-    coverage run --source=database -m unittest test_automation.py
+Run with coverage:
+    coverage run --source=database,student,ta,admin -m unittest test_automation.py
     coverage report -m
     coverage html
-    # then open htmlcov/index.html in your browser and screenshot it
 
-To include the route handlers in the report too:
-    coverage run --source=database,student,ta,admin -m unittest test_automation.py
-
-NOTES
------
-* Tests connect to the database in DATABASE_URL (your .env file).
-* Test rows use the 'tst' netID prefix; cleanup runs before and after,
-  so existing TigerTA data is left alone.
-* Email notifications and Google Sheet writes are mocked so running
-  the tests doesn't send emails or modify the real shift log.
+Test rows use the 'tst' netID prefix and are cleaned up before and
+after each test so real data isn't touched. Emails and Google Sheet
+writes are mocked.
 """
 
 import os
@@ -44,11 +29,8 @@ import dotenv
 
 dotenv.load_dotenv()
 
-# ---------------------------------------------------------------------
-# Mock side-effecting modules BEFORE importing database.py.
-# database.py calls notifications.send_* and googlesheet.log_shift; we
-# replace those with no-ops so the tests are hermetic.
-# ---------------------------------------------------------------------
+# Mock notifications and googlesheet so tests don't send real emails
+# or write to the real shift log.
 import notifications
 import googlesheet
 
@@ -57,16 +39,16 @@ notifications.send_next_in_line = lambda *args, **kwargs: None
 googlesheet.log_shift = lambda *args, **kwargs: None
 googlesheet.log_feedback = lambda *args, **kwargs: None
 
-import database  # noqa: E402  -- must come after the mocks above
+import database
 
 
 DATABASE_URL = os.environ['DATABASE_URL']
-TEST_PREFIX = 'tst'  # all test netIDs start with this; cleanup uses LIKE 'tst%'
+TEST_PREFIX = 'tst'
 
 
 def _cleanup_test_rows():
-    """Delete every test row from every table. Safe to call repeatedly.
-    Order matters because of foreign-key constraints."""
+    """Delete all test rows from every table. Order matters because
+    of foreign-key constraints."""
     with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
         with contextlib.closing(conn.cursor()) as cur:
             cur.execute(
@@ -89,25 +71,38 @@ def _cleanup_test_rows():
 
 
 def _ta_id(n):
-    return f'{TEST_PREFIX}ta{n:03d}'   # tstta001, tstta002, ... (8 chars)
+    return f'{TEST_PREFIX}ta{n:03d}'
 
 
 def _student_id(n):
-    return f'{TEST_PREFIX}st{n:03d}'   # tstst001, tstst002, ... (8 chars)
+    return f'{TEST_PREFIX}st{n:03d}'
 
 
-# Course mix used across tests
-TA_LINEUP_126 = 6     # number of COS 126 TAs to add
-TA_LINEUP_2XX = 4     # number of COS 2XX TAs to add
-STUDENTS_126  = 12    # number of COS 126 students to enqueue
-STUDENTS_226  = 6     # number of COS 226 students
-STUDENTS_217  = 4     # number of COS 217 students
+TA_LINEUP_126 = 6
+TA_LINEUP_2XX = 4
+STUDENTS_126  = 12
+STUDENTS_226  = 6
+STUDENTS_217  = 4
+
+
+# =====================================================================
+# Functional / integration tests  (tests 01-22)
+# =====================================================================
+# These tests walk through the normal flow of TigerTA from the
+# database layer's point of view. They cover the full lifecycle of
+# a TA (add, edit, clock in, match, end session, clock out, remove),
+# the full lifecycle of a student (enqueue, find place in line,
+# match, end session), and the admin operations sitting on top of
+# them. They also pin down the trickier matching rules: the merged
+# COS 217 / 226 queue, 2XX overflow into 126, and 2XX TAs preferring
+# 2XX students when both are available. Together they show that the
+# core data flow of the app behaves the way the rest of the site
+# assumes it does.
+# =====================================================================
 
 
 class ManyToManyTigerTATests(unittest.TestCase):
-    """End-to-end exercise of the database layer with many TAs and
-    many students. Each test is independent: setUp wipes the test slice
-    of every table so tests can run in any order."""
+    """Tests for the database layer."""
 
     @classmethod
     def setUpClass(cls):
@@ -119,10 +114,8 @@ class ManyToManyTigerTATests(unittest.TestCase):
 
     def setUp(self):
         _cleanup_test_rows()
-        # Safety guard: refuse to run if real (non-test) sessions exist.
-        # Tests 05/06/07 use database.match() and database.detect_overflow(),
-        # which look at the entire queue -- a real student in the queue
-        # could be matched to a test TA and then wiped during cleanup.
+        # Skip if a real student is in the queue, since match() looks
+        # at the entire queue and could pull them into a test session.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -132,15 +125,10 @@ class ManyToManyTigerTATests(unittest.TestCase):
                 live = cur.fetchone()[0]
                 if live > 0:
                     self.skipTest(
-                        f'Refusing to run: {live} non-test session(s) '
-                        f'exist in the queue. Run against an empty or '
-                        f'dedicated test database.')
+                        f'{live} non-test session(s) in queue.')
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
     def _populate_tas(self):
-        """Add TA_LINEUP_126 + TA_LINEUP_2XX TAs to the database."""
+        """Add TA_LINEUP_126 + TA_LINEUP_2XX TAs."""
         for i in range(1, TA_LINEUP_126 + 1):
             database.add_ta(
                 _ta_id(i), f'TA {i}',
@@ -153,11 +141,10 @@ class ManyToManyTigerTATests(unittest.TestCase):
 
     def _populate_students(self, n_126=STUDENTS_126,
                            n_226=STUDENTS_226, n_217=STUDENTS_217):
-        """Enqueue students with a known course mix. Returns the list of
-        (netid, course) tuples in queue order."""
+        """Enqueue students. Returns (netid, course) pairs in order."""
         order = []
         idx = 1
-        # Interleave so the queue isn't trivially sorted by course
+        # Interleave courses so the queue order isn't sorted by course.
         for k in range(max(n_126, n_226, n_217)):
             for course, total in [
                 ('COS 126', n_126),
@@ -177,12 +164,8 @@ class ManyToManyTigerTATests(unittest.TestCase):
                     idx += 1
         return order
 
-    # ------------------------------------------------------------------
-    # Tests
-    # ------------------------------------------------------------------
     def test_01_add_many_tas(self):
-        """Adding many TAs should produce the right count and link
-        each TA to their course in ta_courses."""
+        """Adding many TAs produces the right count and course links."""
         self._populate_tas()
 
         all_tas = [t for t in database.get_all_tas()
@@ -197,7 +180,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
             self.assertEqual(by_id[_ta_id(i)]['courses'], 'COS 2XX')
 
     def test_02_enqueue_many_students(self):
-        """Enqueue many students and verify queue ordering and counts."""
+        """Enqueued students appear in the queue in insertion order."""
         order = self._populate_students()
 
         queue = database.get_queue_students()
@@ -205,24 +188,17 @@ class ManyToManyTigerTATests(unittest.TestCase):
                  if q['student_netid'].startswith(TEST_PREFIX)]
         self.assertEqual(len(queue), len(order))
 
-        # Queue numbers should be 1..N strictly increasing
         for i, q in enumerate(queue, start=1):
             self.assertEqual(q['queue_number'], i)
 
-        # Insertion order should match queue order
         for (sid, _course), q in zip(order, queue):
             self.assertEqual(q['student_netid'], sid)
 
     def test_03_find_student_place_per_course(self):
-        """find_student_place should be per-course (with COS 226/217
-        sharing a combined 2XX queue) and 1-indexed.
-
-        The shared database may have real students queued ahead of
-        ours, so we count rows ahead at assertion time and assert
-        relative to that baseline."""
+        """find_student_place is per-course, with 226 and 217 sharing
+        one combined 2XX queue."""
         self._populate_students()
 
-        # find_student_place treats 226 and 217 as one combined queue.
         QUEUE_OF = {
             'COS 126': ('COS 126',),
             'COS 226': ('COS 226', 'COS 217'),
@@ -230,9 +206,8 @@ class ManyToManyTigerTATests(unittest.TestCase):
         }
 
         def _expected_place(course, sid):
-            """Count rows ahead of `sid` (inclusive of itself) in the
-            queue that find_student_place uses, by reading the same
-            rows directly from the session table."""
+            """Compute sid's expected place by reading the session
+            table directly."""
             queue_courses = QUEUE_OF[course]
             placeholders = ','.join(['%s'] * len(queue_courses))
             with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
@@ -269,7 +244,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
             _expected_place('COS 217', first_217))
 
     def test_04_already_in_queue_detection(self):
-        """student_already_in_queue distinguishes 3 states."""
+        """student_already_in_queue distinguishes the 3 states."""
         sid = _student_id(1)
         self.assertEqual(
             database.student_already_in_queue(sid), 'DoesNotExist')
@@ -283,43 +258,36 @@ class ManyToManyTigerTATests(unittest.TestCase):
             database.student_already_in_queue(sid), 'InQueue')
 
     def test_05_126_ta_only_matches_126_students(self):
-        """A COS 126 TA must never be matched with a 226/217 student."""
+        """A 126 TA never matches a 226/217 student."""
         self._populate_tas()
-        # Only 2XX students in queue
         self._populate_students(n_126=0, n_226=3, n_217=2)
 
-        ta_netid = _ta_id(1)  # this is a 126 TA
+        ta_netid = _ta_id(1)
         result = database.match(ta_netid)
-        self.assertIsNone(
-            result,
-            '126 TA should not match when no 126 students are queued')
+        self.assertIsNone(result)
 
     def test_06_2xx_ta_overflow_helps_126(self):
-        """When no 2XX students are queued, a 2XX TA may pick up a 126
-        student (overflow handling)."""
+        """A 2XX TA picks up a 126 student when no 2XX students are
+        queued."""
         self._populate_tas()
         self._populate_students(n_126=3, n_226=0, n_217=0)
 
-        ta_netid = _ta_id(TA_LINEUP_126 + 1)  # first 2XX TA
+        ta_netid = _ta_id(TA_LINEUP_126 + 1)
 
-        self.assertTrue(
-            database.detect_overflow(),
-            'overflow should be true with no 2XX students')
+        self.assertTrue(database.detect_overflow())
 
         session_id = database.match(ta_netid)
-        self.assertIsNotNone(
-            session_id,
-            '2XX TA should match a 126 student during overflow')
+        self.assertIsNotNone(session_id)
 
         info = database.get_session_info_ta(ta_netid)
         self.assertIsNotNone(info)
         self.assertEqual(info['course'], 'COS 126')
 
     def test_07_2xx_ta_prefers_2xx_when_available(self):
-        """When 2XX students are present, a 2XX TA must take a 2XX
-        student first, even if 126 students were enqueued earlier."""
+        """A 2XX TA picks a 2XX student first, even if 126 students
+        joined the queue earlier."""
         self._populate_tas()
-        # 5 126 students enqueued first, then 2 226 students
+        # 5 126 students first, then 2 226 students.
         for i in range(1, 6):
             database.queue_entry({
                 'student_netid': _student_id(i),
@@ -333,20 +301,15 @@ class ManyToManyTigerTATests(unittest.TestCase):
                 'assignment': 'a1', 'bug_description': '.',
             })
 
-        ta_netid = _ta_id(TA_LINEUP_126 + 1)  # a 2XX TA
-        self.assertFalse(
-            database.detect_overflow(),
-            'overflow should be false when 2XX students exist')
+        ta_netid = _ta_id(TA_LINEUP_126 + 1)
+        self.assertFalse(database.detect_overflow())
 
         database.match(ta_netid)
         info = database.get_session_info_ta(ta_netid)
-        self.assertEqual(
-            info['course'], 'COS 226',
-            '2XX TA must pick a 2XX student before any 126 students')
+        self.assertEqual(info['course'], 'COS 226')
 
     def test_08_full_match_cycle_many_to_many(self):
-        """Many-to-many cycle: many TAs each grab one student, then end
-        the session. Exercises add/match/end/cleanup paths together."""
+        """Many TAs match many students, all sessions end cleanly."""
         self._populate_tas()
         order = self._populate_students()
 
@@ -356,9 +319,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
             if session_id is not None:
                 matched_ta_count += 1
 
-        self.assertEqual(
-            matched_ta_count, TA_LINEUP_126,
-            'every 126 TA should match (more 126 students than TAs)')
+        self.assertEqual(matched_ta_count, TA_LINEUP_126)
 
         remaining = [q for q in database.get_queue_students()
                      if q['student_netid'].startswith(TEST_PREFIX)]
@@ -368,14 +329,12 @@ class ManyToManyTigerTATests(unittest.TestCase):
                   if s['ta_netid'].startswith(TEST_PREFIX)]
         self.assertEqual(len(active), matched_ta_count)
 
-        # End every session
         for session in active:
             database.remove_session(session['student_netid'])
 
         active = [s for s in database.get_active_sessions()
                   if s['ta_netid'].startswith(TEST_PREFIX)]
-        self.assertEqual(
-            len(active), 0, 'all test sessions should be removed')
+        self.assertEqual(len(active), 0)
 
     def test_09_clock_in_clock_out_lifecycle(self):
         """Clock-in flips clocked_in to True; clock-out flips it back."""
@@ -385,20 +344,18 @@ class ManyToManyTigerTATests(unittest.TestCase):
         self.assertFalse(database.check_if_clocked_in(ta_netid))
         database.clock_in(ta_netid)
         self.assertTrue(database.check_if_clocked_in(ta_netid))
-        database.clock_out(ta_netid)  # googlesheet.log_shift mocked
+        database.clock_out(ta_netid)
         self.assertFalse(database.check_if_clocked_in(ta_netid))
 
     def test_10_get_num_on_shift_tas_per_course(self):
         """Counts of clocked-in TAs are scoped per course.
-
-        Uses baselines so this passes against a shared database that
-        may already have real TAs clocked in for either course."""
+        Uses baselines so the test works against a shared DB that
+        may already have real TAs clocked in."""
         base_126 = database.get_num_on_shift_tas('COS 126')
         base_2xx = database.get_num_on_shift_tas('COS 2XX')
 
         self._populate_tas()
 
-        # Clock in three 126 TAs and two 2XX TAs
         for i in range(1, 4):
             database.clock_in(_ta_id(i))
         for i in range(TA_LINEUP_126 + 1, TA_LINEUP_126 + 3):
@@ -410,7 +367,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
             database.get_num_on_shift_tas('COS 2XX'), base_2xx + 2)
 
     def test_11_remove_ta_cleans_up_courses(self):
-        """remove_ta deletes the TA and any ta_courses rows for them."""
+        """remove_ta deletes the TA and their ta_courses rows."""
         self._populate_tas()
         target = _ta_id(1)
 
@@ -425,8 +382,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
         self.assertEqual(len(after), 0)
 
     def test_12_edit_ta_updates_name_and_courses(self):
-        """edit_ta should change the TA's name and replace their
-        courses (deleting the old set and inserting the new one)."""
+        """edit_ta updates the TA's name and replaces their courses."""
         self._populate_tas()
         target = _ta_id(1)
 
@@ -440,8 +396,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
             all_tas[target]['courses'], 'COS 126, COS 2XX')
 
     def test_13_update_num_students_helped(self):
-        """update_num_students_helped should increment the counter on
-        the TA's open shift row."""
+        """update_num_students_helped increments the shift counter."""
         self._populate_tas()
         ta_netid = _ta_id(1)
         database.clock_in(ta_netid)
@@ -461,29 +416,22 @@ class ManyToManyTigerTATests(unittest.TestCase):
                 self.assertEqual(row[0], 3)
 
     def test_14_validate_ta_recognises_known_tas_only(self):
-        """validate_ta must return True for TAs we added and falsy for
-        any unknown netid."""
+        """validate_ta returns True for known TAs and False otherwise."""
         self._populate_tas()
 
         self.assertTrue(database.validate_ta(_ta_id(1)))
         self.assertFalse(database.validate_ta('nottrue1'))
 
-    # ------------------------------------------------------------------
-    # Coverage tests for the remaining helper functions in database.py.
-    # These exist mostly to drive every public function from the test
-    # suite so the coverage report reflects real exercise of the data
-    # layer (not just the many-to-many flow).
-    # ------------------------------------------------------------------
     def test_15_get_session_info_student_and_ta_name(self):
-        """After matching, both student-side helpers return the right
-        info: get_session_info_student gives course/bug/session_id and
-        get_session_ta_name gives the TA's display name."""
+        """After matching, get_session_info_student returns the right
+        course/bug/session_id and get_session_ta_name returns the TA's
+        name."""
         self._populate_tas()
         self._populate_students(n_126=1, n_226=0, n_217=0)
         ta_netid = _ta_id(1)
         student_netid = _student_id(1)
 
-        # Before match: no session info / no TA name
+        # Pre-match: no TA name yet.
         self.assertIsNone(database.get_session_ta_name(student_netid))
 
         database.match(ta_netid)
@@ -498,12 +446,11 @@ class ManyToManyTigerTATests(unittest.TestCase):
         self.assertEqual(ta_name, 'TA 1')
 
     def test_16_notify_next_in_line_sets_flag(self):
-        """notify_next_in_line should mark the front-of-line student's
-        notified_next flag in the session table."""
+        """notify_next_in_line sets the notified_next flag on the
+        front-of-line student."""
         self._populate_students(n_126=2, n_226=0, n_217=0)
         front = _student_id(1)
 
-        # Initially notified_next is False (default)
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -520,20 +467,16 @@ class ManyToManyTigerTATests(unittest.TestCase):
                     "WHERE student_netid = %s", (front,))
                 self.assertTrue(cur.fetchone()[0])
 
-        # Calling again is a no-op (already notified) -- exercises the
-        # early-return branch.
+        # Already notified -- should be a no-op.
         database.notify_next_in_line('COS 126')
-
-        # On an empty queue it should also early-return without error.
+        # Empty queue -- should not raise.
         database.notify_next_in_line('COS 126 NONEXISTENT')
 
     def test_17_set_available_flips_flag(self):
-        """set_available should flip a TA's available flag back to
-        TRUE (used after match completes)."""
+        """set_available flips the TA's available flag back to TRUE."""
         self._populate_tas()
         ta_netid = _ta_id(1)
 
-        # Manually set TA to unavailable (simulating mid-match state)
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -551,8 +494,7 @@ class ManyToManyTigerTATests(unittest.TestCase):
                 self.assertTrue(cur.fetchone()[0])
 
     def test_18_get_time_session_began(self):
-        """After a match, time_session_began is set (not NULL); on a
-        bogus session id, the function returns None."""
+        """time_session_began is set after a match; bogus id returns None."""
         self._populate_tas()
         self._populate_students(n_126=1, n_226=0, n_217=0)
         session_id = database.match(_ta_id(1))
@@ -561,12 +503,10 @@ class ManyToManyTigerTATests(unittest.TestCase):
         ts = database.get_time_session_began(session_id)
         self.assertIsNotNone(ts)
 
-        # Bogus id -> None
         self.assertIsNone(database.get_time_session_began(-1))
 
     def test_19_student_already_in_queue_in_session_state(self):
-        """student_already_in_queue should return 'InSession' once a
-        student has been matched with a TA."""
+        """student_already_in_queue returns 'InSession' after match."""
         self._populate_tas()
         self._populate_students(n_126=1, n_226=0, n_217=0)
         student_netid = _student_id(1)
@@ -580,9 +520,8 @@ class ManyToManyTigerTATests(unittest.TestCase):
             database.student_already_in_queue(student_netid), 'InSession')
 
     def test_20_validate_admin(self):
-        """validate_admin returns True for rows in the admin table and
-        False for unknown netids. We add and remove a test admin row
-        directly so we don't depend on production admin data."""
+        """validate_admin returns True for admin rows and False for
+        unknown netids."""
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -606,17 +545,14 @@ class ManyToManyTigerTATests(unittest.TestCase):
                     conn.commit()
 
     def test_21_match_returns_none_when_queue_empty(self):
-        """If a TA tries to match with an empty queue, match() should
-        return None (covers the empty-queue early return paths)."""
-        self._populate_tas()  # TAs but no students
-        self.assertIsNone(database.match(_ta_id(1)))                # 126 TA
-        self.assertIsNone(
-            database.match(_ta_id(TA_LINEUP_126 + 1)))              # 2XX TA
+        """match() returns None when the queue is empty."""
+        self._populate_tas()
+        self.assertIsNone(database.match(_ta_id(1)))
+        self.assertIsNone(database.match(_ta_id(TA_LINEUP_126 + 1)))
 
     def test_22_get_num_on_shift_tas_normalises_2xx(self):
-        """Calling get_num_on_shift_tas with 'COS 226' or 'COS 217'
-        should yield the same count as 'COS 2XX' (the function
-        normalises both into the combined 2XX bucket)."""
+        """get_num_on_shift_tas treats 'COS 226' and 'COS 217' as
+        'COS 2XX'."""
         base_2xx = database.get_num_on_shift_tas('COS 2XX')
         base_226 = database.get_num_on_shift_tas('COS 226')
         base_217 = database.get_num_on_shift_tas('COS 217')
@@ -632,15 +568,20 @@ class ManyToManyTigerTATests(unittest.TestCase):
         self.assertEqual(
             database.get_num_on_shift_tas('COS 217'), base_2xx + 2)
 
-    # ------------------------------------------------------------------
-    # Coverage tests for early-return / invalid-input branches.
-    # These exist to push coverage on the defensive checks scattered
-    # throughout database.py (rejecting bad courses, returning None /
-    # False when the target row doesn't exist, etc).
-    # ------------------------------------------------------------------
+    # =================================================================
+    # Database-layer coverage tests  (tests 23-32)
+    # =================================================================
+    # These tests aim every defensive branch in database.py at a
+    # bad input: unknown netIDs, courses TigerTA doesn't support,
+    # students who aren't queued, TAs who aren't clocked in, and
+    # rows that don't exist. Instead of checking the happy path,
+    # they make sure the database returns False / None / an empty
+    # result and leaves state untouched, so a malformed request can
+    # never crash a route or corrupt the queue.
+    # =================================================================
+
     def test_23_queue_entry_rejects_invalid_course(self):
-        """queue_entry must return False if the course isn't one of
-        the three courses TigerTA supports."""
+        """queue_entry returns False for an unknown course."""
         ok = database.queue_entry({
             'student_netid': _student_id(1),
             'student_name': 'Bad Course',
@@ -648,60 +589,43 @@ class ManyToManyTigerTATests(unittest.TestCase):
             'assignment': 'a1',
             'bug_description': 'x',
         })
-        self.assertFalse(
-            ok, 'queue_entry should reject unknown courses')
+        self.assertFalse(ok)
 
-        # And the student should not have ended up in the queue.
         queue = [q for q in database.get_queue_students()
                  if q['student_netid'].startswith(TEST_PREFIX)]
         self.assertEqual(len(queue), 0)
 
     def test_24_match_returns_none_for_unknown_ta(self):
-        """match() must return None when the ta_netid isn't a known
-        TA (no row in ta_courses)."""
-        # No TAs added at all; the netid we pass simply doesn't exist.
+        """match() returns None for an unknown ta_netid."""
         self.assertIsNone(database.match(f'{TEST_PREFIX}nope1'))
 
     def test_25_add_ta_rejects_invalid_course(self):
-        """add_ta must return False for courses other than 'COS 126'
-        or 'COS 2XX' (and must not insert a TA row)."""
+        """add_ta returns False and inserts nothing for an invalid course."""
         ok = database.add_ta(
             f'{TEST_PREFIX}badc1', 'Bad Course TA',
             f'{TEST_PREFIX}badc1@princeton.edu', 'COS 999')
-        self.assertFalse(
-            ok, 'add_ta should reject unsupported courses')
+        self.assertFalse(ok)
 
-        # Verify the TA was not inserted.
         all_tas = database.get_all_tas()
         self.assertNotIn(
             f'{TEST_PREFIX}badc1',
             [t['ta_netid'] for t in all_tas])
 
     def test_26_clock_in_returns_false_for_unknown_ta(self):
-        """clock_in must return False when no TA row matches (the
-        rowcount == 0 branch)."""
-        result = database.clock_in(f'{TEST_PREFIX}nope2')
-        self.assertFalse(
-            result, 'clock_in should fail for an unknown TA')
+        """clock_in returns False for an unknown TA."""
+        self.assertFalse(database.clock_in(f'{TEST_PREFIX}nope2'))
 
     def test_27_clock_out_returns_false_for_unknown_ta(self):
-        """clock_out must return False when no TA row matches (the
-        rowcount == 0 branch)."""
-        result = database.clock_out(f'{TEST_PREFIX}nope3')
-        self.assertFalse(
-            result, 'clock_out should fail for an unknown TA')
+        """clock_out returns False for an unknown TA."""
+        self.assertFalse(database.clock_out(f'{TEST_PREFIX}nope3'))
 
     def test_28_clock_out_deletes_shift_when_log_succeeds(self):
-        """When googlesheet.log_shift reports success, clock_out
-        should DELETE the TA's shift row from the database (covers
-        the success-path branch in clock_out)."""
+        """When log_shift returns True, clock_out deletes the shift row."""
         self._populate_tas()
         ta_netid = _ta_id(1)
         database.clock_in(ta_netid)
 
-        # Temporarily make log_shift report success so clock_out
-        # takes the "delete the shift row" branch. Restore in finally
-        # so we don't leak state into other tests.
+        # Patch log_shift to return True for this test only.
         original = googlesheet.log_shift
         googlesheet.log_shift = lambda *a, **kw: True
         try:
@@ -709,7 +633,6 @@ class ManyToManyTigerTATests(unittest.TestCase):
         finally:
             googlesheet.log_shift = original
 
-        # After a successful log, the shift row should be gone.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -718,14 +641,12 @@ class ManyToManyTigerTATests(unittest.TestCase):
                 self.assertEqual(cur.fetchone()[0], 0)
 
     def test_29_get_session_info_student_returns_none_for_unknown(self):
-        """get_session_info_student must return None when the student
-        isn't in the queue or any session."""
+        """get_session_info_student returns None for an unknown student."""
         self.assertIsNone(
             database.get_session_info_student(f'{TEST_PREFIX}nope4'))
 
     def test_30_get_session_ta_name_pre_match_returns_none(self):
-        """get_session_ta_name must return None for a student who is
-        in the queue but has not yet been matched to a TA."""
+        """get_session_ta_name returns None for a queued, unmatched student."""
         sid = _student_id(1)
         database.queue_entry({
             'student_netid': sid, 'student_name': 'Solo',
@@ -735,56 +656,45 @@ class ManyToManyTigerTATests(unittest.TestCase):
         self.assertIsNone(database.get_session_ta_name(sid))
 
     def test_31_remove_session_returns_false_for_unknown_student(self):
-        """remove_session must return False when there's no session
-        or student row to remove (numRowsDeleted stays 0)."""
-        result = database.remove_session(f'{TEST_PREFIX}nope5')
-        self.assertFalse(
-            result, 'remove_session should be False when nothing was '
-            'deleted')
+        """remove_session returns False when nothing was deleted."""
+        self.assertFalse(database.remove_session(f'{TEST_PREFIX}nope5'))
 
     def test_32_remove_ta_returns_false_for_unknown_ta(self):
-        """remove_ta must return False when no rows in any of the
-        TA-related tables match."""
-        result = database.remove_ta(f'{TEST_PREFIX}nope6')
-        self.assertFalse(
-            result, 'remove_ta should be False when nothing was '
-            'deleted')
+        """remove_ta returns False when nothing was deleted."""
+        self.assertFalse(database.remove_ta(f'{TEST_PREFIX}nope6'))
 
 
-# ---------------------------------------------------------------------
-# Stress tests
-# ---------------------------------------------------------------------
-# These tests push the database layer with high volume and concurrent
-# operations. They check:
-#   * High-volume enqueue + drain still produces correct ordering and
-#     counts, and finishes within a reasonable time budget.
-#   * Concurrent match() calls never assign the same student to two TAs
-#     and never produce duplicate active sessions.
-#   * Concurrent queue_entry() calls all land in the queue with unique
-#     session_ids and contiguous queue numbers.
-#
-# Sizes are tuned to be meaningful but to also fit in an 8-character
-# netID (matches the rest of the suite, which uses tstta001 / tstst001
-# style ids) and to keep total runtime reasonable on a shared database.
-# ---------------------------------------------------------------------
+# =====================================================================
+# Stress tests  (3 tests)
+# =====================================================================
+# These tests push the database layer past the volume and timing
+# patterns the functional tests use, to surface any bug that only
+# shows up under load.
+#   * High-volume drain: 18 TAs working through a queue of ~125
+#     students. Confirms that with many rounds of matches and session
+#     teardowns the queue still drains completely, no student is
+#     matched twice, and the totals add up.
+#   * Concurrent match: 15 TAs all call match() at the same moment.
+#     Catches race conditions where two TAs could otherwise grab the
+#     same student or one TA could end up in two active sessions.
+#   * Concurrent enqueue: 40 students hit queue_entry() in parallel.
+#     Verifies every insert lands, session IDs stay unique, and the
+#     queue numbers come out as a contiguous 1..N.
+# =====================================================================
 
-STRESS_TA_126 = 10      # number of COS 126 TAs for stress runs
-STRESS_TA_2XX = 8       # number of COS 2XX TAs for stress runs
+STRESS_TA_126 = 10
+STRESS_TA_2XX = 8
 STRESS_STUDENTS_126 = 60
 STRESS_STUDENTS_226 = 40
 STRESS_STUDENTS_217 = 25
 
-CONCURRENT_TAS = 15          # threads racing to match() at once
-CONCURRENT_STUDENTS = 30     # students available to those TAs
-CONCURRENT_ENQUEUE = 40      # threads racing to queue_entry() at once
+CONCURRENT_TAS = 15
+CONCURRENT_STUDENTS = 30
+CONCURRENT_ENQUEUE = 40
 
 
 class StressTigerTATests(unittest.TestCase):
-    """Stress / load tests for the database layer.
-
-    Reuses the same 'tst' netID prefix and cleanup machinery as
-    ManyToManyTigerTATests so it stays hermetic on a shared database.
-    """
+    """High-volume and concurrent tests for the database layer."""
 
     @classmethod
     def setUpClass(cls):
@@ -796,10 +706,6 @@ class StressTigerTATests(unittest.TestCase):
 
     def setUp(self):
         _cleanup_test_rows()
-        # Same safety guard as ManyToManyTigerTATests: refuse to run
-        # against a database that already has real (non-test) sessions
-        # in the queue, because match() looks at the entire queue and
-        # could pull a real student into a test session.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -809,14 +715,10 @@ class StressTigerTATests(unittest.TestCase):
                 live = cur.fetchone()[0]
                 if live > 0:
                     self.skipTest(
-                        f'Refusing to run stress test: {live} non-test '
-                        f'session(s) exist in the queue.')
+                        f'{live} non-test session(s) in queue.')
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
     def _populate_stress_tas(self):
-        """Add STRESS_TA_126 + STRESS_TA_2XX TAs at once."""
+        """Add STRESS_TA_126 + STRESS_TA_2XX TAs."""
         for i in range(1, STRESS_TA_126 + 1):
             database.add_ta(
                 _ta_id(i), f'TA {i}',
@@ -828,8 +730,7 @@ class StressTigerTATests(unittest.TestCase):
                 f'{_ta_id(i)}@princeton.edu', 'COS 2XX')
 
     def _populate_stress_students(self, n_126, n_226, n_217):
-        """Enqueue (n_126 + n_226 + n_217) students with an
-        interleaved course mix so the queue isn't trivially sorted."""
+        """Enqueue (n_126 + n_226 + n_217) students, interleaved."""
         idx = 1
         for k in range(max(n_126, n_226, n_217)):
             for course, total in [
@@ -847,16 +748,11 @@ class StressTigerTATests(unittest.TestCase):
                         'bug_description': f'help with {course} #{idx}',
                     })
                     idx += 1
-        return idx - 1   # total students enqueued
+        return idx - 1
 
-    # ------------------------------------------------------------------
-    # Stress tests
-    # ------------------------------------------------------------------
     def test_stress_01_high_volume_drain(self):
-        """Enqueue many students against many TAs and repeatedly call
-        match() until the queue is empty. Asserts correctness only
-        (no hard time budget, since database.py opens a fresh
-        connection per call and remote-DB latency dominates)."""
+        """Enqueue many students, repeatedly match TAs until the queue
+        is empty, and check that every student was matched exactly once."""
 
         t0 = time.monotonic()
         self._populate_stress_tas()
@@ -866,16 +762,12 @@ class StressTigerTATests(unittest.TestCase):
             STRESS_STUDENTS_217)
         enqueue_elapsed = time.monotonic() - t0
 
-        # Sanity: every test student we tried to enqueue is in the queue
         queue = [q for q in database.get_queue_students()
                  if q['student_netid'].startswith(TEST_PREFIX)]
         self.assertEqual(len(queue), total_enqueued)
 
-        # Drain: walk through every TA once. With 35 TAs and ~250
-        # students, the queue won't fully drain on a single pass --
-        # so we loop until either the queue is empty or no TA was able
-        # to match this round (overflow rules can leave 126-only TAs
-        # idle once 126 students are exhausted).
+        # Loop: each round, every TA tries to match. Stop when no TA
+        # matched (some 126-only TAs may end up idle).
         all_session_ids = []
         all_student_netids = []
         rounds = 0
@@ -884,11 +776,7 @@ class StressTigerTATests(unittest.TestCase):
             matched_this_round = 0
             for i in range(1, STRESS_TA_126 + STRESS_TA_2XX + 1):
                 ta_netid = _ta_id(i)
-                # Free up the TA before each match call (set_available
-                # flips them back to available so they can match again
-                # in the next round).
                 database.set_available(ta_netid)
-                # End any active session for this TA so they're free
                 info = database.get_session_info_ta(ta_netid)
                 if info is not None:
                     student = info.get('student_netid')
@@ -905,12 +793,8 @@ class StressTigerTATests(unittest.TestCase):
 
             if matched_this_round == 0:
                 break
-            self.assertLess(
-                rounds, 100,
-                'drain loop should never need this many rounds')
+            self.assertLess(rounds, 100)
 
-        # Tear down any remaining active sessions so we leave the
-        # queue/sessions in a known state.
         for i in range(1, STRESS_TA_126 + STRESS_TA_2XX + 1):
             ta_netid = _ta_id(i)
             info = database.get_session_info_ta(ta_netid)
@@ -919,44 +803,28 @@ class StressTigerTATests(unittest.TestCase):
 
         elapsed = time.monotonic() - t0
 
-        # Every student the system handed out should be unique --
-        # nobody got matched twice.
         self.assertEqual(
             len(all_student_netids), len(set(all_student_netids)),
-            'stress drain handed the same student to two TAs')
+            'a student was matched to two TAs')
 
-        # We should have matched as many students as we enqueued (or
-        # extremely close, accounting for 126-TA-only-can-help-126
-        # rules -- but our mix has more 126 students than 126 TAs, so
-        # everyone should ultimately match).
         self.assertEqual(
             len(all_student_netids), total_enqueued,
-            f'enqueued {total_enqueued} but only matched '
+            f'enqueued {total_enqueued} but matched '
             f'{len(all_student_netids)}')
 
-        # And the queue is empty of test students.
         leftover = [q for q in database.get_queue_students()
                     if q['student_netid'].startswith(TEST_PREFIX)]
         self.assertEqual(len(leftover), 0)
 
-        # Print timing as a soft signal -- not asserted, since wall
-        # clock depends entirely on the remote DB's network latency.
         print(
             f'\n[stress_01 timing] enqueue {total_enqueued} students: '
-            f'{enqueue_elapsed:.1f}s | full drain + cleanup: '
+            f'{enqueue_elapsed:.1f}s | drain + cleanup: '
             f'{elapsed:.1f}s')
 
     def test_stress_02_concurrent_match_no_double_assignment(self):
-        """Spawn many threads each calling match() at the same time.
+        """Many TAs call match() at the same time. No student should
+        be assigned to two TAs."""
 
-        The critical invariant: no student may be assigned to two
-        different TAs in the session table, even under contention.
-        match() reads the front of the queue and writes the assignment
-        in two separate statements with no row lock, so this is the
-        most likely place a real concurrency bug would show up."""
-
-        # Set up: enough TAs and students that all TAs would *want*
-        # to match if there were no contention.
         for i in range(1, CONCURRENT_TAS + 1):
             database.add_ta(
                 _ta_id(i), f'TA {i}',
@@ -970,7 +838,6 @@ class StressTigerTATests(unittest.TestCase):
                 'bug_description': f'concurrent match #{i}',
             })
 
-        # All TAs race to match at the same time.
         ta_netids = [_ta_id(i) for i in range(1, CONCURRENT_TAS + 1)]
         results = []
         with concurrent.futures.ThreadPoolExecutor(
@@ -979,9 +846,7 @@ class StressTigerTATests(unittest.TestCase):
             for f in concurrent.futures.as_completed(futures):
                 results.append(f.result())
 
-        # ----- Invariant 1: no duplicate active sessions per student
-        # Read every active session in the test slice and assert each
-        # student_netid appears at most once.
+        # No student or TA should appear in two active sessions.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -994,33 +859,21 @@ class StressTigerTATests(unittest.TestCase):
         active_students = [row[0] for row in active]
         active_tas = [row[1] for row in active]
         self.assertEqual(
-            len(active_students), len(set(active_students)),
-            'concurrent match() assigned the same student to two TAs')
-        self.assertEqual(
-            len(active_tas), len(set(active_tas)),
-            'concurrent match() put the same TA in two sessions')
+            len(active_students), len(set(active_students)))
+        self.assertEqual(len(active_tas), len(set(active_tas)))
 
-        # ----- Invariant 2: count sanity
-        # We had CONCURRENT_TAS TAs and CONCURRENT_STUDENTS students
-        # available; the number of active sessions can't exceed
-        # min(TAs, students).
+        # Active sessions can't exceed min(TAs, students).
         self.assertLessEqual(
             len(active),
-            min(CONCURRENT_TAS, CONCURRENT_STUDENTS),
-            'more active sessions than TAs/students should allow')
+            min(CONCURRENT_TAS, CONCURRENT_STUDENTS))
 
-        # ----- Invariant 3: returned session_ids point at real, unique
-        # session rows when non-None.
+        # match() should return unique session_ids.
         successful = [r for r in results if r is not None]
-        self.assertEqual(
-            len(successful), len(set(successful)),
-            'match() returned the same session_id from two different '
-            'concurrent calls')
+        self.assertEqual(len(successful), len(set(successful)))
 
     def test_stress_03_concurrent_enqueue(self):
-        """Many students enqueue at the same instant. All of them
-        should land in the queue, each with a unique session_id and
-        contiguous 1..N queue_numbers in the test slice."""
+        """Many students enqueue at once. All land in the queue with
+        unique session_ids and contiguous 1..N queue numbers."""
 
         def _enqueue_one(i):
             database.queue_entry({
@@ -1036,12 +889,10 @@ class StressTigerTATests(unittest.TestCase):
                 max_workers=20) as pool:
             list(pool.map(_enqueue_one, ids))
 
-        # All students made it in.
         queue = [q for q in database.get_queue_students()
                  if q['student_netid'].startswith(TEST_PREFIX)]
         self.assertEqual(len(queue), CONCURRENT_ENQUEUE)
 
-        # All session_ids are unique (no duplicate row insertion).
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -1052,41 +903,36 @@ class StressTigerTATests(unittest.TestCase):
 
         session_ids = [r[0] for r in rows]
         student_netids = [r[1] for r in rows]
-        self.assertEqual(
-            len(session_ids), len(set(session_ids)),
-            'duplicate session_ids after concurrent enqueue')
-        self.assertEqual(
-            len(student_netids), len(set(student_netids)),
-            'duplicate student rows after concurrent enqueue')
+        self.assertEqual(len(session_ids), len(set(session_ids)))
+        self.assertEqual(len(student_netids), len(set(student_netids)))
 
-        # queue_numbers in the test slice should be 1..N.
         nums = sorted(q['queue_number'] for q in queue)
         self.assertEqual(nums, list(range(1, CONCURRENT_ENQUEUE + 1)))
 
 
-# ---------------------------------------------------------------------
-# Route handler tests
-# ---------------------------------------------------------------------
-# These tests exercise the Flask route handlers in student.py, ta.py,
-# and admin.py through Flask's test client. CAS authentication is
-# bypassed by injecting a username into the session (the same effect
-# auth.authenticate() has after a successful CAS round trip), and
-# CSRF protection is disabled for the test app (Flask-WTF supports
-# this via the WTF_CSRF_ENABLED config flag).
+# =====================================================================
+# Flask route tests  (47 tests)
+# =====================================================================
+# These tests drive TigerTA through Flask's test client, hitting the
+# real route handlers in student.py, ta.py, and admin.py. Every
+# user-facing workflow is covered end-to-end:
+#   * Student: home page, role selection, joining the queue,
+#     polling for a match, entering a session, leaving the queue,
+#     submitting feedback, and ending the session.
+#   * TA: work hub, clock in / clock out, starting a session,
+#     in-session view, and ending a session.
+#   * Admin: admin page, adding / editing / removing TAs, including
+#     each error redirect (?error=ta_not_added, etc.).
+# Both the success paths and the error-redirect branches are
+# exercised, so a regression in any handler shows up here before it
+# reaches a real user.
 #
-# Notes:
-# * The route handlers' before_request hooks redirect HTTP -> HTTPS
-#   unless the URL contains 'localhost:' (with a port). Flask's test
-#   client uses 'http://localhost/' by default (no port), so every
-#   request below is sent with base_url='http://localhost:5000' to
-#   keep the handlers in their happy path.
-# * googlesheet.log_feedback was mocked at the top of this file so
-#   feedback-submitting routes don't write to the real Sheet.
-# * The test app's secret_key is force-set so sessions work even if
-#   APP_SECRET_KEY isn't in the environment.
-# ---------------------------------------------------------------------
+# CAS auth is bypassed by writing a username straight into the
+# session, CSRF is disabled, and every request uses a base_url with
+# a port so the before_request HTTP->HTTPS redirect doesn't fire.
+# =====================================================================
 
-import app as _app_module  # noqa: E402  -- import after database mocks
+import app as _app_module
 _flask_app = _app_module.app
 _flask_app.config['TESTING'] = True
 _flask_app.config['WTF_CSRF_ENABLED'] = False
@@ -1097,8 +943,7 @@ _TEST_BASE_URL = 'http://localhost:5000'
 
 
 class RouteTests(unittest.TestCase):
-    """End-to-end-ish tests for the Flask route handlers in
-    student.py, ta.py, and admin.py."""
+    """Tests for the Flask route handlers."""
 
     @classmethod
     def setUpClass(cls):
@@ -1111,9 +956,6 @@ class RouteTests(unittest.TestCase):
     def setUp(self):
         _cleanup_test_rows()
         self.client = _flask_app.test_client()
-        # Same safety guard as the other test classes: refuse to run
-        # if a non-test session is in the queue, because some route
-        # tests call match() which would scan the full queue.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -1123,15 +965,10 @@ class RouteTests(unittest.TestCase):
                 live = cur.fetchone()[0]
                 if live > 0:
                     self.skipTest(
-                        f'Refusing to run route tests: {live} non-test '
-                        f'session(s) exist in the queue.')
+                        f'{live} non-test session(s) in queue.')
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
     def _login_as(self, netid):
-        """Inject a username into the Flask session as if CAS had
-        just successfully authenticated this user."""
+        """Set the session username (skip CAS)."""
         with self.client.session_transaction() as sess:
             sess['username'] = netid
 
@@ -1143,56 +980,48 @@ class RouteTests(unittest.TestCase):
         return self.client.post(
             path, base_url=_TEST_BASE_URL, **kwargs)
 
-    # ------------------------------------------------------------------
-    # student.py routes
-    # ------------------------------------------------------------------
     def test_route_01_homepage_returns_200(self):
-        """GET / and GET /home both render the homepage template
-        with a 200 response."""
+        """GET / and GET /home render the homepage."""
         for path in ('/', '/home'):
             r = self._get(path)
             self.assertEqual(r.status_code, 200, f'{path} not 200')
 
     def test_route_02_roleselection_get_renders(self):
-        """GET /roleselection (when already logged in) renders the
-        role selection template."""
+        """GET /roleselection renders for a logged-in user."""
         self._login_as(f'{TEST_PREFIX}stu1')
         r = self._get('/roleselection')
         self.assertEqual(r.status_code, 200)
 
     def test_route_03_roleselection_post_student_redirects_to_queueentry(self):
-        """A logged-in user picking the 'student' role with no
-        existing session is redirected to /queueentry."""
+        """Picking 'student' redirects to /queueentry."""
         self._login_as(f'{TEST_PREFIX}stu2')
         r = self._post('/roleselection', data={'role': 'Student'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('/queueentry', r.headers['Location'])
 
     def test_route_04_roleselection_post_ta_for_non_ta_redirects_with_error(self):
-        """A logged-in user picking the 'TA' role who isn't actually
-        a TA is bounced back to /roleselection with ?error=not_ta."""
+        """A non-TA picking 'TA' is redirected with error=not_ta."""
         self._login_as(f'{TEST_PREFIX}stu3')
         r = self._post('/roleselection', data={'role': 'TA'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('error=not_ta', r.headers['Location'])
 
     def test_route_05_roleselection_post_admin_for_non_admin_redirects_with_error(self):
-        """A logged-in user picking the 'Admin' role who isn't an
-        admin is bounced back with ?error=not_admin."""
+        """A non-admin picking 'Admin' is redirected with error=not_admin."""
         self._login_as(f'{TEST_PREFIX}stu4')
         r = self._post('/roleselection', data={'role': 'Admin'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('error=not_admin', r.headers['Location'])
 
     def test_route_06_queueentry_get_renders(self):
-        """GET /queueentry renders the queue entry form."""
+        """GET /queueentry renders the form."""
         self._login_as(f'{TEST_PREFIX}stu5')
         r = self._get('/queueentry')
         self.assertEqual(r.status_code, 200)
 
     def test_route_07_queueentry_post_inserts_into_queue(self):
-        """Submitting /queueentry with valid form data inserts the
-        student into the database and redirects to /queuestatus."""
+        """A valid /queueentry POST adds the student and redirects
+        to /queuestatus."""
         netid = f'{TEST_PREFIX}stu6'
         self._login_as(netid)
         r = self._post('/queueentry', data={
@@ -1203,22 +1032,19 @@ class RouteTests(unittest.TestCase):
         })
         self.assertEqual(r.status_code, 302)
         self.assertIn('/queuestatus', r.headers['Location'])
-        # And the student is actually in the queue now.
         queue = [q for q in database.get_queue_students()
                  if q['student_netid'] == netid]
         self.assertEqual(len(queue), 1)
 
     def test_route_08_queuestatus_redirects_to_queueentry_when_no_session(self):
-        """GET /queuestatus for a student with no active session
-        sends them to /queueentry."""
+        """A student with no session is sent from /queuestatus to /queueentry."""
         self._login_as(f'{TEST_PREFIX}stu7')
         r = self._get('/queuestatus')
         self.assertEqual(r.status_code, 302)
         self.assertIn('/queueentry', r.headers['Location'])
 
     def test_route_09_trymatch_returns_json_for_unknown_student(self):
-        """GET /trymatch for a student not in the database returns
-        the JSON shape expected by the front end."""
+        """/trymatch returns the expected JSON for an unknown student."""
         self._login_as(f'{TEST_PREFIX}stu8')
         r = self._get('/trymatch')
         self.assertEqual(r.status_code, 200)
@@ -1227,22 +1053,20 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(body['in_database'], False)
 
     def test_route_10_insessionstudent_redirects_when_no_session(self):
-        """GET /insessionstudent for a student with no session is
-        bounced to /endsessionstudent."""
+        """A student with no session is sent from /insessionstudent to
+        /endsessionstudent."""
         self._login_as(f'{TEST_PREFIX}stu9')
         r = self._get('/insessionstudent')
         self.assertEqual(r.status_code, 302)
         self.assertIn('/endsessionstudent', r.headers['Location'])
 
     def test_route_11_endsessionstudent_get_renders(self):
-        """GET /endsessionstudent renders the end-session template
-        even with no cookie / query state."""
+        """GET /endsessionstudent renders without state."""
         r = self._get('/endsessionstudent')
         self.assertEqual(r.status_code, 200)
 
     def test_route_12_submit_feedback_logs_and_redirects(self):
-        """POST /submitfeedback writes to googlesheet.log_feedback
-        (which is mocked) and redirects to the end-session page."""
+        """POST /submitfeedback redirects to /endsessionstudent."""
         r = self._post('/submitfeedback', data={
             'rating': '5',
             'feedback_text': 'Great help!',
@@ -1251,11 +1075,8 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 302)
         self.assertIn('/endsessionstudent', r.headers['Location'])
 
-    # ------------------------------------------------------------------
-    # ta.py routes
-    # ------------------------------------------------------------------
     def test_route_13_workhub_get_renders_for_ta(self):
-        """A clocked-out TA hitting /workhub gets the work-hub page."""
+        """A clocked-out TA gets the /workhub page."""
         ta_netid = f'{TEST_PREFIX}ta01'
         database.add_ta(
             ta_netid, 'Work Hub TA',
@@ -1265,8 +1086,7 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
 
     def test_route_14_workhub_post_clock_in_succeeds(self):
-        """POST /workhub action=clock_in for a real TA succeeds and
-        redirects back to /workhub."""
+        """POST clock_in for a real TA succeeds."""
         ta_netid = f'{TEST_PREFIX}ta02'
         database.add_ta(
             ta_netid, 'Clocker',
@@ -1278,16 +1098,14 @@ class RouteTests(unittest.TestCase):
         self.assertTrue(database.check_if_clocked_in(ta_netid))
 
     def test_route_15_workhub_post_clock_in_for_unknown_ta_redirects_with_error(self):
-        """POST clock_in for an unknown TA hits the failure branch
-        and redirects with ?error=not_clocked_in."""
+        """POST clock_in for an unknown TA returns error=not_clocked_in."""
         self._login_as(f'{TEST_PREFIX}nope9')
         r = self._post('/workhub', data={'action': 'clock_in'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('error=not_clocked_in', r.headers['Location'])
 
     def test_route_16_workhub_status_returns_json(self):
-        """GET /workhub_status returns a JSON payload with the
-        keys the front end expects."""
+        """/workhub_status returns the expected JSON keys."""
         self._login_as(f'{TEST_PREFIX}ta03')
         r = self._get('/workhub_status')
         self.assertEqual(r.status_code, 200)
@@ -1297,32 +1115,25 @@ class RouteTests(unittest.TestCase):
         self.assertIn('active_sessions', body)
 
     def test_route_17_insessionta_redirects_when_no_session(self):
-        """A TA with no active session hitting /insessionta is
-        bounced to /workhub."""
+        """A TA with no session is sent from /insessionta to /workhub."""
         self._login_as(f'{TEST_PREFIX}ta04')
         r = self._get('/insessionta')
         self.assertEqual(r.status_code, 302)
         self.assertIn('/workhub', r.headers['Location'])
 
     def test_route_18_endsessionta_get_renders(self):
-        """GET /endsessionta renders the template without crashing
-        even when the student_name cookie isn't set."""
+        """GET /endsessionta renders without the student_name cookie."""
         self._login_as(f'{TEST_PREFIX}ta05')
         r = self._get('/endsessionta')
         self.assertEqual(r.status_code, 200)
 
-    # ------------------------------------------------------------------
-    # admin.py routes
-    # ------------------------------------------------------------------
     def test_route_19_adminpage_renders(self):
-        """GET /adminpage renders the admin template with the TA
-        list pulled from the database."""
+        """GET /adminpage renders with the TA list."""
         r = self._get('/adminpage')
         self.assertEqual(r.status_code, 200)
 
     def test_route_20_add_ta_post_succeeds(self):
-        """POST /add_ta with a valid form inserts the TA and
-        redirects back to /adminpage."""
+        """POST /add_ta inserts the TA and redirects to /adminpage."""
         ta_netid = f'{TEST_PREFIX}ta06'
         r = self._post('/add_ta', data={
             'ta_net_id': ta_netid,
@@ -1334,8 +1145,7 @@ class RouteTests(unittest.TestCase):
         self.assertTrue(database.validate_ta(ta_netid))
 
     def test_route_21_add_ta_post_invalid_course_redirects_with_error(self):
-        """POST /add_ta with an unsupported course hits the
-        failure branch and redirects with ?error=ta_not_added."""
+        """POST /add_ta with an invalid course returns error=ta_not_added."""
         ta_netid = f'{TEST_PREFIX}ta07'
         r = self._post('/add_ta', data={
             'ta_net_id': ta_netid,
@@ -1346,8 +1156,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('error=ta_not_added', r.headers['Location'])
 
     def test_route_22_remove_ta_post_succeeds(self):
-        """POST /remove_ta for an existing TA removes them and
-        redirects to /adminpage."""
+        """POST /remove_ta deletes the TA and redirects to /adminpage."""
         ta_netid = f'{TEST_PREFIX}ta08'
         database.add_ta(
             ta_netid, 'Removable',
@@ -1358,8 +1167,7 @@ class RouteTests(unittest.TestCase):
         self.assertFalse(database.validate_ta(ta_netid))
 
     def test_route_23_remove_ta_post_for_unknown_ta_redirects_with_error(self):
-        """POST /remove_ta for a TA that doesn't exist hits the
-        failure branch and redirects with ?error=ta_not_removed."""
+        """POST /remove_ta for an unknown TA returns error=ta_not_removed."""
         r = self._post('/remove_ta', data={
             'ta_net_id': f'{TEST_PREFIX}nope10',
         })
@@ -1367,8 +1175,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('error=ta_not_removed', r.headers['Location'])
 
     def test_route_24_edit_ta_post_updates_and_redirects(self):
-        """POST /edit_ta updates the TA's row and redirects back
-        to /adminpage."""
+        """POST /edit_ta updates the TA and redirects to /adminpage."""
         ta_netid = f'{TEST_PREFIX}ta09'
         database.add_ta(
             ta_netid, 'Old Name',
@@ -1385,13 +1192,8 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(all_tas[ta_netid]['ta_name'], 'New Name')
         self.assertEqual(all_tas[ta_netid]['courses'], 'COS 2XX')
 
-    # ------------------------------------------------------------------
-    # Additional route tests pushing coverage on the matched-session,
-    # already-in-queue, error-path, and POST-action branches.
-    # ------------------------------------------------------------------
     def _setup_matched(self, ta_netid, student_netid, course='COS 126'):
-        """Helper: add a TA, enqueue a student, match them. Returns
-        the session_id from match()."""
+        """Add a TA, enqueue a student, match them. Returns session_id."""
         database.add_ta(
             ta_netid, f'TA {ta_netid}',
             f'{ta_netid}@princeton.edu', course)
@@ -1405,18 +1207,16 @@ class RouteTests(unittest.TestCase):
         return database.match(ta_netid)
 
     def test_route_25_logout_clears_session_and_redirects(self):
-        """GET /logout clears the Flask session and redirects to /home."""
+        """/logout clears the session and redirects."""
         netid = f'{TEST_PREFIX}stu10'
         self._login_as(netid)
         r = self._get('/logout')
         self.assertEqual(r.status_code, 302)
-        # Session should now be empty.
         with self.client.session_transaction() as sess:
             self.assertNotIn('username', sess)
 
     def test_route_26_roleselection_post_ta_for_real_ta(self):
-        """A logged-in real TA picking the TA role is redirected to
-        /workhub (the TA-success branch of roleselection)."""
+        """A real TA picking 'TA' is redirected to /workhub."""
         netid = f'{TEST_PREFIX}ta10'
         database.add_ta(
             netid, 'Real TA',
@@ -1427,10 +1227,8 @@ class RouteTests(unittest.TestCase):
         self.assertIn('/workhub', r.headers['Location'])
 
     def test_route_27_roleselection_post_admin_for_real_admin(self):
-        """A logged-in real admin picking the Admin role is redirected
-        to /adminpage (the admin-success branch of roleselection)."""
+        """A real admin picking 'Admin' is redirected to /adminpage."""
         netid = f'{TEST_PREFIX}adm2'
-        # Insert directly into admin table; cleaned up at end of test.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
                 cur.execute(
@@ -1451,8 +1249,8 @@ class RouteTests(unittest.TestCase):
                     conn.commit()
 
     def test_route_28_roleselection_post_student_already_in_queue(self):
-        """A student who is already in the queue and picks the
-        Student role is redirected straight to /queuestatus."""
+        """A student already in the queue who picks 'Student' is
+        redirected to /queuestatus."""
         netid = f'{TEST_PREFIX}stu11'
         database.queue_entry({
             'student_netid': netid, 'student_name': 'In Queue',
@@ -1465,8 +1263,8 @@ class RouteTests(unittest.TestCase):
         self.assertIn('/queuestatus', r.headers['Location'])
 
     def test_route_29_roleselection_post_student_in_session(self):
-        """A student already in a session picking the Student role
-        is redirected to /insessionstudent."""
+        """A student already in a session who picks 'Student' is
+        redirected to /insessionstudent."""
         ta_netid = f'{TEST_PREFIX}ta11'
         student_netid = f'{TEST_PREFIX}stu12'
         self._setup_matched(ta_netid, student_netid)
@@ -1476,8 +1274,8 @@ class RouteTests(unittest.TestCase):
         self.assertIn('/insessionstudent', r.headers['Location'])
 
     def test_route_30_queueentry_post_when_already_in_queue(self):
-        """A student already in the queue who POSTs /queueentry is
-        redirected to /queuestatus with ?error=already_in_queue."""
+        """POST /queueentry while already queued returns
+        error=already_in_queue."""
         netid = f'{TEST_PREFIX}stu13'
         database.queue_entry({
             'student_netid': netid, 'student_name': 'In Queue',
@@ -1493,8 +1291,8 @@ class RouteTests(unittest.TestCase):
         self.assertIn('error=already_in_queue', r.headers['Location'])
 
     def test_route_31_queueentry_post_when_already_in_session(self):
-        """A student already in a session who POSTs /queueentry is
-        redirected to /insessionstudent with ?error=already_in_session."""
+        """POST /queueentry while already in a session returns
+        error=already_in_session."""
         ta_netid = f'{TEST_PREFIX}ta12'
         student_netid = f'{TEST_PREFIX}stu14'
         self._setup_matched(ta_netid, student_netid)
@@ -1507,8 +1305,8 @@ class RouteTests(unittest.TestCase):
         self.assertIn('error=already_in_session', r.headers['Location'])
 
     def test_route_32_queueentry_post_insert_fails_for_invalid_course(self):
-        """If queue_entry() returns False (invalid course), the route
-        redirects with ?error=not_added_to_queue."""
+        """POST /queueentry with an invalid course returns
+        error=not_added_to_queue."""
         self._login_as(f'{TEST_PREFIX}stu15')
         r = self._post('/queueentry', data={
             'student_name': 'Bad', 'course': 'COS 999',
@@ -1518,8 +1316,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('error=not_added_to_queue', r.headers['Location'])
 
     def test_route_33_queuestatus_renders_for_in_queue_student(self):
-        """A student who is in the queue (and not yet matched) hits
-        the full render path of /queuestatus."""
+        """A queued, unmatched student renders /queuestatus."""
         netid = f'{TEST_PREFIX}stu16'
         database.queue_entry({
             'student_netid': netid, 'student_name': 'Queued',
@@ -1531,8 +1328,7 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
 
     def test_route_34_queuestatus_post_leave_queue(self):
-        """POST /queuestatus action=leave_queue removes the student
-        from the queue and redirects to /queueentry."""
+        """POST leave_queue removes the student and redirects to /queueentry."""
         netid = f'{TEST_PREFIX}stu17'
         database.queue_entry({
             'student_netid': netid, 'student_name': 'Quitter',
@@ -1543,14 +1339,12 @@ class RouteTests(unittest.TestCase):
         r = self._post('/queuestatus', data={'action': 'leave_queue'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('/queueentry', r.headers['Location'])
-        # And the student is no longer in the queue.
         queue = [q for q in database.get_queue_students()
                  if q['student_netid'] == netid]
         self.assertEqual(len(queue), 0)
 
     def test_route_35_queuestatus_redirects_to_insessionstudent_when_matched(self):
-        """If a student is matched, hitting /queuestatus redirects
-        them to /insessionstudent."""
+        """A matched student is sent from /queuestatus to /insessionstudent."""
         ta_netid = f'{TEST_PREFIX}ta13'
         student_netid = f'{TEST_PREFIX}stu18'
         self._setup_matched(ta_netid, student_netid)
@@ -1560,8 +1354,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('/insessionstudent', r.headers['Location'])
 
     def test_route_36_trymatch_returns_in_database_true_for_queued_student(self):
-        """GET /trymatch for a student who is in the queue returns
-        in_database=True with a real student_place."""
+        """/trymatch returns in_database=True for a queued student."""
         netid = f'{TEST_PREFIX}stu19'
         database.queue_entry({
             'student_netid': netid, 'student_name': 'Polling',
@@ -1577,8 +1370,7 @@ class RouteTests(unittest.TestCase):
         self.assertGreaterEqual(body['student_place'], 1)
 
     def test_route_37_insessionstudent_renders_when_matched(self):
-        """A matched student hitting /insessionstudent gets the full
-        in-session render."""
+        """A matched student renders /insessionstudent."""
         ta_netid = f'{TEST_PREFIX}ta14'
         student_netid = f'{TEST_PREFIX}stu20'
         self._setup_matched(ta_netid, student_netid)
@@ -1587,33 +1379,24 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
 
     def test_route_38_endsessionstudent_post_home_redirects(self):
-        """POST /endsessionstudent action=home redirects to /queueentry."""
+        """POST endsessionstudent action=home redirects to /queueentry."""
         r = self._post('/endsessionstudent', data={'action': 'home'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('/queueentry', r.headers['Location'])
 
-    # ------------------------------------------------------------------
-    # ta.py additional routes
-    # ------------------------------------------------------------------
     def test_route_39_workhub_redirects_to_homepage_when_no_user(self):
-        """GET /workhub with no logged-in user (empty username)
-        redirects to /."""
+        """GET /workhub with no logged-in user redirects to /."""
         r = self._get('/workhub')
         self.assertEqual(r.status_code, 302)
-        self.assertTrue(
-            r.headers['Location'].endswith('/'),
-            f'expected redirect to /, got {r.headers["Location"]}')
+        self.assertTrue(r.headers['Location'].endswith('/'))
 
     def test_route_40_workhub_post_clock_out_succeeds(self):
-        """POST /workhub action=clock_out for a clocked-in TA whose
-        log_shift returns success completes and redirects."""
+        """POST clock_out succeeds when log_shift returns True."""
         ta_netid = f'{TEST_PREFIX}ta15'
         database.add_ta(
             ta_netid, 'Clock Out TA',
             f'{ta_netid}@princeton.edu', 'COS 126')
         database.clock_in(ta_netid)
-        # Temporarily make log_shift return success so clock_out
-        # takes the success branch.
         original = googlesheet.log_shift
         googlesheet.log_shift = lambda *a, **kw: True
         try:
@@ -1626,9 +1409,8 @@ class RouteTests(unittest.TestCase):
         self.assertNotIn('error', r.headers['Location'])
 
     def test_route_41_workhub_post_clock_out_fails(self):
-        """POST clock_out for a TA who isn't clocked in (and whose
-        log_shift returns falsy) goes through the failure branch and
-        redirects with ?error=not_clocked_out."""
+        """POST clock_out for a TA who isn't clocked in returns
+        error=not_clocked_out."""
         ta_netid = f'{TEST_PREFIX}ta16'
         database.add_ta(
             ta_netid, 'Never Clocked In',
@@ -1639,8 +1421,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('error=not_clocked_out', r.headers['Location'])
 
     def test_route_42_workhub_post_start_session_with_match(self):
-        """POST /workhub action=start_session when a student is
-        queued matches the TA and redirects to /insessionta."""
+        """POST start_session matches the TA and redirects to /insessionta."""
         ta_netid = f'{TEST_PREFIX}ta17'
         student_netid = f'{TEST_PREFIX}stu21'
         database.add_ta(
@@ -1657,8 +1438,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('/insessionta', r.headers['Location'])
 
     def test_route_43_workhub_post_start_session_no_match(self):
-        """POST start_session with no students in the queue does not
-        redirect to /insessionta (match returns None)."""
+        """POST start_session with an empty queue stays at /workhub."""
         ta_netid = f'{TEST_PREFIX}ta18'
         database.add_ta(
             ta_netid, 'No Match',
@@ -1670,8 +1450,7 @@ class RouteTests(unittest.TestCase):
         self.assertNotIn('/insessionta', r.headers['Location'])
 
     def test_route_44_workhub_redirects_to_insessionta_when_matched(self):
-        """A TA who already has an active session hitting /workhub
-        is redirected to /insessionta."""
+        """A TA in an active session is sent from /workhub to /insessionta."""
         ta_netid = f'{TEST_PREFIX}ta19'
         student_netid = f'{TEST_PREFIX}stu22'
         self._setup_matched(ta_netid, student_netid)
@@ -1681,8 +1460,7 @@ class RouteTests(unittest.TestCase):
         self.assertIn('/insessionta', r.headers['Location'])
 
     def test_route_45_insessionta_renders_when_matched(self):
-        """A matched TA hitting /insessionta gets the full
-        in-session render with the student's info."""
+        """A matched TA renders /insessionta."""
         ta_netid = f'{TEST_PREFIX}ta20'
         student_netid = f'{TEST_PREFIX}stu23'
         self._setup_matched(ta_netid, student_netid)
@@ -1691,8 +1469,7 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
 
     def test_route_46_insessionta_post_end_session(self):
-        """POST /insessionta action=end_session removes the session
-        and redirects to /endsessionta with the student_name cookie."""
+        """POST end_session removes the session and redirects to /endsessionta."""
         ta_netid = f'{TEST_PREFIX}ta21'
         student_netid = f'{TEST_PREFIX}stu24'
         self._setup_matched(ta_netid, student_netid)
@@ -1700,12 +1477,11 @@ class RouteTests(unittest.TestCase):
         r = self._post('/insessionta', data={'action': 'end_session'})
         self.assertEqual(r.status_code, 302)
         self.assertIn('/endsessionta', r.headers['Location'])
-        # The session should now be gone from the database.
         info = database.get_session_info_ta(ta_netid)
         self.assertIsNone(info)
 
     def test_route_47_endsessionta_post_home_redirects(self):
-        """POST /endsessionta action=home redirects back to /workhub."""
+        """POST endsessionta action=home redirects to /workhub."""
         self._login_as(f'{TEST_PREFIX}ta22')
         r = self._post('/endsessionta', data={'action': 'home'})
         self.assertEqual(r.status_code, 302)
