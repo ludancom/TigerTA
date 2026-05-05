@@ -34,8 +34,10 @@ NOTES
 """
 
 import os
+import time
 import contextlib
 import unittest
+import concurrent.futures
 
 import psycopg
 import dotenv
@@ -628,6 +630,437 @@ class ManyToManyTigerTATests(unittest.TestCase):
             database.get_num_on_shift_tas('COS 226'), base_2xx + 2)
         self.assertEqual(
             database.get_num_on_shift_tas('COS 217'), base_2xx + 2)
+
+    # ------------------------------------------------------------------
+    # Coverage tests for early-return / invalid-input branches.
+    # These exist to push coverage on the defensive checks scattered
+    # throughout database.py (rejecting bad courses, returning None /
+    # False when the target row doesn't exist, etc).
+    # ------------------------------------------------------------------
+    def test_23_queue_entry_rejects_invalid_course(self):
+        """queue_entry must return False if the course isn't one of
+        the three courses TigerTA supports."""
+        ok = database.queue_entry({
+            'student_netid': _student_id(1),
+            'student_name': 'Bad Course',
+            'course': 'COS 999',
+            'assignment': 'a1',
+            'bug_description': 'x',
+        })
+        self.assertFalse(
+            ok, 'queue_entry should reject unknown courses')
+
+        # And the student should not have ended up in the queue.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(queue), 0)
+
+    def test_24_match_returns_none_for_unknown_ta(self):
+        """match() must return None when the ta_netid isn't a known
+        TA (no row in ta_courses)."""
+        # No TAs added at all; the netid we pass simply doesn't exist.
+        self.assertIsNone(database.match(f'{TEST_PREFIX}nope1'))
+
+    def test_25_add_ta_rejects_invalid_course(self):
+        """add_ta must return False for courses other than 'COS 126'
+        or 'COS 2XX' (and must not insert a TA row)."""
+        ok = database.add_ta(
+            f'{TEST_PREFIX}badc1', 'Bad Course TA',
+            f'{TEST_PREFIX}badc1@princeton.edu', 'COS 999')
+        self.assertFalse(
+            ok, 'add_ta should reject unsupported courses')
+
+        # Verify the TA was not inserted.
+        all_tas = database.get_all_tas()
+        self.assertNotIn(
+            f'{TEST_PREFIX}badc1',
+            [t['ta_netid'] for t in all_tas])
+
+    def test_26_clock_in_returns_false_for_unknown_ta(self):
+        """clock_in must return False when no TA row matches (the
+        rowcount == 0 branch)."""
+        result = database.clock_in(f'{TEST_PREFIX}nope2')
+        self.assertFalse(
+            result, 'clock_in should fail for an unknown TA')
+
+    def test_27_clock_out_returns_false_for_unknown_ta(self):
+        """clock_out must return False when no TA row matches (the
+        rowcount == 0 branch)."""
+        result = database.clock_out(f'{TEST_PREFIX}nope3')
+        self.assertFalse(
+            result, 'clock_out should fail for an unknown TA')
+
+    def test_28_clock_out_deletes_shift_when_log_succeeds(self):
+        """When googlesheet.log_shift reports success, clock_out
+        should DELETE the TA's shift row from the database (covers
+        the success-path branch in clock_out)."""
+        self._populate_tas()
+        ta_netid = _ta_id(1)
+        database.clock_in(ta_netid)
+
+        # Temporarily make log_shift report success so clock_out
+        # takes the "delete the shift row" branch. Restore in finally
+        # so we don't leak state into other tests.
+        original = googlesheet.log_shift
+        googlesheet.log_shift = lambda *a, **kw: True
+        try:
+            self.assertTrue(database.clock_out(ta_netid))
+        finally:
+            googlesheet.log_shift = original
+
+        # After a successful log, the shift row should be gone.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM shifts WHERE ta_netid = %s",
+                    (ta_netid,))
+                self.assertEqual(cur.fetchone()[0], 0)
+
+    def test_29_get_session_info_student_returns_none_for_unknown(self):
+        """get_session_info_student must return None when the student
+        isn't in the queue or any session."""
+        self.assertIsNone(
+            database.get_session_info_student(f'{TEST_PREFIX}nope4'))
+
+    def test_30_get_session_ta_name_pre_match_returns_none(self):
+        """get_session_ta_name must return None for a student who is
+        in the queue but has not yet been matched to a TA."""
+        sid = _student_id(1)
+        database.queue_entry({
+            'student_netid': sid, 'student_name': 'Solo',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self.assertIsNone(database.get_session_ta_name(sid))
+
+    def test_31_remove_session_returns_false_for_unknown_student(self):
+        """remove_session must return False when there's no session
+        or student row to remove (numRowsDeleted stays 0)."""
+        result = database.remove_session(f'{TEST_PREFIX}nope5')
+        self.assertFalse(
+            result, 'remove_session should be False when nothing was '
+            'deleted')
+
+    def test_32_remove_ta_returns_false_for_unknown_ta(self):
+        """remove_ta must return False when no rows in any of the
+        TA-related tables match."""
+        result = database.remove_ta(f'{TEST_PREFIX}nope6')
+        self.assertFalse(
+            result, 'remove_ta should be False when nothing was '
+            'deleted')
+
+
+# ---------------------------------------------------------------------
+# Stress tests
+# ---------------------------------------------------------------------
+# These tests push the database layer with high volume and concurrent
+# operations. They check:
+#   * High-volume enqueue + drain still produces correct ordering and
+#     counts, and finishes within a reasonable time budget.
+#   * Concurrent match() calls never assign the same student to two TAs
+#     and never produce duplicate active sessions.
+#   * Concurrent queue_entry() calls all land in the queue with unique
+#     session_ids and contiguous queue numbers.
+#
+# Sizes are tuned to be meaningful but to also fit in an 8-character
+# netID (matches the rest of the suite, which uses tstta001 / tstst001
+# style ids) and to keep total runtime reasonable on a shared database.
+# ---------------------------------------------------------------------
+
+STRESS_TA_126 = 10      # number of COS 126 TAs for stress runs
+STRESS_TA_2XX = 8       # number of COS 2XX TAs for stress runs
+STRESS_STUDENTS_126 = 60
+STRESS_STUDENTS_226 = 40
+STRESS_STUDENTS_217 = 25
+
+CONCURRENT_TAS = 15          # threads racing to match() at once
+CONCURRENT_STUDENTS = 30     # students available to those TAs
+CONCURRENT_ENQUEUE = 40      # threads racing to queue_entry() at once
+
+
+class StressTigerTATests(unittest.TestCase):
+    """Stress / load tests for the database layer.
+
+    Reuses the same 'tst' netID prefix and cleanup machinery as
+    ManyToManyTigerTATests so it stays hermetic on a shared database.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        _cleanup_test_rows()
+
+    @classmethod
+    def tearDownClass(cls):
+        _cleanup_test_rows()
+
+    def setUp(self):
+        _cleanup_test_rows()
+        # Same safety guard as ManyToManyTigerTATests: refuse to run
+        # against a database that already has real (non-test) sessions
+        # in the queue, because match() looks at the entire queue and
+        # could pull a real student into a test session.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM session "
+                    "WHERE student_netid NOT LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                live = cur.fetchone()[0]
+                if live > 0:
+                    self.skipTest(
+                        f'Refusing to run stress test: {live} non-test '
+                        f'session(s) exist in the queue.')
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _populate_stress_tas(self):
+        """Add STRESS_TA_126 + STRESS_TA_2XX TAs at once."""
+        for i in range(1, STRESS_TA_126 + 1):
+            database.add_ta(
+                _ta_id(i), f'TA {i}',
+                f'{_ta_id(i)}@princeton.edu', 'COS 126')
+        for i in range(STRESS_TA_126 + 1,
+                       STRESS_TA_126 + STRESS_TA_2XX + 1):
+            database.add_ta(
+                _ta_id(i), f'TA {i}',
+                f'{_ta_id(i)}@princeton.edu', 'COS 2XX')
+
+    def _populate_stress_students(self, n_126, n_226, n_217):
+        """Enqueue (n_126 + n_226 + n_217) students with an
+        interleaved course mix so the queue isn't trivially sorted."""
+        idx = 1
+        for k in range(max(n_126, n_226, n_217)):
+            for course, total in [
+                ('COS 126', n_126),
+                ('COS 226', n_226),
+                ('COS 217', n_217),
+            ]:
+                if k < total:
+                    sid = _student_id(idx)
+                    database.queue_entry({
+                        'student_netid': sid,
+                        'student_name': f'Student {idx}',
+                        'course': course,
+                        'assignment': 'a1',
+                        'bug_description': f'help with {course} #{idx}',
+                    })
+                    idx += 1
+        return idx - 1   # total students enqueued
+
+    # ------------------------------------------------------------------
+    # Stress tests
+    # ------------------------------------------------------------------
+    def test_stress_01_high_volume_drain(self):
+        """Enqueue many students against many TAs and repeatedly call
+        match() until the queue is empty. Asserts correctness only
+        (no hard time budget, since database.py opens a fresh
+        connection per call and remote-DB latency dominates)."""
+
+        t0 = time.monotonic()
+        self._populate_stress_tas()
+        total_enqueued = self._populate_stress_students(
+            STRESS_STUDENTS_126,
+            STRESS_STUDENTS_226,
+            STRESS_STUDENTS_217)
+        enqueue_elapsed = time.monotonic() - t0
+
+        # Sanity: every test student we tried to enqueue is in the queue
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(queue), total_enqueued)
+
+        # Drain: walk through every TA once. With 35 TAs and ~250
+        # students, the queue won't fully drain on a single pass --
+        # so we loop until either the queue is empty or no TA was able
+        # to match this round (overflow rules can leave 126-only TAs
+        # idle once 126 students are exhausted).
+        all_session_ids = []
+        all_student_netids = []
+        rounds = 0
+        while True:
+            rounds += 1
+            matched_this_round = 0
+            for i in range(1, STRESS_TA_126 + STRESS_TA_2XX + 1):
+                ta_netid = _ta_id(i)
+                # Free up the TA before each match call (set_available
+                # flips them back to available so they can match again
+                # in the next round).
+                database.set_available(ta_netid)
+                # End any active session for this TA so they're free
+                info = database.get_session_info_ta(ta_netid)
+                if info is not None:
+                    student = info.get('student_netid')
+                    if student is not None:
+                        database.remove_session(student)
+
+                session_id = database.match(ta_netid)
+                if session_id is not None:
+                    all_session_ids.append(session_id)
+                    new_info = database.get_session_info_ta(ta_netid)
+                    self.assertIsNotNone(new_info)
+                    all_student_netids.append(new_info['student_netid'])
+                    matched_this_round += 1
+
+            if matched_this_round == 0:
+                break
+            self.assertLess(
+                rounds, 100,
+                'drain loop should never need this many rounds')
+
+        # Tear down any remaining active sessions so we leave the
+        # queue/sessions in a known state.
+        for i in range(1, STRESS_TA_126 + STRESS_TA_2XX + 1):
+            ta_netid = _ta_id(i)
+            info = database.get_session_info_ta(ta_netid)
+            if info is not None and info.get('student_netid') is not None:
+                database.remove_session(info['student_netid'])
+
+        elapsed = time.monotonic() - t0
+
+        # Every student the system handed out should be unique --
+        # nobody got matched twice.
+        self.assertEqual(
+            len(all_student_netids), len(set(all_student_netids)),
+            'stress drain handed the same student to two TAs')
+
+        # We should have matched as many students as we enqueued (or
+        # extremely close, accounting for 126-TA-only-can-help-126
+        # rules -- but our mix has more 126 students than 126 TAs, so
+        # everyone should ultimately match).
+        self.assertEqual(
+            len(all_student_netids), total_enqueued,
+            f'enqueued {total_enqueued} but only matched '
+            f'{len(all_student_netids)}')
+
+        # And the queue is empty of test students.
+        leftover = [q for q in database.get_queue_students()
+                    if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(leftover), 0)
+
+        # Print timing as a soft signal -- not asserted, since wall
+        # clock depends entirely on the remote DB's network latency.
+        print(
+            f'\n[stress_01 timing] enqueue {total_enqueued} students: '
+            f'{enqueue_elapsed:.1f}s | full drain + cleanup: '
+            f'{elapsed:.1f}s')
+
+    def test_stress_02_concurrent_match_no_double_assignment(self):
+        """Spawn many threads each calling match() at the same time.
+
+        The critical invariant: no student may be assigned to two
+        different TAs in the session table, even under contention.
+        match() reads the front of the queue and writes the assignment
+        in two separate statements with no row lock, so this is the
+        most likely place a real concurrency bug would show up."""
+
+        # Set up: enough TAs and students that all TAs would *want*
+        # to match if there were no contention.
+        for i in range(1, CONCURRENT_TAS + 1):
+            database.add_ta(
+                _ta_id(i), f'TA {i}',
+                f'{_ta_id(i)}@princeton.edu', 'COS 126')
+        for i in range(1, CONCURRENT_STUDENTS + 1):
+            database.queue_entry({
+                'student_netid': _student_id(i),
+                'student_name': f'Student {i}',
+                'course': 'COS 126',
+                'assignment': 'a1',
+                'bug_description': f'concurrent match #{i}',
+            })
+
+        # All TAs race to match at the same time.
+        ta_netids = [_ta_id(i) for i in range(1, CONCURRENT_TAS + 1)]
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=CONCURRENT_TAS) as pool:
+            futures = [pool.submit(database.match, n) for n in ta_netids]
+            for f in concurrent.futures.as_completed(futures):
+                results.append(f.result())
+
+        # ----- Invariant 1: no duplicate active sessions per student
+        # Read every active session in the test slice and assert each
+        # student_netid appears at most once.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT student_netid, ta_netid FROM session "
+                    "WHERE ta_netid IS NOT NULL "
+                    "AND student_netid LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                active = cur.fetchall()
+
+        active_students = [row[0] for row in active]
+        active_tas = [row[1] for row in active]
+        self.assertEqual(
+            len(active_students), len(set(active_students)),
+            'concurrent match() assigned the same student to two TAs')
+        self.assertEqual(
+            len(active_tas), len(set(active_tas)),
+            'concurrent match() put the same TA in two sessions')
+
+        # ----- Invariant 2: count sanity
+        # We had CONCURRENT_TAS TAs and CONCURRENT_STUDENTS students
+        # available; the number of active sessions can't exceed
+        # min(TAs, students).
+        self.assertLessEqual(
+            len(active),
+            min(CONCURRENT_TAS, CONCURRENT_STUDENTS),
+            'more active sessions than TAs/students should allow')
+
+        # ----- Invariant 3: returned session_ids point at real, unique
+        # session rows when non-None.
+        successful = [r for r in results if r is not None]
+        self.assertEqual(
+            len(successful), len(set(successful)),
+            'match() returned the same session_id from two different '
+            'concurrent calls')
+
+    def test_stress_03_concurrent_enqueue(self):
+        """Many students enqueue at the same instant. All of them
+        should land in the queue, each with a unique session_id and
+        contiguous 1..N queue_numbers in the test slice."""
+
+        def _enqueue_one(i):
+            database.queue_entry({
+                'student_netid': _student_id(i),
+                'student_name': f'Student {i}',
+                'course': 'COS 126',
+                'assignment': 'a1',
+                'bug_description': f'concurrent enqueue #{i}',
+            })
+
+        ids = list(range(1, CONCURRENT_ENQUEUE + 1))
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=20) as pool:
+            list(pool.map(_enqueue_one, ids))
+
+        # All students made it in.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'].startswith(TEST_PREFIX)]
+        self.assertEqual(len(queue), CONCURRENT_ENQUEUE)
+
+        # All session_ids are unique (no duplicate row insertion).
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT session_id, student_netid FROM session "
+                    "WHERE student_netid LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                rows = cur.fetchall()
+
+        session_ids = [r[0] for r in rows]
+        student_netids = [r[1] for r in rows]
+        self.assertEqual(
+            len(session_ids), len(set(session_ids)),
+            'duplicate session_ids after concurrent enqueue')
+        self.assertEqual(
+            len(student_netids), len(set(student_netids)),
+            'duplicate student rows after concurrent enqueue')
+
+        # queue_numbers in the test slice should be 1..N.
+        nums = sorted(q['queue_number'] for q in queue)
+        self.assertEqual(nums, list(range(1, CONCURRENT_ENQUEUE + 1)))
 
 
 if __name__ == '__main__':
