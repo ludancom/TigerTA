@@ -145,6 +145,12 @@ def queue_entry(session):
                 ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
+        # Mirror the pre-212309c contract: queue_entry is responsible for
+        # firing the "you're next in line" notification path. notify_next_in_line
+        # itself decides whether the current position-1 student should
+        # actually receive an email (it's a no-op if they were already notified).
+        notify_next_in_line(course)
+
         # If student is successfully added to queue...
         return True
 
