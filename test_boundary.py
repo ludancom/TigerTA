@@ -211,14 +211,14 @@ class BoundaryTigerTATests(unittest.TestCase):
             """ A nonexistent session should not be removed. """
 
             result = database.remove_session("hello")
-            self.assertIsFalse(
+            self.assertFalse(
                 result)
 
     def test_04_remove_nonexistent_ta(self):
             """ A nonexistent TA should not be removed. """
 
             result = database.remove_ta("hello")
-            self.assertIsFalse(result)
+            self.assertFalse(result)
 
     def test_05_get_nonexistent_session_information(self):
             """ A nonexistent session should not have information. """
@@ -245,7 +245,7 @@ class BoundaryTigerTATests(unittest.TestCase):
                 'bug_description': f'help with {course} #{id1}',
             })
             
-            self.assertIsFalse(result)
+            self.assertFalse(result)
 
     def test_07_long_bug_description(self):
             """ A user cannot add input with a length greater than the character limit. """
@@ -262,7 +262,7 @@ class BoundaryTigerTATests(unittest.TestCase):
                 'bug_description': bug_description,
             })
             
-            self.assertIsFalse(result)
+            self.assertFalse(result)
     
     # ------------------------------------------------------------------
     # Tests: Queue Boundaries
@@ -428,9 +428,8 @@ class BoundaryTigerTATests(unittest.TestCase):
             result1 = database.clock_in(ta_netid) 
             result2 = database.clock_in(ta_netid) 
             
-            self.assertIsTrue(result1)
-            self.assertIsFalse(result2)
-
+            self.assertTrue(result1)
+            self.assertFalse(result2)
 
     def test_14_two_clockout_attempts(self):
             """ A TA should not be able to clock out twice without
@@ -442,11 +441,11 @@ class BoundaryTigerTATests(unittest.TestCase):
 
             result1 = database.clock_in(ta_netid)
             result2 = database.clock_out(ta_netid) 
+            self.assertFalse(database.check_if_clocked_in(ta_netid))
             result3 = database.clock_out(ta_netid) 
             
-            self.assertIsTrue(result1)
-            self.assertIsTrue(result2)
-            self.assertIsFalse(result3)
+            self.assertTrue(result1)
+            self.assertFalse(result3)
 
     def test_15_clockout_attempt_without_clockin(self):
             """ A TA should not be able to clock out if they did not clock in. """
@@ -457,7 +456,7 @@ class BoundaryTigerTATests(unittest.TestCase):
 
             result = database.clock_out(ta_netid)
             
-            self.assertIsFalse(result)
+            self.assertFalse(result)
 
     # ------------------------------------------------------------------
     # Tests: Courses
@@ -471,7 +470,7 @@ class BoundaryTigerTATests(unittest.TestCase):
             result = database.add_ta(_ta_id(1), f'TA {1}',
             f'{_ta_id(1)}@princeton.edu', 'COS 2XX, COS 126')
 
-            self.assertIsFalse(result)
+            self.assertFalse(result)
 
     def test_17_no_TA_course(self):
             """ A TA must be assigned to a valid course. """
@@ -479,7 +478,7 @@ class BoundaryTigerTATests(unittest.TestCase):
             result = database.add_ta(_ta_id(1), f'TA {1}',
             f'{_ta_id(1)}@princeton.edu', ' ')
 
-            self.assertIsFalse(result)
+            self.assertFalse(result)
 
     def test_18_invalid_student_course(self):
             """ A student must be assigned to a valid course. """
@@ -495,7 +494,7 @@ class BoundaryTigerTATests(unittest.TestCase):
                 'bug_description': f'help with {course} #{id1}',
             })
 
-            self.assertIsFalse(result)
+            self.assertFalse(result)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

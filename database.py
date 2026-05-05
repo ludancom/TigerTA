@@ -392,6 +392,16 @@ def match(ta_netid):
                 # Parameter testing
                 assert (ta_netid is not None)
 
+                # Ensure TA is not currently helping another student 
+                statement_str = """SELECT 1 FROM session 
+                WHERE ta_netid = %s
+                LIMIT 1"""
+                cursor.execute(statement_str, (ta_netid,))
+                row = cursor.fetchone()
+
+                if row is not None:
+                    return None
+                    
                 # Find TA's course
                 cursor.execute("""
                     SELECT course
