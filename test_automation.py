@@ -1385,6 +1385,332 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(all_tas[ta_netid]['ta_name'], 'New Name')
         self.assertEqual(all_tas[ta_netid]['courses'], 'COS 2XX')
 
+    # ------------------------------------------------------------------
+    # Additional route tests pushing coverage on the matched-session,
+    # already-in-queue, error-path, and POST-action branches.
+    # ------------------------------------------------------------------
+    def _setup_matched(self, ta_netid, student_netid, course='COS 126'):
+        """Helper: add a TA, enqueue a student, match them. Returns
+        the session_id from match()."""
+        database.add_ta(
+            ta_netid, f'TA {ta_netid}',
+            f'{ta_netid}@princeton.edu', course)
+        database.queue_entry({
+            'student_netid': student_netid,
+            'student_name': f'Student {student_netid}',
+            'course': course,
+            'assignment': 'a1',
+            'bug_description': f'help with {course}',
+        })
+        return database.match(ta_netid)
+
+    def test_route_25_logout_clears_session_and_redirects(self):
+        """GET /logout clears the Flask session and redirects to /home."""
+        netid = f'{TEST_PREFIX}stu10'
+        self._login_as(netid)
+        r = self._get('/logout')
+        self.assertEqual(r.status_code, 302)
+        # Session should now be empty.
+        with self.client.session_transaction() as sess:
+            self.assertNotIn('username', sess)
+
+    def test_route_26_roleselection_post_ta_for_real_ta(self):
+        """A logged-in real TA picking the TA role is redirected to
+        /workhub (the TA-success branch of roleselection)."""
+        netid = f'{TEST_PREFIX}ta10'
+        database.add_ta(
+            netid, 'Real TA',
+            f'{netid}@princeton.edu', 'COS 126')
+        self._login_as(netid)
+        r = self._post('/roleselection', data={'role': 'TA'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+
+    def test_route_27_roleselection_post_admin_for_real_admin(self):
+        """A logged-in real admin picking the Admin role is redirected
+        to /adminpage (the admin-success branch of roleselection)."""
+        netid = f'{TEST_PREFIX}adm2'
+        # Insert directly into admin table; cleaned up at end of test.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "INSERT INTO admin (admin_netid) VALUES (%s) "
+                    "ON CONFLICT DO NOTHING", (netid,))
+                conn.commit()
+        try:
+            self._login_as(netid)
+            r = self._post('/roleselection', data={'role': 'Admin'})
+            self.assertEqual(r.status_code, 302)
+            self.assertIn('/adminpage', r.headers['Location'])
+        finally:
+            with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+                with contextlib.closing(conn.cursor()) as cur:
+                    cur.execute(
+                        "DELETE FROM admin WHERE admin_netid = %s",
+                        (netid,))
+                    conn.commit()
+
+    def test_route_28_roleselection_post_student_already_in_queue(self):
+        """A student who is already in the queue and picks the
+        Student role is redirected straight to /queuestatus."""
+        netid = f'{TEST_PREFIX}stu11'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'In Queue',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._post('/roleselection', data={'role': 'Student'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queuestatus', r.headers['Location'])
+
+    def test_route_29_roleselection_post_student_in_session(self):
+        """A student already in a session picking the Student role
+        is redirected to /insessionstudent."""
+        ta_netid = f'{TEST_PREFIX}ta11'
+        student_netid = f'{TEST_PREFIX}stu12'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._post('/roleselection', data={'role': 'Student'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionstudent', r.headers['Location'])
+
+    def test_route_30_queueentry_post_when_already_in_queue(self):
+        """A student already in the queue who POSTs /queueentry is
+        redirected to /queuestatus with ?error=already_in_queue."""
+        netid = f'{TEST_PREFIX}stu13'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'In Queue',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._post('/queueentry', data={
+            'student_name': 'x', 'course': 'COS 126',
+            'assignment': 'a1', 'bug_description': 'y',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=already_in_queue', r.headers['Location'])
+
+    def test_route_31_queueentry_post_when_already_in_session(self):
+        """A student already in a session who POSTs /queueentry is
+        redirected to /insessionstudent with ?error=already_in_session."""
+        ta_netid = f'{TEST_PREFIX}ta12'
+        student_netid = f'{TEST_PREFIX}stu14'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._post('/queueentry', data={
+            'student_name': 'x', 'course': 'COS 126',
+            'assignment': 'a1', 'bug_description': 'y',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=already_in_session', r.headers['Location'])
+
+    def test_route_32_queueentry_post_insert_fails_for_invalid_course(self):
+        """If queue_entry() returns False (invalid course), the route
+        redirects with ?error=not_added_to_queue."""
+        self._login_as(f'{TEST_PREFIX}stu15')
+        r = self._post('/queueentry', data={
+            'student_name': 'Bad', 'course': 'COS 999',
+            'assignment': 'a1', 'bug_description': '.',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_added_to_queue', r.headers['Location'])
+
+    def test_route_33_queuestatus_renders_for_in_queue_student(self):
+        """A student who is in the queue (and not yet matched) hits
+        the full render path of /queuestatus."""
+        netid = f'{TEST_PREFIX}stu16'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'Queued',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': 'help me',
+        })
+        self._login_as(netid)
+        r = self._get('/queuestatus')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_34_queuestatus_post_leave_queue(self):
+        """POST /queuestatus action=leave_queue removes the student
+        from the queue and redirects to /queueentry."""
+        netid = f'{TEST_PREFIX}stu17'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'Quitter',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._post('/queuestatus', data={'action': 'leave_queue'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+        # And the student is no longer in the queue.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'] == netid]
+        self.assertEqual(len(queue), 0)
+
+    def test_route_35_queuestatus_redirects_to_insessionstudent_when_matched(self):
+        """If a student is matched, hitting /queuestatus redirects
+        them to /insessionstudent."""
+        ta_netid = f'{TEST_PREFIX}ta13'
+        student_netid = f'{TEST_PREFIX}stu18'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._get('/queuestatus')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionstudent', r.headers['Location'])
+
+    def test_route_36_trymatch_returns_in_database_true_for_queued_student(self):
+        """GET /trymatch for a student who is in the queue returns
+        in_database=True with a real student_place."""
+        netid = f'{TEST_PREFIX}stu19'
+        database.queue_entry({
+            'student_netid': netid, 'student_name': 'Polling',
+            'course': 'COS 126', 'assignment': 'a1',
+            'bug_description': '.',
+        })
+        self._login_as(netid)
+        r = self._get('/trymatch')
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertEqual(body['in_database'], True)
+        self.assertEqual(body['matched'], False)
+        self.assertGreaterEqual(body['student_place'], 1)
+
+    def test_route_37_insessionstudent_renders_when_matched(self):
+        """A matched student hitting /insessionstudent gets the full
+        in-session render."""
+        ta_netid = f'{TEST_PREFIX}ta14'
+        student_netid = f'{TEST_PREFIX}stu20'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(student_netid)
+        r = self._get('/insessionstudent')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_38_endsessionstudent_post_home_redirects(self):
+        """POST /endsessionstudent action=home redirects to /queueentry."""
+        r = self._post('/endsessionstudent', data={'action': 'home'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+
+    # ------------------------------------------------------------------
+    # ta.py additional routes
+    # ------------------------------------------------------------------
+    def test_route_39_workhub_redirects_to_homepage_when_no_user(self):
+        """GET /workhub with no logged-in user (empty username)
+        redirects to /."""
+        r = self._get('/workhub')
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(
+            r.headers['Location'].endswith('/'),
+            f'expected redirect to /, got {r.headers["Location"]}')
+
+    def test_route_40_workhub_post_clock_out_succeeds(self):
+        """POST /workhub action=clock_out for a clocked-in TA whose
+        log_shift returns success completes and redirects."""
+        ta_netid = f'{TEST_PREFIX}ta15'
+        database.add_ta(
+            ta_netid, 'Clock Out TA',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        database.clock_in(ta_netid)
+        # Temporarily make log_shift return success so clock_out
+        # takes the success branch.
+        original = googlesheet.log_shift
+        googlesheet.log_shift = lambda *a, **kw: True
+        try:
+            self._login_as(ta_netid)
+            r = self._post('/workhub', data={'action': 'clock_out'})
+        finally:
+            googlesheet.log_shift = original
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+        self.assertNotIn('error', r.headers['Location'])
+
+    def test_route_41_workhub_post_clock_out_fails(self):
+        """POST clock_out for a TA who isn't clocked in (and whose
+        log_shift returns falsy) goes through the failure branch and
+        redirects with ?error=not_clocked_out."""
+        ta_netid = f'{TEST_PREFIX}ta16'
+        database.add_ta(
+            ta_netid, 'Never Clocked In',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'clock_out'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_clocked_out', r.headers['Location'])
+
+    def test_route_42_workhub_post_start_session_with_match(self):
+        """POST /workhub action=start_session when a student is
+        queued matches the TA and redirects to /insessionta."""
+        ta_netid = f'{TEST_PREFIX}ta17'
+        student_netid = f'{TEST_PREFIX}stu21'
+        database.add_ta(
+            ta_netid, 'Starter',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        database.queue_entry({
+            'student_netid': student_netid,
+            'student_name': 'Waiting', 'course': 'COS 126',
+            'assignment': 'a1', 'bug_description': '.',
+        })
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'start_session'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionta', r.headers['Location'])
+
+    def test_route_43_workhub_post_start_session_no_match(self):
+        """POST start_session with no students in the queue does not
+        redirect to /insessionta (match returns None)."""
+        ta_netid = f'{TEST_PREFIX}ta18'
+        database.add_ta(
+            ta_netid, 'No Match',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'start_session'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+        self.assertNotIn('/insessionta', r.headers['Location'])
+
+    def test_route_44_workhub_redirects_to_insessionta_when_matched(self):
+        """A TA who already has an active session hitting /workhub
+        is redirected to /insessionta."""
+        ta_netid = f'{TEST_PREFIX}ta19'
+        student_netid = f'{TEST_PREFIX}stu22'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(ta_netid)
+        r = self._get('/workhub')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/insessionta', r.headers['Location'])
+
+    def test_route_45_insessionta_renders_when_matched(self):
+        """A matched TA hitting /insessionta gets the full
+        in-session render with the student's info."""
+        ta_netid = f'{TEST_PREFIX}ta20'
+        student_netid = f'{TEST_PREFIX}stu23'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(ta_netid)
+        r = self._get('/insessionta')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_46_insessionta_post_end_session(self):
+        """POST /insessionta action=end_session removes the session
+        and redirects to /endsessionta with the student_name cookie."""
+        ta_netid = f'{TEST_PREFIX}ta21'
+        student_netid = f'{TEST_PREFIX}stu24'
+        self._setup_matched(ta_netid, student_netid)
+        self._login_as(ta_netid)
+        r = self._post('/insessionta', data={'action': 'end_session'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/endsessionta', r.headers['Location'])
+        # The session should now be gone from the database.
+        info = database.get_session_info_ta(ta_netid)
+        self.assertIsNone(info)
+
+    def test_route_47_endsessionta_post_home_redirects(self):
+        """POST /endsessionta action=home redirects back to /workhub."""
+        self._login_as(f'{TEST_PREFIX}ta22')
+        r = self._post('/endsessionta', data={'action': 'home'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
