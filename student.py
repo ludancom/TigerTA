@@ -8,7 +8,6 @@ import flask
 import os
 import database
 import auth
-import notifications
 
 #-----------------------------------------------------------------------
 student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
@@ -119,7 +118,7 @@ def roleselection():
             else:
                 response = flask.redirect('/queueentry')
 
-        return flask.redirect('/testemail')
+        return response
 
     return flask.render_template('roleselection.html')
 
@@ -271,7 +270,7 @@ def trymatch():
     # Get number of TAs on shift for specific course
     num_on_shift_tas = database.get_num_on_shift_tas(course)
 
-    # Check whether the student is in the database
+    # Check whether the student is in database
     status = database.student_already_in_queue(student_netid)
     if (status == "DoesNotExist"):
         in_database = False
@@ -376,11 +375,6 @@ def submit_feedback():
     return flask.redirect(
         flask.url_for('student_routes.endsessionstudent', feedback_submitted='1')
     )
-
-@student_routes.route('/testemail')
-def test_email():
-    notifications.send_next_in_line("sd0936", "Test", "COS 126")
-    return "sent"
 
     
 
