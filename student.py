@@ -220,21 +220,21 @@ def queuestatus():
             else:
                 return flask.redirect('/queuestatus?error=not_removed_from_queue')
 
-    html_code = flask.render_template(
+    return flask.render_template(
         'queuestatus.html',
         bug_description=bug_description,
         student_place=student_place,
         num_on_shift_tas=num_on_shift_tas
     )
 
-    response = flask.make_response(html_code)
+    # response = flask.make_response(html_code)
 
-    # Disable cache for correct back button redirecting
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers["Expires"] = "0"
+    # # Disable cache for correct back button redirecting
+    # response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    # response.headers['Pragma'] = 'no-cache'
+    # response.headers["Expires"] = "0"
 
-    return response
+    # return response
 
 #-----------------------------------------------------------------------
 # Match Attempt & Updating Number of TAs on Shift (For Queue Status Page):
@@ -307,20 +307,20 @@ def insessionstudent():
     # Get bug description
     bug_description = session_info['bug_description']
 
-    html_code = flask.render_template(
+    return flask.render_template(
         'insessionstudent.html',
         bug_description=bug_description,
         ta_name=ta_name
     )
 
-    response = flask.make_response(html_code)
+    # response = flask.make_response(html_code)
 
-    # Disable cache for correct back button redirecting
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers["Expires"] = "0"
+    # # Disable cache for correct back button redirecting
+    # response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    # response.headers['Pragma'] = 'no-cache'
+    # response.headers["Expires"] = "0"
 
-    return response
+    # return response
 
 #-----------------------------------------------------------------------
 # End Session Student Page:

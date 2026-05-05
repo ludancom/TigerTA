@@ -86,18 +86,18 @@ def workhub():
     queue_students = database.get_queue_students()
     active_sessions = database.get_active_sessions()
 
-    html_code = flask.render_template('workhub.html', clocked_in=clocked_in,
+    return flask.render_template('workhub.html', clocked_in=clocked_in,
                                    queue_students=queue_students,
                                     active_sessions=active_sessions)
 
-    response = flask.make_response(html_code)
+    # response = flask.make_response(html_code)
 
-    # Disable cache for correct back button redirecting
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers["Expires"] = "0"
+    # # Disable cache for correct back button redirecting
+    # response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    # response.headers['Pragma'] = 'no-cache'
+    # response.headers["Expires"] = "0"
 
-    return response
+    # return response
 
 #-----------------------------------------------------------------------
 # JSON Helper for Workhub:
@@ -174,20 +174,20 @@ def insessionta():
             
             return response
 
-    html_code = flask.render_template('insessionta.html', student_name=student_name,
+    return flask.render_template('insessionta.html', student_name=student_name,
                                  course=course, assignment=assignment,
                                  bug_description=bug_description, 
                                  time_session_began = time_session_began)
-    response = flask.make_response(html_code)
+    # response = flask.make_response(html_code)
 
-    # Disable cache so TA is successfully redirected if they click on 
-    # a back button back to this page, the page reloads (and is therefore 
-    # able to redirect them to work hub page)
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers["Expires"] = "0"
+    # # Disable cache so TA is successfully redirected if they click on 
+    # # a back button back to this page, the page reloads (and is therefore 
+    # # able to redirect them to work hub page)
+    # response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    # response.headers['Pragma'] = 'no-cache'
+    # response.headers["Expires"] = "0"
 
-    return response
+    # return response
 
 #-----------------------------------------------------------------------
 # End Session TA Page:
