@@ -6,6 +6,7 @@
 import socket
 import sys
 from flask_mail import Mail, Message
+import threading
 
 mail = Mail()
 
@@ -19,6 +20,11 @@ _SMTP_TIMEOUT_SECONDS = 10
 def _princeton_email(netid):
     return f"{netid}@princeton.edu"
 
+
+def send_async(func, *args):
+    thread = threading.Thread(target=func, args=args)
+    thread.daemon = True
+    thread.start()
 
 def _send(msg, label):
     """ Run mail.send under a short socket timeout and emit a single
