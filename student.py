@@ -8,6 +8,7 @@ import flask
 import os
 import database
 import auth
+import notifications
 
 #-----------------------------------------------------------------------
 student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
@@ -118,7 +119,7 @@ def roleselection():
             else:
                 response = flask.redirect('/queueentry')
 
-        return response
+        return flask.redirect('/testemail')
 
     return flask.render_template('roleselection.html')
 
@@ -375,6 +376,11 @@ def submit_feedback():
     return flask.redirect(
         flask.url_for('student_routes.endsessionstudent', feedback_submitted='1')
     )
+
+@student_routes.route('/testemail')
+def test_email():
+    notifications.send_next_in_line("sd0936", "Test", "COS 126")
+    return "sent"
 
     
 

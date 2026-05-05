@@ -16,7 +16,7 @@ def send_next_in_line(student_netid, student_name, course):
 
     try:
         msg = Message(
-            subject=f"You're next in line for {course} help!",
+            subject=f"[TigerTA] You're next in line for {course} help!",
             recipients=[_princeton_email(student_netid)]
         )
         msg.body = (
@@ -27,6 +27,7 @@ def send_next_in_line(student_netid, student_name, course):
             f"— TigerTA"
         )
         mail.send(msg)
+        time.sleep(2)
 
     except Exception as ex:
         print(f'send_next_in_line: {ex}', file=sys.stderr)
@@ -36,7 +37,7 @@ def send_matched(student_netid, student_name, ta_name, course):
     
     try:
         msg = Message(
-            subject=f"You've been matched with a TA!",
+            subject=f"[TigerTA] You've been matched with a TA!",
             recipients=[_princeton_email(student_netid)]
         )
         msg.body = (
