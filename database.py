@@ -149,7 +149,7 @@ def queue_entry(session):
         # "you're next in line" path. notify_next_in_line itself decides
         # whether to actually send (no-op if the position-1 student was
         # already notified for this session).
-        notify_next_in_line(course)
+        # notify_next_in_line(course)
 
         # If student is successfully added to queue...
         return True
@@ -263,6 +263,10 @@ def notify_next_in_line(course):
                     return None
 
                 student_netid, student_name, session_id, already_notified = row
+                if already_notified:
+                    return None
+
+        notifications.send_next_in_line(student_netid, student_name, course)
 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -271,13 +275,8 @@ def notify_next_in_line(course):
                     SET notified_next = TRUE
                     WHERE session_id = %s
                     AND notified_next = FALSE
-                    RETURNING session_id
                 """, (session_id,))
-
-                updated = cursor.fetchone()
                 connection.commit()
-                if updated:
-                    notifications.send_next_in_line(student_netid, student_name, course)
 
     except Exception as ex:
         print(f'notify_next_in_line: {ex}', file=sys.stderr)
@@ -516,11 +515,11 @@ def match(ta_netid):
 
                 session_id, student_name, ta_name, course = row
 
-        # Send matched email outside the connection block
-        notifications.send_matched(student_netid, student_name, ta_name, course)
-
         # Queue just shifted, so notify student that is now 1st in line
         notify_next_in_line(course)
+
+        # Send matched email outside the connection block
+        notifications.send_matched(student_netid, student_name, ta_name, course)
 
         return session_id
                 
@@ -686,19 +685,8 @@ def clock_in(ta_netid):
                 """, (ta_netid, datetime.now()))
                 connection.commit()
 
-                # Grab the courses TA covers so we know which queues
-                # might now have a newly-notifiable front-of-line student
-                cursor.execute(
-                    "SELECT course FROM ta_courses WHERE ta_netid = %s",
-                    (ta_netid,)
-                )
-                courses = [r[0] for r in cursor.fetchall()]
-
-        for course in courses:
-            notify_next_in_line(course)
-
-        # If TA is successfully clocked in...
-        return True
+                # If TA is successfully clocked in...
+                return True
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
