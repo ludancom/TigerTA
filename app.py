@@ -49,7 +49,96 @@ auth.init(app)
 
 # Security Measures
 flask_wtf.csrf.CSRFProtect(app)
+
+
 #-----------------------------------------------------------------------
+# /diagnose route: temporary debugging endpoint that runs a step-by-step
+# SMTP test from inside the running container and returns the result as
+# plain text. Lets us see what's failing without needing log access.
+# Remove this route once email is confirmed working in production.
+#-----------------------------------------------------------------------
+import socket
+import time
+import traceback as _traceback
+from flask_mail import Message as _DiagMessage
+
+@app.route('/diagnose')
+def _diagnose():
+    lines = []
+    def log(s):
+        lines.append(s)
+
+    server = app.config.get('MAIL_SERVER') or ''
+    port = app.config.get('MAIL_PORT') or 587
+    username = app.config.get('MAIL_USERNAME') or ''
+    password = app.config.get('MAIL_PASSWORD') or ''
+    sender = app.config.get('MAIL_DEFAULT_SENDER') or ''
+
+    log("=== TigerTA SMTP diagnostic ===")
+    log(f"server   = {server!r}")
+    log(f"port     = {port}")
+    log(f"use_tls  = {app.config.get('MAIL_USE_TLS')}")
+    log(f"username = {username!r}")
+    log(f"sender   = {sender!r}")
+    log(f"password = <{len(password)} chars>")
+    log("")
+
+    log("[1/4] DNS lookup for the mail server...")
+    try:
+        addrs = socket.getaddrinfo(server, port, type=socket.SOCK_STREAM)
+        log(f"      OK: resolves to {addrs[0][4]}")
+    except Exception as ex:
+        log(f"      FAIL: {type(ex).__name__}: {ex}")
+        return ("\n".join(lines), 200, {'Content-Type': 'text/plain'})
+
+    log("[2/4] Raw TCP connect (5s timeout)...")
+    t0 = time.time()
+    try:
+        sock = socket.create_connection((server, port), timeout=5)
+        sock.close()
+        log(f"      OK: connected in {time.time() - t0:.2f}s")
+    except Exception as ex:
+        log(f"      FAIL after {time.time() - t0:.2f}s: {type(ex).__name__}: {ex}")
+        log("")
+        log("      => This means the host running TigerTA cannot reach the SMTP")
+        log("         server on this port. On Render free/hobby/starter plans,")
+        log("         outbound 25/465/587 is blocked. Switch to an HTTP email API")
+        log("         (Resend, SendGrid, Mailgun) or upgrade Render.")
+        return ("\n".join(lines), 200, {'Content-Type': 'text/plain'})
+
+    log("[3/4] Reachability to general internet (sanity check)...")
+    t0 = time.time()
+    try:
+        sock = socket.create_connection(('1.1.1.1', 443), timeout=5)
+        sock.close()
+        log(f"      OK: 1.1.1.1:443 connect in {time.time() - t0:.2f}s")
+    except Exception as ex:
+        log(f"      FAIL: {type(ex).__name__}: {ex}")
+
+    log("[4/4] Trying flask_mail.send() to ak1225@princeton.edu (10s timeout)...")
+    old_to = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(10)
+    try:
+        msg = _DiagMessage(
+            subject="[TigerTA] /diagnose test",
+            recipients=["ak1225@princeton.edu"],
+        )
+        msg.body = "If you got this, /diagnose says SMTP works end-to-end."
+        notifications.mail.send(msg)
+        log("      OK: send() returned without exception")
+        log("")
+        log(">>> Check ak1225@princeton.edu (inbox + spam).")
+    except Exception as ex:
+        log(f"      FAIL: {type(ex).__name__}: {ex}")
+        log("")
+        log("Full traceback:")
+        log(_traceback.format_exc())
+    finally:
+        socket.setdefaulttimeout(old_to)
+
+    return ("\n".join(lines), 200, {'Content-Type': 'text/plain'})
+
+
 # Register routes
 app.register_blueprint(student_routes)
 app.register_blueprint(ta_routes)
