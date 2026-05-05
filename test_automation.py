@@ -55,6 +55,7 @@ import googlesheet
 notifications.send_matched = lambda *args, **kwargs: None
 notifications.send_next_in_line = lambda *args, **kwargs: None
 googlesheet.log_shift = lambda *args, **kwargs: None
+googlesheet.log_feedback = lambda *args, **kwargs: None
 
 import database  # noqa: E402  -- must come after the mocks above
 
@@ -1061,6 +1062,328 @@ class StressTigerTATests(unittest.TestCase):
         # queue_numbers in the test slice should be 1..N.
         nums = sorted(q['queue_number'] for q in queue)
         self.assertEqual(nums, list(range(1, CONCURRENT_ENQUEUE + 1)))
+
+
+# ---------------------------------------------------------------------
+# Route handler tests
+# ---------------------------------------------------------------------
+# These tests exercise the Flask route handlers in student.py, ta.py,
+# and admin.py through Flask's test client. CAS authentication is
+# bypassed by injecting a username into the session (the same effect
+# auth.authenticate() has after a successful CAS round trip), and
+# CSRF protection is disabled for the test app (Flask-WTF supports
+# this via the WTF_CSRF_ENABLED config flag).
+#
+# Notes:
+# * The route handlers' before_request hooks redirect HTTP -> HTTPS
+#   unless the URL contains 'localhost:' (with a port). Flask's test
+#   client uses 'http://localhost/' by default (no port), so every
+#   request below is sent with base_url='http://localhost:5000' to
+#   keep the handlers in their happy path.
+# * googlesheet.log_feedback was mocked at the top of this file so
+#   feedback-submitting routes don't write to the real Sheet.
+# * The test app's secret_key is force-set so sessions work even if
+#   APP_SECRET_KEY isn't in the environment.
+# ---------------------------------------------------------------------
+
+import app as _app_module  # noqa: E402  -- import after database mocks
+_flask_app = _app_module.app
+_flask_app.config['TESTING'] = True
+_flask_app.config['WTF_CSRF_ENABLED'] = False
+if not _flask_app.secret_key:
+    _flask_app.secret_key = 'test-secret-key-for-route-tests'
+
+_TEST_BASE_URL = 'http://localhost:5000'
+
+
+class RouteTests(unittest.TestCase):
+    """End-to-end-ish tests for the Flask route handlers in
+    student.py, ta.py, and admin.py."""
+
+    @classmethod
+    def setUpClass(cls):
+        _cleanup_test_rows()
+
+    @classmethod
+    def tearDownClass(cls):
+        _cleanup_test_rows()
+
+    def setUp(self):
+        _cleanup_test_rows()
+        self.client = _flask_app.test_client()
+        # Same safety guard as the other test classes: refuse to run
+        # if a non-test session is in the queue, because some route
+        # tests call match() which would scan the full queue.
+        with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
+            with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM session "
+                    "WHERE student_netid NOT LIKE %s",
+                    (f'{TEST_PREFIX}%',))
+                live = cur.fetchone()[0]
+                if live > 0:
+                    self.skipTest(
+                        f'Refusing to run route tests: {live} non-test '
+                        f'session(s) exist in the queue.')
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _login_as(self, netid):
+        """Inject a username into the Flask session as if CAS had
+        just successfully authenticated this user."""
+        with self.client.session_transaction() as sess:
+            sess['username'] = netid
+
+    def _get(self, path, **kwargs):
+        return self.client.get(
+            path, base_url=_TEST_BASE_URL, **kwargs)
+
+    def _post(self, path, **kwargs):
+        return self.client.post(
+            path, base_url=_TEST_BASE_URL, **kwargs)
+
+    # ------------------------------------------------------------------
+    # student.py routes
+    # ------------------------------------------------------------------
+    def test_route_01_homepage_returns_200(self):
+        """GET / and GET /home both render the homepage template
+        with a 200 response."""
+        for path in ('/', '/home'):
+            r = self._get(path)
+            self.assertEqual(r.status_code, 200, f'{path} not 200')
+
+    def test_route_02_roleselection_get_renders(self):
+        """GET /roleselection (when already logged in) renders the
+        role selection template."""
+        self._login_as(f'{TEST_PREFIX}stu1')
+        r = self._get('/roleselection')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_03_roleselection_post_student_redirects_to_queueentry(self):
+        """A logged-in user picking the 'student' role with no
+        existing session is redirected to /queueentry."""
+        self._login_as(f'{TEST_PREFIX}stu2')
+        r = self._post('/roleselection', data={'role': 'Student'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+
+    def test_route_04_roleselection_post_ta_for_non_ta_redirects_with_error(self):
+        """A logged-in user picking the 'TA' role who isn't actually
+        a TA is bounced back to /roleselection with ?error=not_ta."""
+        self._login_as(f'{TEST_PREFIX}stu3')
+        r = self._post('/roleselection', data={'role': 'TA'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_ta', r.headers['Location'])
+
+    def test_route_05_roleselection_post_admin_for_non_admin_redirects_with_error(self):
+        """A logged-in user picking the 'Admin' role who isn't an
+        admin is bounced back with ?error=not_admin."""
+        self._login_as(f'{TEST_PREFIX}stu4')
+        r = self._post('/roleselection', data={'role': 'Admin'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_admin', r.headers['Location'])
+
+    def test_route_06_queueentry_get_renders(self):
+        """GET /queueentry renders the queue entry form."""
+        self._login_as(f'{TEST_PREFIX}stu5')
+        r = self._get('/queueentry')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_07_queueentry_post_inserts_into_queue(self):
+        """Submitting /queueentry with valid form data inserts the
+        student into the database and redirects to /queuestatus."""
+        netid = f'{TEST_PREFIX}stu6'
+        self._login_as(netid)
+        r = self._post('/queueentry', data={
+            'student_name': 'Route Student',
+            'course': 'COS 126',
+            'assignment': 'a1',
+            'bug_description': 'route test',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queuestatus', r.headers['Location'])
+        # And the student is actually in the queue now.
+        queue = [q for q in database.get_queue_students()
+                 if q['student_netid'] == netid]
+        self.assertEqual(len(queue), 1)
+
+    def test_route_08_queuestatus_redirects_to_queueentry_when_no_session(self):
+        """GET /queuestatus for a student with no active session
+        sends them to /queueentry."""
+        self._login_as(f'{TEST_PREFIX}stu7')
+        r = self._get('/queuestatus')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/queueentry', r.headers['Location'])
+
+    def test_route_09_trymatch_returns_json_for_unknown_student(self):
+        """GET /trymatch for a student not in the database returns
+        the JSON shape expected by the front end."""
+        self._login_as(f'{TEST_PREFIX}stu8')
+        r = self._get('/trymatch')
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertIn('matched', body)
+        self.assertEqual(body['in_database'], False)
+
+    def test_route_10_insessionstudent_redirects_when_no_session(self):
+        """GET /insessionstudent for a student with no session is
+        bounced to /endsessionstudent."""
+        self._login_as(f'{TEST_PREFIX}stu9')
+        r = self._get('/insessionstudent')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/endsessionstudent', r.headers['Location'])
+
+    def test_route_11_endsessionstudent_get_renders(self):
+        """GET /endsessionstudent renders the end-session template
+        even with no cookie / query state."""
+        r = self._get('/endsessionstudent')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_12_submit_feedback_logs_and_redirects(self):
+        """POST /submitfeedback writes to googlesheet.log_feedback
+        (which is mocked) and redirects to the end-session page."""
+        r = self._post('/submitfeedback', data={
+            'rating': '5',
+            'feedback_text': 'Great help!',
+            'ta_name': 'TA One',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/endsessionstudent', r.headers['Location'])
+
+    # ------------------------------------------------------------------
+    # ta.py routes
+    # ------------------------------------------------------------------
+    def test_route_13_workhub_get_renders_for_ta(self):
+        """A clocked-out TA hitting /workhub gets the work-hub page."""
+        ta_netid = f'{TEST_PREFIX}ta01'
+        database.add_ta(
+            ta_netid, 'Work Hub TA',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._get('/workhub')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_14_workhub_post_clock_in_succeeds(self):
+        """POST /workhub action=clock_in for a real TA succeeds and
+        redirects back to /workhub."""
+        ta_netid = f'{TEST_PREFIX}ta02'
+        database.add_ta(
+            ta_netid, 'Clocker',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        self._login_as(ta_netid)
+        r = self._post('/workhub', data={'action': 'clock_in'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+        self.assertTrue(database.check_if_clocked_in(ta_netid))
+
+    def test_route_15_workhub_post_clock_in_for_unknown_ta_redirects_with_error(self):
+        """POST clock_in for an unknown TA hits the failure branch
+        and redirects with ?error=not_clocked_in."""
+        self._login_as(f'{TEST_PREFIX}nope9')
+        r = self._post('/workhub', data={'action': 'clock_in'})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=not_clocked_in', r.headers['Location'])
+
+    def test_route_16_workhub_status_returns_json(self):
+        """GET /workhub_status returns a JSON payload with the
+        keys the front end expects."""
+        self._login_as(f'{TEST_PREFIX}ta03')
+        r = self._get('/workhub_status')
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertIn('matched', body)
+        self.assertIn('queue_students', body)
+        self.assertIn('active_sessions', body)
+
+    def test_route_17_insessionta_redirects_when_no_session(self):
+        """A TA with no active session hitting /insessionta is
+        bounced to /workhub."""
+        self._login_as(f'{TEST_PREFIX}ta04')
+        r = self._get('/insessionta')
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/workhub', r.headers['Location'])
+
+    def test_route_18_endsessionta_get_renders(self):
+        """GET /endsessionta renders the template without crashing
+        even when the student_name cookie isn't set."""
+        self._login_as(f'{TEST_PREFIX}ta05')
+        r = self._get('/endsessionta')
+        self.assertEqual(r.status_code, 200)
+
+    # ------------------------------------------------------------------
+    # admin.py routes
+    # ------------------------------------------------------------------
+    def test_route_19_adminpage_renders(self):
+        """GET /adminpage renders the admin template with the TA
+        list pulled from the database."""
+        r = self._get('/adminpage')
+        self.assertEqual(r.status_code, 200)
+
+    def test_route_20_add_ta_post_succeeds(self):
+        """POST /add_ta with a valid form inserts the TA and
+        redirects back to /adminpage."""
+        ta_netid = f'{TEST_PREFIX}ta06'
+        r = self._post('/add_ta', data={
+            'ta_net_id': ta_netid,
+            'ta_name': 'Added Via Route',
+            'course': 'COS 126',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/adminpage', r.headers['Location'])
+        self.assertTrue(database.validate_ta(ta_netid))
+
+    def test_route_21_add_ta_post_invalid_course_redirects_with_error(self):
+        """POST /add_ta with an unsupported course hits the
+        failure branch and redirects with ?error=ta_not_added."""
+        ta_netid = f'{TEST_PREFIX}ta07'
+        r = self._post('/add_ta', data={
+            'ta_net_id': ta_netid,
+            'ta_name': 'Bad Course',
+            'course': 'COS 999',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=ta_not_added', r.headers['Location'])
+
+    def test_route_22_remove_ta_post_succeeds(self):
+        """POST /remove_ta for an existing TA removes them and
+        redirects to /adminpage."""
+        ta_netid = f'{TEST_PREFIX}ta08'
+        database.add_ta(
+            ta_netid, 'Removable',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        r = self._post('/remove_ta', data={'ta_net_id': ta_netid})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/adminpage', r.headers['Location'])
+        self.assertFalse(database.validate_ta(ta_netid))
+
+    def test_route_23_remove_ta_post_for_unknown_ta_redirects_with_error(self):
+        """POST /remove_ta for a TA that doesn't exist hits the
+        failure branch and redirects with ?error=ta_not_removed."""
+        r = self._post('/remove_ta', data={
+            'ta_net_id': f'{TEST_PREFIX}nope10',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('error=ta_not_removed', r.headers['Location'])
+
+    def test_route_24_edit_ta_post_updates_and_redirects(self):
+        """POST /edit_ta updates the TA's row and redirects back
+        to /adminpage."""
+        ta_netid = f'{TEST_PREFIX}ta09'
+        database.add_ta(
+            ta_netid, 'Old Name',
+            f'{ta_netid}@princeton.edu', 'COS 126')
+        r = self._post('/edit_ta', data={
+            'ta_netid': ta_netid,
+            'ta_name': 'New Name',
+            'ta_email': f'{ta_netid}@princeton.edu',
+            'ta_courses': 'COS 2XX',
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('/adminpage', r.headers['Location'])
+        all_tas = {t['ta_netid']: t for t in database.get_all_tas()}
+        self.assertEqual(all_tas[ta_netid]['ta_name'], 'New Name')
+        self.assertEqual(all_tas[ta_netid]['courses'], 'COS 2XX')
 
 
 if __name__ == '__main__':
