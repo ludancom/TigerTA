@@ -13,20 +13,29 @@ from flask import current_app
 import notifications
 
 def send_async(func, *args):
+    from flask import current_app
+    import threading, time, sys
+
     app = current_app._get_current_object()
 
     def wrapper():
         with app.app_context():
             try:
                 print("ASYNC START", flush=True)
+                sys.stdout.flush()
+
                 func(*args)
+
                 print("ASYNC DONE", flush=True)
+                sys.stdout.flush()
+
+                time.sleep(0.5)  
             except Exception:
                 import traceback
-                print("ASYNC ERROR:", flush=True)
                 traceback.print_exc()
+                sys.stdout.flush()
 
-    threading.Thread(target=wrapper, daemon=True).start()
+    threading.Thread(target=wrapper, daemon=False).start() 
 
 #-----------------------------------------------------------------------
 student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
