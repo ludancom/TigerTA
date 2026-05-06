@@ -264,9 +264,6 @@ def notify_next_in_line(course):
 
                 student_netid, student_name, session_id, already_notified = row
 
-                if already_notified:
-                    return
-
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
