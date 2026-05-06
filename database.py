@@ -263,12 +263,12 @@ def notify_next_in_line(course):
                     return None
 
                 student_netid, student_name, session_id, already_notified = row
-                if already_notified:
-                    return None
+                # if already_notified:
+                #     return None
 
-                notifications.send_next_in_line(student_netid,
-                    student_name,
-                    course)
+                # notifications.send_next_in_line(student_netid,
+                #     student_name,
+                #     course)
 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -277,8 +277,12 @@ def notify_next_in_line(course):
                     SET notified_next = TRUE
                     WHERE session_id = %s
                     AND notified_next = FALSE
+                    RETURNING session_id
                 """, (session_id,))
+                updated = cursor.fetchone()
                 connection.commit()
+                if updated:
+                    notifications.send_next_in_line(student_netid, student_name, course)
 
     except Exception as ex:
         print(f'notify_next_in_line: {ex}', file=sys.stderr)

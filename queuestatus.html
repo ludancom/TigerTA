@@ -65,10 +65,10 @@
 
             // If student was matched, but TA ends session (deleting student from database) before student 
             // is redirected to in session page, student is immediately redirected to end session page
-            // if(!data.in_database){
-            //     window.location.href = "/endsessionstudent";
-            //     return;
-            // }
+            if(!data.in_database){
+                window.location.href = "/endsessionstudent";
+                return;
+            }
 
             // Otherwise, update and display student's place in line
             if (data.student_place != null) {

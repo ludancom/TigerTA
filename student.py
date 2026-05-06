@@ -168,19 +168,18 @@ def queueentry():
         # student was already notified for this session).
         insertSuccessful = database.queue_entry(session)
         # If insert is unsuccessful, alert user and stay on the page
-        return flask.redirect('/queuestatus')
-        # if insertSuccessful:
-        #     # If student joined as position 1 with a TA on shift, notify student
-        #     student_place = database.find_student_place(course, student_netid)
-        #     if student_place == 1:
-        #         database.notify_next_in_line(course)
-        #     html_code = flask.redirect('/queuestatus')
-        #     response = flask.make_response(html_code)
-        #     # Delete previous cookie with TA's name 
-        #     response.set_cookie('ta_name', '', expires=0)
-        #     return response
-        # else:
-        #     return flask.redirect('/queueentry?error=not_added_to_queue')
+        if insertSuccessful:
+            # If student joined as position 1 with a TA on shift, notify student
+            student_place = database.find_student_place(course, student_netid)
+            if student_place == 1:
+                database.notify_next_in_line(course)
+            html_code = flask.redirect('/queuestatus')
+            response = flask.make_response(html_code)
+            # Delete previous cookie with TA's name 
+            response.set_cookie('ta_name', '', expires=0)
+            return response
+        else:
+            return flask.redirect('/queueentry?error=not_added_to_queue')
 
     return flask.render_template('queueentry.html')
 
@@ -250,7 +249,7 @@ def trymatch():
             "matched": False,
             "student_place": None,
             "num_on_shift_tas": 0,
-            # "in_database": False
+            "in_database": False
         }
 
     # Get course
@@ -266,17 +265,17 @@ def trymatch():
     num_on_shift_tas = database.get_num_on_shift_tas(course)
 
     # Check whether the student is in database
-    # status = database.student_already_in_queue(student_netid)
-    # if (status == "DoesNotExist"):
-    #     in_database = False
-    # else:
-    #     in_database = True
+    status = database.student_already_in_queue(student_netid)
+    if (status == "DoesNotExist"):
+        in_database = False
+    else:
+        in_database = True
 
     return {
         "matched": ta_name is not None,
         "student_place": student_place,
         "num_on_shift_tas": num_on_shift_tas,
-        # "in_database": in_database
+        "in_database": in_database
     }
 
 #-----------------------------------------------------------------------
