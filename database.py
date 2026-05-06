@@ -260,15 +260,14 @@ def notify_next_in_line(course):
                 row = cursor.fetchone()
 
                 if row is None:
-                    return None
+                    return
 
                 student_netid, student_name, session_id, already_notified = row
-                 if already_notified:
-                    return None
 
-                 notifications.send_next_in_line(student_netid,
-                    student_name,
-                    course)
+                if already_notified:
+                    return
+
+        notifications.send_next_in_line(student_netid, student_name, course)
 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
