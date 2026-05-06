@@ -17,7 +17,14 @@ def send_async(func, *args):
 
     def wrapper():
         with app.app_context():
-            func(*args)
+            try:
+                print("ASYNC START", flush=True)
+                func(*args)
+                print("ASYNC DONE", flush=True)
+            except Exception:
+                import traceback
+                print("ASYNC ERROR:", flush=True)
+                traceback.print_exc()
 
     threading.Thread(target=wrapper, daemon=True).start()
 
