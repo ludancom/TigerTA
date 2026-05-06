@@ -382,18 +382,18 @@ class ManyToManyTigerTATests(unittest.TestCase):
         self.assertEqual(len(after), 0)
 
     def test_12_edit_ta_updates_name_and_courses(self):
-        """edit_ta updates the TA's name and replaces their courses."""
+        """edit_ta updates the TA's name and replaces their course."""
         self._populate_tas()
         target = _ta_id(1)
 
         database.edit_ta(
             target, 'New Name',
-            f'{target}@princeton.edu', 'COS 126, COS 2XX')
+            f'{target}@princeton.edu', 'COS 2XX')
 
         all_tas = {t['ta_netid']: t for t in database.get_all_tas()}
         self.assertEqual(all_tas[target]['ta_name'], 'New Name')
         self.assertEqual(
-            all_tas[target]['courses'], 'COS 126, COS 2XX')
+            all_tas[target]['courses'], 'COS 2XX')
 
     def test_13_update_num_students_helped(self):
         """update_num_students_helped increments the shift counter."""
