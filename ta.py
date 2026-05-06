@@ -9,6 +9,18 @@ import os
 import database
 import auth
 import time
+import threading
+from flask import current_app
+import notifications
+
+def send_async(func, *args):
+    app = current_app._get_current_object()
+
+    def wrapper():
+        with app.app_context():
+            func(*args)
+
+    threading.Thread(target=wrapper, daemon=True).start()
 
 #-----------------------------------------------------------------------
 ta_routes = flask.Blueprint('ta_routes', __name__, template_folder='.')
@@ -68,9 +80,30 @@ def workhub():
             database.set_available(ta_netid)
             session_id = database.match(ta_netid)
             if session_id is not None:
-                # Update number of students TA helps during shift
                 database.update_num_students_helped(ta_netid)
-                return flask.redirect('/insessionta')
+
+                session_info = database.get_session_info_ta(ta_netid)
+
+                if session_info:
+                    student_netid = session_info['student_netid']
+                    student_name = session_info['student_name']
+                    course = session_info['course']
+                    ta_name = database.get_session_ta_name(student_netid)
+
+                    # matched email
+                    send_async(
+                        notifications.send_matched,
+                        student_netid,
+                        student_name,
+                        ta_name,
+                        course
+                    )
+
+                    # next in line email
+                    next_info = database.notify_next_in_line(course)
+                    if next_info:
+                        send_async(notifications.send_next_in_line, *next_info)
+
             return flask.redirect('/workhub')
 
     # Check if TA was matched by seeing if session_info is able

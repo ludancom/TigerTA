@@ -149,7 +149,7 @@ def queue_entry(session):
         # "you're next in line" path. notify_next_in_line itself decides
         # whether to actually send (no-op if the position-1 student was
         # already notified for this session).
-        notify_next_in_line(course)
+        # notify_next_in_line(course)
 
         # If student is successfully added to queue...
         return True
@@ -267,8 +267,6 @@ def notify_next_in_line(course):
                 if already_notified:
                     return
 
-        notifications.send_next_in_line(student_netid, student_name, course)
-
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute("""
@@ -277,6 +275,8 @@ def notify_next_in_line(course):
                     WHERE session_id = %s
                 """, (session_id,))
                 connection.commit()
+
+                return (student_netid, student_name, course)
 
     except Exception as ex:
         print(f'notify_next_in_line: {ex}', file=sys.stderr)
@@ -517,15 +517,15 @@ def match(ta_netid):
                 session_id, student_name, ta_name, course = row
 
         # Queue just shifted, so notify student that is now 1st in line
-        notify_next_in_line(course)
+        # notify_next_in_line(course)
 
         # Send matched email outside the connection block
-        notifications.send_matched(
-            student_netid,
-            student_name,
-            ta_name,
-            course
-        )
+        # notifications.send_matched(
+        #     student_netid,
+        #     student_name,
+        #     ta_name,
+        #     course
+        # )
 
         return session_id
                 
@@ -652,8 +652,8 @@ def remove_session(student_netid):
                 numRowsDeleted += cursor.rowcount
                 connection.commit()
 
-        if course is not None:
-            notify_next_in_line(course)
+        # if course is not None:
+            # notify_next_in_line(course)
 
         # If session is successfully removed...
         return numRowsDeleted > 0

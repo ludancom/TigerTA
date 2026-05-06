@@ -8,6 +8,18 @@ import flask
 import os
 import database
 import auth
+import threading
+from flask import current_app
+import notifications
+
+def send_async(func, *args):
+    app = current_app._get_current_object()
+
+    def wrapper():
+        with app.app_context():
+            func(*args)
+
+    threading.Thread(target=wrapper, daemon=True).start()
 
 #-----------------------------------------------------------------------
 student_routes = flask.Blueprint('student_routes', __name__, template_folder='.')
@@ -172,7 +184,9 @@ def queueentry():
             # If student joined as position 1 with a TA on shift, notify student
             student_place = database.find_student_place(course, student_netid)
             if student_place == 1:
-                database.notify_next_in_line(course)
+                info = database.notify_next_in_line(course)
+                if info:
+                    send_async(notifications.send_next_in_line, *info)
             html_code = flask.redirect('/queuestatus')
             response = flask.make_response(html_code)
             # Delete previous cookie with TA's name 
