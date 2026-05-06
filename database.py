@@ -13,8 +13,6 @@ import time
 from datetime import datetime
 import random
 import googlesheet
-import threading
-from flask import current_app
 
 dotenv.load_dotenv()
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -262,12 +260,9 @@ def notify_next_in_line(course):
                 if already_notified:
                     return None
 
-                send_async(
-                    notifications.send_next_in_line,
-                    student_netid,
+                notifications.send_next_in_line(student_netid,
                     student_name,
-                    course
-                )
+                    course)
 
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as connection:
             with contextlib.closing(connection.cursor()) as cursor:
@@ -521,8 +516,7 @@ def match(ta_netid):
         notify_next_in_line(course)
 
         # Send matched email outside the connection block
-        send_async(
-            notifications.send_matched,
+        notifications.send_matched(
             student_netid,
             student_name,
             ta_name,
@@ -534,21 +528,6 @@ def match(ta_netid):
     except Exception as ex:
         print(f'match: {ex}', file=sys.stderr)
         return None
-
-def send_async(func, *args):
-    app = current_app._get_current_object()
-
-    def wrapper():
-        with app.app_context():
-            try:
-                func(*args)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-
-    thread = threading.Thread(target=wrapper)
-    thread.daemon = True
-    thread.start()
 
 def detect_overflow():
     """ Method that detects if there are no 2xx level students in the queue.
