@@ -145,12 +145,6 @@ def queue_entry(session):
                 ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
-        # queue_entry is the single source of truth for triggering the
-        # "you're next in line" path. notify_next_in_line itself decides
-        # whether to actually send (no-op if the position-1 student was
-        # already notified for this session).
-        # notify_next_in_line(course)
-
         # If student is successfully added to queue...
         return True
 
@@ -308,6 +302,7 @@ def student_already_in_queue(student_netid):
                 if(db_ta_netid is not None):
                     status = "InSession"
                 return status
+                
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
