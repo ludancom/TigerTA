@@ -145,8 +145,8 @@ def queue_entry(session):
                 ''', [student_netid, course, assignment, bug_description])
                 connection.commit()
 
-        # If student is successfully added to queue...
-        return True
+                # If student is successfully added to queue...
+                return True
 
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
@@ -302,7 +302,7 @@ def student_already_in_queue(student_netid):
                 if(db_ta_netid is not None):
                     status = "InSession"
                 return status
-                
+
     except Exception as ex:
         print(f'{sys.argv[0]}: {ex}', file=sys.stderr)
 
