@@ -169,13 +169,9 @@ def queueentry():
         insertSuccessful = database.queue_entry(session)
         # If insert is unsuccessful, alert user and stay on the page
         if insertSuccessful:
-            # If student joined as position 1 with a TA on shift, notify student
-            student_place = database.find_student_place(course, student_netid)
-            if student_place == 1:
-                database.notify_next_in_line(course)
             html_code = flask.redirect('/queuestatus')
             response = flask.make_response(html_code)
-            # Delete previous cookie with TA's name 
+            # Delete previous cookie with TA's name
             response.set_cookie('ta_name', '', expires=0)
             return response
         else:
