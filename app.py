@@ -14,6 +14,7 @@ from ta import ta_routes
 from admin import admin_routes
 import flask_wtf.csrf
 import notifications
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 #-----------------------------------------------------------------------
 # Create app
@@ -24,6 +25,8 @@ app = flask.Flask(
     static_url_path='/static'
 )
 
+# fix for "too many redirects" on render
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 #-----------------------------------------------------------------------
 # CAS Authentication
 dotenv.load_dotenv()
