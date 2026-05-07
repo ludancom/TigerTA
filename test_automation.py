@@ -447,12 +447,21 @@ class ManyToManyTigerTATests(unittest.TestCase):
 
     def test_16_notify_next_in_line_sets_flag(self):
         """notify_next_in_line sets the notified_next flag on the
-        front-of-line student."""
+        front-of-line student. queue_entry already triggers a notify
+        on insert, so we manually reset the flag first to test the
+        function in isolation."""
         self._populate_students(n_126=2, n_226=0, n_217=0)
         front = _student_id(1)
 
+        # Reset the flag (queue_entry already set it to True when the
+        # front-of-line student was inserted) so we can verify that
+        # notify_next_in_line itself flips it.
         with contextlib.closing(psycopg.connect(DATABASE_URL)) as conn:
             with contextlib.closing(conn.cursor()) as cur:
+                cur.execute(
+                    "UPDATE session SET notified_next = FALSE "
+                    "WHERE student_netid = %s", (front,))
+                conn.commit()
                 cur.execute(
                     "SELECT notified_next FROM session "
                     "WHERE student_netid = %s", (front,))
