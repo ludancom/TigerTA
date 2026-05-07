@@ -29,6 +29,14 @@ import dotenv
 
 dotenv.load_dotenv()
 
+# If TEST_DATABASE_URL is set in .env, route all DB operations to the
+# test database instead of production. This lets the suite run safely
+# even when real students are using TigerTA: match() and the cleanup
+# helpers operate on a queue that is guaranteed to have no real users
+# in it. Falls back to DATABASE_URL if TEST_DATABASE_URL is unset.
+if os.environ.get('TEST_DATABASE_URL'):
+    os.environ['DATABASE_URL'] = os.environ['TEST_DATABASE_URL']
+
 # Mock notifications and googlesheet so tests don't send real emails
 # or write to the real shift log.
 import notifications
