@@ -11,6 +11,20 @@ import dotenv
 import contextlib
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Princeton's time zone. We log shift times to the Google Sheet using
+# wall-clock ET so the Head Lab TAs see the same hour they'd see on a
+# clock in the lab, regardless of where the server is hosted.
+_ET = ZoneInfo('America/New_York')
+
+
+def _now_et():
+    """Current wall-clock time in US/Eastern as a naive datetime.
+    Stored as-is in TIMESTAMP columns (no tz conversion happens), so
+    the value displayed in the Google Sheet matches the hour the TA
+    actually clocked in/out, not the server's UTC offset."""
+    return datetime.now(_ET).replace(tzinfo=None)
 import random
 import googlesheet
 
@@ -695,7 +709,7 @@ def clock_in(ta_netid):
                 cursor.execute("""
                     INSERT INTO shifts (ta_netid, clock_in, clock_out, students_helped)
                     VALUES (%s, %s, NULL, 0)
-                """, (ta_netid, datetime.now()))
+                """, (ta_netid, _now_et()))
                 connection.commit()
 
                 # If TA is successfully clocked in...
@@ -731,7 +745,7 @@ def clock_out(ta_netid):
                 SET clock_out = %s
                 WHERE ta_netid = %s
                 AND clock_out IS NULL"""
-                cursor.execute(statement_str, (datetime.now(), ta_netid))
+                cursor.execute(statement_str, (_now_et(), ta_netid))
                 connection.commit()
 
                 # Get TA's name 

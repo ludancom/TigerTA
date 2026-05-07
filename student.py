@@ -337,14 +337,18 @@ def submit_feedback():
     a button to submit feedback. """
 
     import datetime
+    from zoneinfo import ZoneInfo
     import googlesheet
 
     rating = flask.request.form.get('rating', '').strip()
     feedback_text = flask.request.form.get('feedback_text', '').strip()
     ta_name = flask.request.form.get('ta_name', '').strip()
 
-
-    timestamp = datetime.datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+    # Use Princeton ET so the timestamp in the feedback sheet matches
+    # the wall-clock hour the student submitted, not the server's UTC.
+    timestamp = (datetime.datetime
+                 .now(ZoneInfo('America/New_York'))
+                 .strftime("%m-%d-%Y %H:%M:%S"))
 
     googlesheet.log_feedback(
         timestamp,
