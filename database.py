@@ -429,15 +429,18 @@ def match(ta_netid):
                 if ta_course == 'COS 2XX':
 
                     # If there is overflow, 2xx level TAs can match to
-                    # any student
+                    # any student. Exclude the TA's own netID so a user
+                    # who is queued as a student in another tab can't be
+                    # matched to themselves.
                     if overflow:
                         statement_str = """SELECT student_netid
                         FROM session
-                        WHERE ta_netid IS NULL 
+                        WHERE ta_netid IS NULL
+                        AND student_netid != %s
                         ORDER BY session_id ASC
                         LIMIT 1
                         """
-                        cursor.execute(statement_str)
+                        cursor.execute(statement_str, (ta_netid,))
                         row = cursor.fetchone()
 
                         if row is None:
@@ -446,33 +449,37 @@ def match(ta_netid):
                         student_netid = row[0]
 
                     # Otherwise, if there is no overflow, 2xx level TAs
-                    # can only match to 2xx students
+                    # can only match to 2xx students. Exclude the TA's
+                    # own netID for the same reason as above.
                     else:
                         statement_str = """SELECT student_netid
                         FROM session
-                        WHERE ta_netid IS NULL 
+                        WHERE ta_netid IS NULL
                         AND (course = 'COS 226' OR course = 'COS 217')
+                        AND student_netid != %s
                         ORDER BY session_id ASC
                         LIMIT 1"""
-                        cursor.execute(statement_str)
+                        cursor.execute(statement_str, (ta_netid,))
                         row = cursor.fetchone()
-                        
+
                         if row is None:
                             return None
 
                         student_netid = row[0]
 
-                # If TA is a 126 TA, only match with 126 student
-                else:               
+                # If TA is a 126 TA, only match with 126 student.
+                # Exclude the TA's own netID for the same reason as above.
+                else:
                     statement_str = """SELECT student_netid
                     FROM session
-                    WHERE ta_netid IS NULL 
+                    WHERE ta_netid IS NULL
                     AND course = 'COS 126'
+                    AND student_netid != %s
                     ORDER BY session_id ASC
                     LIMIT 1"""
-                    cursor.execute(statement_str)
+                    cursor.execute(statement_str, (ta_netid,))
                     row = cursor.fetchone()
-                    
+
                     if row is None:
                         return None
 
