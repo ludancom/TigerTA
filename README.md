@@ -28,7 +28,7 @@ in order to have access to the admin workflow.
 
       pip install -r requirements.txt
    
-3. Start the server, replacing 5555 with any free port:
+3. To run the app, replacing 5555 with any free port:
 
       python app.py 5555
    
