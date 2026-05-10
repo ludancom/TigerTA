@@ -36,6 +36,7 @@ in order to have access to the admin workflow.
 The deployed version of TigerTA is available at https://tigerta.onrender.com .
 
 -- To Run Tests ----------------------------------------------------------------
+
 The test scripts must be run locally. With dependencies installed, run:
     
     python -m unittest test_automation.py -v
