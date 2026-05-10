@@ -25,18 +25,27 @@ in order to have access to the admin workflow.
    does not contain .env for security reasons, but we have specified where you
    can find it in the Product Evaluation document.
 2. Install dependencies:
-       pip install -r requirements.txt
+
+      pip install -r requirements.txt
+   
 3. Start the server, replacing 5555 with any free port:
-       python app.py 5555
+
+      python app.py 5555
+   
 4. Visit http://localhost:5555 in a browser.
 The deployed version of TigerTA is available at https://tigerta.onrender.com .
 
 -- To Run Tests ----------------------------------------------------------------
 The test scripts must be run locally. With dependencies installed, run:
+    
     python -m unittest test_automation.py -v
+    
     python -m unittest test_boundary.py -v
+    
 For combined coverage measurement:
+    
     coverage erase && coverage run --source=database,student,ta,admin,notifications -m unittest test_automation.py test_boundary.py && coverage report -m && coverage html && open htmlcov/index.html
+    
 A successful run prints "Ran 100 tests in X.Xs" followed by "OK" and a
 coverage report showing 85% total coverage. See the Product Evaluation
 document for more detail.
